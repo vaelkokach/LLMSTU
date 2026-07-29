@@ -10,12 +10,14 @@ import yaml
 
 from attention.detector_adapter import FrozenLLMDetAdapter, MMDetDetectorAdapter, iou_xyxy
 from attention.features import StudentFeatureExtractor
+from attention.taxonomy import CUE_CLASSES, CUE_TASK_SCORE
 from attention.temporal_model import AttentionTransformer, logits_to_pred
 from attention.tracking import IoUTracker
 
 
-CLASS_NAMES = ["attentive", "distracted", "sleeping", "engaged"]
-CLASS_SCORE = {"attentive": 1.0, "engaged": 0.9, "distracted": 0.3, "sleeping": 0.1}
+CLASS_NAMES = CUE_CLASSES
+CLASS_SCORE = CUE_TASK_SCORE
+_ONTASK_LABELS = ("screen_oriented",)
 
 
 def parse_args():
@@ -137,6 +139,7 @@ def main():
         dropout=float(cfg["model"]["dropout"]),
         num_classes=int(cfg["model"]["num_classes"]),
         max_seq_len=int(cfg["model"]["max_seq_len"]),
+        per_frame=bool(cfg["model"].get("per_frame", True)),
     ).to(device)
     ckpt = torch.load(cfg["temporal_checkpoint"], map_location="cpu")
     model.load_state_dict(ckpt["model"], strict=False)
@@ -187,6 +190,8 @@ def main():
             x = torch.from_numpy(x).unsqueeze(0).to(device)
             with torch.inference_mode(), torch.cuda.amp.autocast(enabled=device.type == "cuda"):
                 logits = model(x)
+                if logits.dim() == 3:  # per-frame model: use the newest frame
+                    logits = logits[:, -1, :]
                 pred, conf = logits_to_pred(logits)
             raw_label_idx = int(pred.item())
             raw_conf = float(conf.item())
@@ -223,11 +228,11 @@ def main():
         for t in tracks:
             x1, y1, x2, y2 = [int(v) for v in t.bbox_xyxy]
             label, conf = preds.get(t.track_id, ("pending", 0.0))
-            col = (0, 255, 0) if label in ("attentive", "engaged") else (0, 165, 255)
+            col = (0, 255, 0) if label in _ONTASK_LABELS else (0, 165, 255)
             cv2.rectangle(vis, (x1, y1), (x2, y2), col, 2)
             cv2.putText(vis, f"id={t.track_id} {label}:{conf:.2f}", (x1, max(20, y1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, col, 2)
 
-        cv2.putText(vis, f"classroom_attention={classroom:.2f}", (12, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.85, (255, 255, 255), 2)
+        cv2.putText(vis, f"classroom_task_orientation={classroom:.2f}", (12, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.85, (255, 255, 255), 2)
         if writer is not None:
             writer.write(vis)
         if args.show:

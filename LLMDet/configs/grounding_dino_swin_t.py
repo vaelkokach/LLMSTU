@@ -280,8 +280,8 @@ v3det_dataset = dict(
 # --------------------------- student behavior emotion/action vg dataset---------------------------
 student_behavior_dataset = dict(
     type='ODVGDataset',
-    data_root='../grounding_data/frames1/',
-    ann_file='student_behavior_emotion_vg7_train.jsonl',
+    data_root='../grounding_data/stu_img/',
+    ann_file='annotations/Qwen3-VL_Student_action_emotion_fixed_train.jsonl',
     label_map_file=None,
     data_prefix=dict(img='frames/'),
     filter_cfg=dict(filter_empty_gt=False),

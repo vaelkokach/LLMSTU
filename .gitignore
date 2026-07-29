@@ -32,3 +32,25 @@ outputs/
 .DS_Store
 
 
+
+# Run outputs & experiment artifacts (results JSONs force-added selectively)
+LLMDet/work_dirs/
+LLMDet/.dist_test/
+train_debug.log
+
+# Media / test assets
+*.mp4
+*.jfif
+tes*.jpg
+test*.jpg
+*.pkl
+*.npz
+
+# Archives & bundles
+*.tar.gz
+gold_annotation_bundle*
+
+# Gold annotation outputs stay local until finalized
+tools/gold_annotator/gold_annotations_*.jsonl
+tools/gold_annotator/gold_events_*.jsonl
+.claude/

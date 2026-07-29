@@ -32,15 +32,20 @@ def convert_grounding_to_cls_scores(logits: Tensor,
             # only need to compute once
             positive_map = positive_maps[0]
             for label_j in positive_map:
+                idx = positive_map[label_j]
+                if not idx:
+                    continue
                 scores[:, :, label_j -
                        1] = logits[:, :,
-                                   torch.LongTensor(positive_map[label_j]
-                                                    )].mean(-1)
+                                   torch.LongTensor(idx)].mean(-1)
         else:
             for i, positive_map in enumerate(positive_maps):
                 for label_j in positive_map:
+                    idx = positive_map[label_j]
+                    if not idx:
+                        continue
                     scores[i, :, label_j - 1] = logits[
-                        i, :, torch.LongTensor(positive_map[label_j])].mean(-1)
+                        i, :, torch.LongTensor(idx)].mean(-1)
     return scores
 
 class ContrastiveEmbed(nn.Module):
@@ -487,7 +492,18 @@ class GroundingDINOHead(DINOHead):
             cls_score = convert_grounding_to_cls_scores(
                 logits=cls_score.sigmoid()[None],
                 positive_maps=[token_positive_maps])[0]
-            scores, indexes = cls_score.view(-1).topk(max_per_img)
+            flat = cls_score.reshape(-1)
+            # max_per_img can exceed num_queries * num_phrases (e.g. few phrases
+            # in caption); topk(k) requires k <= numel.
+            if flat.numel() == 0:
+                device, dtype = cls_score.device, cls_score.dtype
+                results = InstanceData()
+                results.bboxes = torch.zeros((0, 4), device=device, dtype=dtype)
+                results.scores = torch.zeros((0,), device=device, dtype=dtype)
+                results.labels = torch.zeros((0,), device=device, dtype=torch.long)
+                return results
+            k = min(max_per_img, flat.numel())
+            scores, indexes = flat.topk(k)
             num_classes = cls_score.shape[-1]
             det_labels = indexes % num_classes
             bbox_index = indexes // num_classes
@@ -495,7 +511,8 @@ class GroundingDINOHead(DINOHead):
         else:
             cls_score = cls_score.sigmoid()
             scores, _ = cls_score.max(-1)
-            scores, indexes = scores.topk(max_per_img)
+            k = min(max_per_img, scores.numel())
+            scores, indexes = scores.topk(k)
             bbox_pred = bbox_pred[indexes]
             det_labels = scores.new_zeros(scores.shape, dtype=torch.long)
 

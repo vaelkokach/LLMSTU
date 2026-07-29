@@ -196,8 +196,11 @@ class BertEncoder(nn.Module):
         config = BertConfig.from_pretrained(name)
         config.gradient_checkpointing = use_checkpoint
         # only encoder
+        # Grounding-DINO feeds a 3D special-token relation mask; the SDPA
+        # attention path only accepts 2D masks, so force the eager path.
         self.model = HFBertModel.from_pretrained(
-            name, add_pooling_layer=add_pooling_layer, config=config)
+            name, add_pooling_layer=add_pooling_layer, config=config,
+            attn_implementation='eager')
         self.language_dim = config.hidden_size
         self.num_layers_of_embedded = num_layers_of_embedded
 

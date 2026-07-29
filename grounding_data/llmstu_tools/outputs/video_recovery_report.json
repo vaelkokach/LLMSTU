@@ -1,0 +1,14 @@
+{
+  "n_chains": 128,
+  "gate": 14.0,
+  "anchor_frames": 4660,
+  "anchor_correct": 4660,
+  "anchor_accuracy": 1.0,
+  "chains_with_mixed_anchor_names": 0,
+  "distinct_named": 127,
+  "chain_size_min_med_max": [
+    475,
+    735,
+    1635
+  ]
+}

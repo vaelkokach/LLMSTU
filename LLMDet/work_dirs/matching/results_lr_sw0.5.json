@@ -1,0 +1,136 @@
+{
+  "config": {
+    "gt": "../grounding_data/llmstu_tools/outputs/correspondence_gt.jsonl",
+    "standin_shard": "/home/jovyan/Computer_vision/grounding_data/LLMSTU/labels/shard_000.jsonl",
+    "frames": 999999,
+    "unit_order": "lr",
+    "spatial_weight": 0.5,
+    "device": "cuda",
+    "eps": 0.1,
+    "dump": "work_dirs/matching/full_sweep_assignments.jsonl",
+    "seed": 0,
+    "standin": false
+  },
+  "results": {
+    "ordinal": {
+      "overall": {
+        "frames": 72398,
+        "units": 261397,
+        "assignment_acc": 0.26069541731542445,
+        "wrong_assignment_rate": 0.7393045826845756,
+        "region_correct_iou50": 0.2614720138333646
+      },
+      "n=2": {
+        "frames": 18098,
+        "units": 36196,
+        "assignment_acc": 0.5020444247983202,
+        "wrong_assignment_rate": 0.49795557520167977,
+        "region_correct_iou50": 0.5023759531439939
+      },
+      "n=3": {
+        "frames": 17398,
+        "units": 52194,
+        "assignment_acc": 0.3169138215120512,
+        "wrong_assignment_rate": 0.6830861784879488,
+        "region_correct_iou50": 0.3182741311261831
+      },
+      "n>=4": {
+        "frames": 36902,
+        "units": 173007,
+        "assignment_acc": 0.19324073592397994,
+        "wrong_assignment_rate": 0.80675926407602,
+        "region_correct_iou50": 0.1939343494771888
+      }
+    },
+    "ordinal_lr": {
+      "overall": {
+        "frames": 72398,
+        "units": 261397,
+        "assignment_acc": 1.0,
+        "wrong_assignment_rate": 0.0,
+        "region_correct_iou50": 1.0
+      },
+      "n=2": {
+        "frames": 18098,
+        "units": 36196,
+        "assignment_acc": 1.0,
+        "wrong_assignment_rate": 0.0,
+        "region_correct_iou50": 1.0
+      },
+      "n=3": {
+        "frames": 17398,
+        "units": 52194,
+        "assignment_acc": 1.0,
+        "wrong_assignment_rate": 0.0,
+        "region_correct_iou50": 1.0
+      },
+      "n>=4": {
+        "frames": 36902,
+        "units": 173007,
+        "assignment_acc": 1.0,
+        "wrong_assignment_rate": 0.0,
+        "region_correct_iou50": 1.0
+      }
+    },
+    "hungarian": {
+      "overall": {
+        "frames": 72398,
+        "units": 261397,
+        "assignment_acc": 0.9230595607447676,
+        "wrong_assignment_rate": 0.07694043925523246,
+        "region_correct_iou50": 0.9234076902183269
+      },
+      "n=2": {
+        "frames": 18098,
+        "units": 36196,
+        "assignment_acc": 0.9870703945187314,
+        "wrong_assignment_rate": 0.012929605481268648,
+        "region_correct_iou50": 0.9872361586915681
+      },
+      "n=3": {
+        "frames": 17398,
+        "units": 52194,
+        "assignment_acc": 0.9640188527416944,
+        "wrong_assignment_rate": 0.035981147258305556,
+        "region_correct_iou50": 0.9642870828064528
+      },
+      "n>=4": {
+        "frames": 36902,
+        "units": 173007,
+        "assignment_acc": 0.8973105134474327,
+        "wrong_assignment_rate": 0.10268948655256724,
+        "region_correct_iou50": 0.8977209014664147
+      }
+    },
+    "sinkhorn": {
+      "overall": {
+        "frames": 72398,
+        "units": 261397,
+        "assignment_acc": 0.9231207703225363,
+        "wrong_assignment_rate": 0.07687922967746379,
+        "region_correct_iou50": 0.9234688997960956
+      },
+      "n=2": {
+        "frames": 18098,
+        "units": 36196,
+        "assignment_acc": 0.9870703945187314,
+        "wrong_assignment_rate": 0.012929605481268648,
+        "region_correct_iou50": 0.9872361586915681
+      },
+      "n=3": {
+        "frames": 17398,
+        "units": 52194,
+        "assignment_acc": 0.9639422155803349,
+        "wrong_assignment_rate": 0.0360577844196651,
+        "region_correct_iou50": 0.9642104456450933
+      },
+      "n>=4": {
+        "frames": 36902,
+        "units": 173007,
+        "assignment_acc": 0.8974261157063009,
+        "wrong_assignment_rate": 0.1025738842936991,
+        "region_correct_iou50": 0.8978365037252828
+      }
+    }
+  }
+}

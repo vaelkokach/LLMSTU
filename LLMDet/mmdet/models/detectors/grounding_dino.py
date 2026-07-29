@@ -670,8 +670,17 @@ class GroundingDINO(DINO):
                     positive_map, entities
 
         chunked_size = self.test_cfg.get('chunked_size', -1)
-        if (not self.training and chunked_size > 0 and
-                (isinstance(original_caption, (list, tuple)) or custom_entities)):
+        if not self.training and chunked_size > 0:
+            assert isinstance(original_caption,
+                              (list, tuple)) or custom_entities is True
+            # Same as get_tokens_and_prompts: a str must be split into phrases.
+            # Otherwise chunked path does ``for i in original_caption`` over
+            # characters and label_names become single letters in inference.
+            if custom_entities and isinstance(original_caption, str):
+                original_caption = original_caption.strip(self._special_tokens)
+                original_caption = original_caption.split(self._special_tokens)
+                original_caption = list(
+                    filter(lambda x: len(x) > 0, original_caption))
             all_output = self.get_tokens_positive_and_prompts_chunked(
                 original_caption, enhanced_text_prompt)
             positive_map_label_to_token, \
@@ -711,12 +720,16 @@ class GroundingDINO(DINO):
             else:
                 caption_string, tokens_positive = self.to_plain_text_prompts(
                     original_caption_chunked[i])
-            tokenized = self.language_model.tokenizer([caption_string],
-                                                      return_tensors='pt')
-            if tokenized.input_ids.shape[1] > self.language_model.max_tokens:
-                warnings.warn('Inputting a text that is too long will result '
-                              'in poor prediction performance. '
-                              'Please reduce the --chunked-size.')
+            # Must match BertModel.forward (batch_encode_plus + max_length +
+            # truncation); otherwise positive maps index tokens that are cut off
+            # or padded differently than the actual text encoder input.
+            lm = self.language_model
+            tokenized = lm.tokenizer(
+                [caption_string],
+                max_length=lm.max_tokens,
+                padding='max_length' if lm.pad_to_max else 'longest',
+                truncation=True,
+                return_tensors='pt')
             positive_map_label_to_token, positive_map = self.get_positive_map(
                 tokenized, tokens_positive)
 
@@ -966,15 +979,8 @@ class GroundingDINO(DINO):
                         selected_queries.append(features)
                         query_lens.append(len(features))
                     
+                    # guard must run before torch.cat: cat() on an empty list raises
                     if len(selected_queries) == 0:
-                        if not hasattr(self, 'empty_region_batches'):
-                            self.empty_region_batches = 0
-                            self.empty_region_log_every = 100
-                        self.empty_region_batches += 1
-                        if self.empty_region_batches % self.empty_region_log_every == 0:
-                            print(
-                                f'Empty region batches so far: {self.empty_region_batches}'
-                            )
                         losses[f'd{i}.loss_lmm_region'] = torch.sum(head_inputs_dict['hidden_states'][-i]) * 0
                         continue
                     selected_boxes = torch.cat(selected_boxes).unsqueeze(1) # (total_queries, 1, 4)
@@ -1213,7 +1219,15 @@ class GroundingDINO(DINO):
             count = 0
             results_list = []
 
-            entities = [[item for lst in entities[0] for item in lst]]
+            # Flatten per-chunk phrase lists without iterating str chars if a
+            # chunk entry is accidentally a bare string.
+            flat_entities: List[str] = []
+            for lst in entities[0]:
+                if isinstance(lst, str):
+                    flat_entities.append(lst)
+                else:
+                    flat_entities.extend(lst)
+            entities = [flat_entities]
 
             for b in range(len(text_prompts[0])):
                 text_prompts_once = [text_prompts[0][b]]
@@ -1263,15 +1277,35 @@ class GroundingDINO(DINO):
                 rescale=rescale,
                 batch_data_samples=batch_data_samples)
 
+        def _phrases_for_custom_entities(sample) -> Optional[List[str]]:
+            """Same phrase split as get_tokens_and_prompts / chunked path."""
+            raw = sample.text
+            if isinstance(raw, str):
+                parts = raw.strip(self._special_tokens).split(
+                    self._special_tokens)
+                return [
+                    clean_label_name(p) for p in parts if len(p.strip()) > 0
+                ]
+            if isinstance(raw, (list, tuple)):
+                return [clean_label_name(str(p)) for p in raw]
+            return None
+
         for i, (data_sample, pred_instances, entity, is_rec_task) in enumerate(zip(
                 batch_data_samples, results_list, entities, is_rec_tasks)):
             if len(pred_instances) > 0:
+                # Class indices are 0..K-1 over the full (possibly chunked)
+                # prompt; phrase list must be the same length and order.
+                if custom_entities and not is_rec_task:
+                    synced = _phrases_for_custom_entities(data_sample)
+                    if synced is not None and len(synced) > 0:
+                        entity = synced
                 label_names = []
-                for labels in pred_instances.labels:
+                label_ids = pred_instances.labels.detach().cpu().reshape(-1)
+                for labels in label_ids.tolist():
                     if is_rec_task:
                         label_names.append(text_prompts[i])
                         continue
-                    if labels >= len(entity):
+                    if labels < 0 or labels >= len(entity):
                         warnings.warn(
                             'The unexpected output indicates an issue with '
                             'named entity recognition. You can try '
@@ -1355,7 +1389,15 @@ class GroundingDINO(DINO):
             count = 0
             results_list = []
 
-            entities = [[item for lst in entities[0] for item in lst]]
+            # Flatten per-chunk phrase lists without iterating str chars if a
+            # chunk entry is accidentally a bare string.
+            flat_entities: List[str] = []
+            for lst in entities[0]:
+                if isinstance(lst, str):
+                    flat_entities.append(lst)
+                else:
+                    flat_entities.extend(lst)
+            entities = [flat_entities]
 
             for b in range(len(text_prompts[0])):
                 text_prompts_once = [text_prompts[0][b]]

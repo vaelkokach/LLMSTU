@@ -1,0 +1,49 @@
+{
+  "input_records": 283913,
+  "dropped_seat_noise": 1178,
+  "dropped_occluded_face2": 13239,
+  "after_dedup": 138531,
+  "final": 84950,
+  "retention_after_dedup": 0.4879346842166438,
+  "activity_hist_before": {
+    "listening": 109041,
+    "using_laptop": 91821,
+    "looking_away": 16239,
+    "head_down_sleeping": 14674,
+    "reading": 10543,
+    "using_phone": 8969,
+    "other": 8708,
+    "talking_to_peer": 5705,
+    "writing_notes": 2157,
+    "eating_drinking": 1526,
+    "raising_hand": 113
+  },
+  "activity_hist_after_dedup": {
+    "listening": 53072,
+    "using_laptop": 42984,
+    "looking_away": 11692,
+    "other": 7112,
+    "head_down_sleeping": 6250,
+    "reading": 6050,
+    "talking_to_peer": 4784,
+    "using_phone": 4094,
+    "eating_drinking": 1216,
+    "writing_notes": 1187,
+    "raising_hand": 90
+  },
+  "activity_hist_final": {
+    "listening": 23474,
+    "using_laptop": 19001,
+    "looking_away": 11692,
+    "other": 7112,
+    "head_down_sleeping": 6250,
+    "reading": 6050,
+    "talking_to_peer": 4784,
+    "using_phone": 4094,
+    "eating_drinking": 1216,
+    "writing_notes": 1187,
+    "raising_hand": 90
+  },
+  "stride_s": 10.0,
+  "majority_cap": 0.5
+}

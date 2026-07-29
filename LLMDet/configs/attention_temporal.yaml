@@ -1,55 +1,61 @@
 seed: 42
 
 detector:
-  config_path: "configs/grounding_dino_swin_t.py"
-  checkpoint_path: "work_dirs/grounding_dino_swin_t/iter_15000.pth"
+  config_path: "configs/grounding_dino_swin_t_student_e1.py"
+  checkpoint_path: "work_dirs/grounding_dino_swin_t_student_e1/iter_9000.pth"
   text_prompt: "student"
-  score_thr: 0.28
+  score_thr: 0.45
   max_det: 80
-  min_rel_area: 0.003
-  max_rel_area: 0.80
-  min_aspect_ratio: 0.12
-  max_aspect_ratio: 1.60
-  nms_iou_thr: 0.5
+  min_rel_area: 0.01
+  max_rel_area: 0.55
+  min_aspect_ratio: 0.20
+  max_aspect_ratio: 1.20
+  nms_iou_thr: 0.45
   device: "cuda:0"
 
+# Dual-detector verification. Disabled: the previous setup pointed primary
+# and verifier at the SAME config/checkpoint/prompt, so every 3rd frame ran
+# the identical model twice and IoU-filtered its own output against itself —
+# pure latency cost, no filtering benefit. Re-enable only with a genuinely
+# different verifier model.
 hybrid:
   enabled: false
   verify_every_n_frames: 3
   verify_iou_thr: 0.25
   primary_detector:
-    # Recommended: person detector checkpoint/config trained for people.
-    # If you use COCO-style detector, class_whitelist often contains person class id [0].
-    config_path: "configs/grounding_dino_swin_t.py"
-    checkpoint_path: "work_dirs/grounding_dino_swin_t/iter_15000.pth"
-    score_thr: 0.30
+    config_path: "configs/grounding_dino_swin_t_student_e1.py"
+    checkpoint_path: "work_dirs/grounding_dino_swin_t_student_e1/iter_9000.pth"
+    score_thr: 0.45
     max_det: 120
     device: "cuda:0"
-    text_prompt: "person"
+    text_prompt: "student"
     class_whitelist: []
 
 tracking:
-  iou_match_thr: 0.20
-  max_age: 60
-  min_hits: 4
-  appearance_weight: 0.35
-  min_match_score: 0.25
+  iou_match_thr: 0.15
+  max_age: 45
+  min_hits: 8
+  appearance_weight: 0.45
+  min_match_score: 0.35
 
 features:
   clip_model_name: "openai/clip-vit-base-patch32"
   device: "cuda:0"
 
 model:
-  input_dim: 544
+  # 512 CLIP + 8 bbox geom + 24 color stats + 8 posture geom
+  input_dim: 552
   hidden_dim: 512
   num_layers: 4
   num_heads: 8
   dropout: 0.1
-  num_classes: 4
+  # 7 visible-cue classes, see attention/TAXONOMY.md
+  num_classes: 6
   max_seq_len: 128
+  per_frame: true
 
 data:
-  sequence_dir: "../grounding_data/stu_img/attention_sequences"
+  sequence_dir: "../grounding_data/llmstu_sequences"
 
 training:
   mode: "supervised" # supervised | semi_supervised
@@ -57,22 +63,39 @@ training:
   use_class_weights: true
   enforce_full_class_coverage: true
   required_min_per_class: 1
-  epochs: 30
+  epochs: 90
   batch_size: 32
   num_workers: 4
   lr: 0.0003
   weight_decay: 0.01
   grad_clip: 1.0
   amp: true
-  output_dir: "work_dirs/attention_temporal"
+  output_dir: "work_dirs/attention_temporal_v2"
+
+rule_baseline:
+  window_s: 10.0
+  on_task_majority: 0.5
+  looking_away_s: 5.0
+  head_down_s: 20.0
+  min_history_s: 3.0
+  uncertain_max_frac: 0.5
+
+events:
+  min_duration_s: 3.0
+  max_gap_s: 2.0
+  return_confirm_s: 5.0
+  iou_thr: 0.3
+  per_channel_min_duration:
+    phone_use: 2.0
+    head_down: 5.0
 
 inference:
   window_size: 32
-  min_frames_for_pred: 6
-  label_smooth_window: 7
-  label_switch_margin: 1
+  min_frames_for_pred: 10
+  label_smooth_window: 3
+  label_switch_margin: 0
 
 privacy:
   anonymize_faces: false
 
-temporal_checkpoint: "work_dirs/attention_temporal/checkpoints/best.pth"
+temporal_checkpoint: "work_dirs/attention_temporal_v2/checkpoints/best.pth"

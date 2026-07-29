@@ -1,19 +1,41 @@
+"""Build temporal training sequences for the attention transformer.
+
+Primary path (``--format llmstu``): reads the LLMSTU per-student label jsonl
+shards (structured fields), maps each record to a visible-cue class via
+:mod:`attention.taxonomy`, groups crops into per-(video, seat) timelines and
+emits NPZ sequences with **per-frame** labels, split video-wise into
+``train/`` and ``val/`` subdirectories.
+
+Legacy path (``--format legacy``): the old ODVG whole-frame jsonl. Deprecated —
+its weak keyword labels are unreliable (they used to be scored against the
+whole caption + tags, collapsing every student in a frame to one label; that
+bug is fixed here, but the label source itself remains noisy). Kept only for
+comparison experiments.
+
+Video identity: LLMSTU filenames encode the source video for only ~2% of
+frames, so the builder requires a ``frame_to_video.json`` mapping (produced by
+``grounding_data/llmstu_tools``). Seat identity: students are stationary, so
+seats are recovered by greedy centroid clustering of ``bbox_person`` within a
+video.
+"""
+
 import argparse
 import json
+import random
 import re
+import warnings
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-import cv2
 import numpy as np
 
-from attention.features import StudentFeatureExtractor
+from attention.taxonomy import CUE_CLASSES, map_record, parse_stem_time
 
-
-CLASS_NAMES = ["attentive", "distracted", "sleeping", "engaged"]
-CLASS_TO_ID = {c: i for i, c in enumerate(CLASS_NAMES)}
+# --- legacy 4-class taxonomy (deprecated) ---------------------------------
+LEGACY_CLASS_NAMES = ["attentive", "distracted", "sleeping", "engaged"]
+LEGACY_CLASS_TO_ID = {c: i for i, c in enumerate(LEGACY_CLASS_NAMES)}
 
 WEAK_LABEL_MAP = {
     "focused": "attentive",
@@ -41,39 +63,24 @@ WEAK_LABEL_MAP = {
     "yawning": "sleeping",
 }
 
+CLASS_NAMES = CUE_CLASSES  # backward-compatible export
+
 
 @dataclass
-class RegionObs:
-    filename: str
-    frame_idx: int
-    timestamp: str
-    video_id: str
+class CropObs:
+    src_frame: str
+    time_s: float
     bbox_xyxy: List[float]
     label_id: int
-
-
-def _extract_video_id(filename: str) -> str:
-    m = re.search(r"(video_\d+)", filename)
-    if m:
-        return m.group(1)
-    return "video_unknown"
-
-
-def _extract_frame_idx(filename: str) -> int:
-    m = re.search(r"_f(\d+)_", filename)
-    if m:
-        return int(m.group(1))
-    m = re.search(r"f(\d+)", filename)
-    return int(m.group(1)) if m else 0
-
-
-def _extract_timestamp(filename: str) -> str:
-    ts = re.findall(r"(\d{14})", filename)
-    return ts[0] if ts else "00000000000000"
+    head_span_px: float = 150.0
+    meta: Dict = field(default_factory=dict)
 
 
 def _region_to_label(region_phrase: str, tags: List[str], caption: str) -> Optional[int]:
-    text = " ".join([region_phrase, caption] + tags).lower()
+    """Legacy weak labeling. Scores ONLY the region's own phrase — the old
+    version matched against the whole caption + tags, which made every region
+    in a frame share the same label."""
+    text = region_phrase.lower()
     scores = defaultdict(int)
     for key, cls in WEAK_LABEL_MAP.items():
         if key in text:
@@ -81,7 +88,7 @@ def _region_to_label(region_phrase: str, tags: List[str], caption: str) -> Optio
     if not scores:
         return None
     cls = sorted(scores.items(), key=lambda x: x[1], reverse=True)[0][0]
-    return CLASS_TO_ID[cls]
+    return LEGACY_CLASS_TO_ID[cls]
 
 
 def _iou(a: List[float], b: List[float]) -> float:
@@ -96,7 +103,279 @@ def _iou(a: List[float], b: List[float]) -> float:
     return inter / (area_a + area_b - inter + 1e-6)
 
 
+# ---------------------------------------------------------------------------
+# LLMSTU path
+# ---------------------------------------------------------------------------
+
+def load_frame_to_video(path: Path) -> Dict[str, str]:
+    with path.open("r", encoding="utf-8") as f:
+        mapping = json.load(f)
+    if not isinstance(mapping, dict) or not mapping:
+        raise RuntimeError(f"frame_to_video mapping at {path} is empty or malformed")
+    return mapping
+
+
+def _video_id_from_filename(fname: str) -> Optional[str]:
+    m = re.search(r"(video_\d+[^.]*)", fname)
+    return m.group(1) if m else None
+
+
+def parse_llmstu_labels(
+    label_paths: List[Path],
+    frame_to_video: Optional[Dict[str, str]],
+    allow_filename_fallback: bool = False,
+) -> Dict[str, List[CropObs]]:
+    """Parse LLMSTU label jsonl shards into per-video observation lists."""
+    by_video: Dict[str, List[CropObs]] = defaultdict(list)
+    n_total = 0
+    n_unmapped = 0
+    for lp in label_paths:
+        with lp.open("r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                rec = json.loads(line)
+                n_total += 1
+                src = rec["src_frame"]
+                stem = Path(src).stem
+                if frame_to_video is not None and src in frame_to_video:
+                    vid = frame_to_video[src]
+                elif frame_to_video is not None and stem in frame_to_video:
+                    vid = frame_to_video[stem]
+                elif allow_filename_fallback:
+                    vid = _video_id_from_filename(src) or "video_unknown"
+                    n_unmapped += 1
+                else:
+                    n_unmapped += 1
+                    continue
+                t = parse_stem_time(stem)
+                if t is None:
+                    continue
+                by_video[vid].append(
+                    CropObs(
+                        src_frame=src,
+                        time_s=t,
+                        bbox_xyxy=[float(v) for v in rec["bbox_person"]],
+                        label_id=map_record(rec),
+                        head_span_px=float(rec.get("head_span_px", 150.0)),
+                        meta={"file_name": rec.get("file_name", "")},
+                    )
+                )
+    if n_unmapped:
+        pct = 100.0 * n_unmapped / max(1, n_total)
+        warnings.warn(
+            f"{n_unmapped}/{n_total} records ({pct:.1f}%) had no video mapping"
+            + (" (used filename fallback)" if allow_filename_fallback else " and were dropped")
+        )
+    for vid in by_video:
+        by_video[vid].sort(key=lambda o: (o.time_s, o.src_frame))
+    return by_video
+
+
+def assign_seats(video_obs: List[CropObs], eps_factor: float = 0.75) -> Dict[int, List[CropObs]]:
+    """Cluster stationary students into seats by bbox centroid.
+
+    Greedy nearest-seat assignment: a crop joins the nearest existing seat if
+    its centroid is within ``eps_factor * median_head_span`` of the seat's
+    running centroid, else it opens a new seat. Adequate because the cameras
+    and students are static within a video.
+    """
+    if not video_obs:
+        return {}
+    med_span = float(np.median([o.head_span_px for o in video_obs]))
+    eps = eps_factor * max(60.0, med_span)
+    seats: Dict[int, List[CropObs]] = {}
+    centroids: Dict[int, np.ndarray] = {}
+    counts: Dict[int, int] = {}
+    next_sid = 0
+    for obs in video_obs:
+        x1, y1, x2, y2 = obs.bbox_xyxy
+        c = np.array([(x1 + x2) * 0.5, (y1 + y2) * 0.5])
+        best_sid, best_d = -1, float("inf")
+        for sid, cent in centroids.items():
+            d = float(np.linalg.norm(c - cent))
+            if d < best_d:
+                best_d, best_sid = d, sid
+        if best_sid >= 0 and best_d <= eps:
+            seats[best_sid].append(obs)
+            n = counts[best_sid]
+            centroids[best_sid] = (centroids[best_sid] * n + c) / (n + 1)
+            counts[best_sid] = n + 1
+        else:
+            seats[next_sid] = [obs]
+            centroids[next_sid] = c
+            counts[next_sid] = 1
+            next_sid += 1
+    return seats
+
+
+def split_videos(video_ids: List[str], val_fraction: float, seed: int) -> Tuple[set, set]:
+    vids = sorted(video_ids)
+    rng = random.Random(seed)
+    rng.shuffle(vids)
+    n_val = max(1, int(round(len(vids) * val_fraction))) if len(vids) > 1 else 0
+    val = set(vids[:n_val])
+    train = set(vids[n_val:])
+    return train, val
+
+
+def build_sequences_llmstu(
+    label_dir: Path,
+    image_root: Path,
+    output_dir: Path,
+    frame_to_video_path: Path,
+    min_track_len: int = 8,
+    max_track_len: int = 128,
+    val_fraction: float = 0.2,
+    seed: int = 42,
+    allow_filename_fallback: bool = False,
+    allow_clip_fallback: bool = False,
+    max_gap_s: float = 15.0,
+) -> None:
+    """Build per-(video, seat) sequences with per-frame cue labels.
+
+    Sequences are cut whenever the seat disappears for more than ``max_gap_s``
+    or when ``max_track_len`` frames are accumulated. NPZ fields:
+    ``x`` [T, D] features, ``y_frames`` [T] per-frame labels, ``t`` [T]
+    timestamps (s), ``y`` scalar majority label (backward compatibility).
+    """
+    from attention.features import StudentFeatureExtractor  # deferred: loads CLIP
+
+    import cv2
+
+    label_paths = sorted(label_dir.glob("*.jsonl")) if label_dir.is_dir() else [label_dir]
+    if not label_paths:
+        raise RuntimeError(f"No label jsonl found at {label_dir}")
+    if not frame_to_video_path.exists():
+        if not allow_filename_fallback:
+            raise RuntimeError(
+                f"frame_to_video mapping not found at {frame_to_video_path}. "
+                "Generate it with grounding_data/llmstu_tools (video-ID recovery), or pass "
+                "--allow-filename-video-fallback (NOT recommended: ~98% of frames lack a "
+                "video ID in the filename and will be dropped into 'video_unknown', which "
+                "breaks the subject-wise split)."
+            )
+        frame_to_video = None
+    else:
+        frame_to_video = load_frame_to_video(frame_to_video_path)
+
+    by_video = parse_llmstu_labels(label_paths, frame_to_video, allow_filename_fallback)
+    if not by_video:
+        raise RuntimeError("No observations parsed — check label paths and video mapping.")
+
+    train_vids, val_vids = split_videos(list(by_video.keys()), val_fraction, seed)
+    extractor = StudentFeatureExtractor(allow_clip_fallback=allow_clip_fallback)
+
+    for split in ("train", "val"):
+        (output_dir / split).mkdir(parents=True, exist_ok=True)
+
+    sample_idx = 0
+    meta_rows = []
+    frame_cache: Tuple[Optional[str], Optional[np.ndarray]] = (None, None)
+
+    for video_id, obs_list in sorted(by_video.items()):
+        split = "train" if video_id in train_vids else "val"
+        seats = assign_seats(obs_list)
+        for sid, seat_obs in seats.items():
+            if len(seat_obs) < min_track_len:
+                continue
+            # cut into chunks on time gaps / max length
+            chunks: List[List[CropObs]] = [[]]
+            for obs in seat_obs:
+                cur = chunks[-1]
+                if cur and (obs.time_s - cur[-1].time_s > max_gap_s or len(cur) >= max_track_len):
+                    chunks.append([])
+                    cur = chunks[-1]
+                cur.append(obs)
+            for chunk in chunks:
+                if len(chunk) < min_track_len:
+                    continue
+                feats, labels, times = [], [], []
+                for obs in chunk:
+                    img_path = image_root / obs.src_frame
+                    if frame_cache[0] == str(img_path):
+                        frame = frame_cache[1]
+                    else:
+                        frame = cv2.imread(str(img_path))
+                        frame_cache = (str(img_path), frame)
+                    if frame is None:
+                        continue
+                    feats.append(extractor.extract(frame, obs.bbox_xyxy))
+                    labels.append(obs.label_id)
+                    times.append(obs.time_s)
+                if len(feats) < min_track_len:
+                    continue
+                x = np.stack(feats, axis=0).astype(np.float32)
+                y_frames = np.array(labels, dtype=np.int64)
+                y_major = int(np.bincount(y_frames).argmax())
+                out_name = f"sample_{sample_idx:06d}.npz"
+                np.savez_compressed(
+                    output_dir / split / out_name,
+                    x=x,
+                    y_frames=y_frames,
+                    y=np.array(y_major, dtype=np.int64),
+                    t=np.array(times, dtype=np.float64),
+                )
+                meta_rows.append(
+                    {
+                        "file": f"{split}/{out_name}",
+                        "video_id": video_id,
+                        "seat_id": sid,
+                        "length": int(x.shape[0]),
+                        "label_majority": y_major,
+                        "split": split,
+                    }
+                )
+                sample_idx += 1
+
+    with (output_dir / "meta.json").open("w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "num_samples": sample_idx,
+                "class_names": CUE_CLASSES,
+                "label_source": "llmstu_structured_fields",
+                "split": {"train_videos": sorted(train_vids), "val_videos": sorted(val_vids)},
+                "seed": seed,
+                "samples": meta_rows,
+            },
+            f,
+            indent=2,
+        )
+    print(f"Built {sample_idx} sequences ({len(train_vids)} train / {len(val_vids)} val videos) in {output_dir}")
+
+
+# ---------------------------------------------------------------------------
+# Legacy ODVG path (deprecated)
+# ---------------------------------------------------------------------------
+
+def _extract_video_id(filename: str) -> str:
+    m = re.search(r"(video_\d+)", filename)
+    return m.group(1) if m else "video_unknown"
+
+
+def _extract_frame_idx(filename: str) -> int:
+    m = re.search(r"_f(\d+)_", filename)
+    if m:
+        return int(m.group(1))
+    m = re.search(r"f(\d+)", filename)
+    return int(m.group(1)) if m else 0
+
+
+@dataclass
+class RegionObs:
+    filename: str
+    frame_idx: int
+    video_id: str
+    bbox_xyxy: List[float]
+    label_id: int
+
+
 def parse_jsonl(jsonl_path: Path) -> Dict[str, List[RegionObs]]:
+    warnings.warn(
+        "Legacy ODVG weak-label path is deprecated; use --format llmstu.",
+        DeprecationWarning,
+    )
     by_video: Dict[str, List[RegionObs]] = defaultdict(list)
     with jsonl_path.open("r", encoding="utf-8") as f:
         for line in f:
@@ -105,9 +384,6 @@ def parse_jsonl(jsonl_path: Path) -> Dict[str, List[RegionObs]]:
                 continue
             item = json.loads(line)
             fname = item["filename"]
-            video_id = _extract_video_id(fname)
-            frame_idx = _extract_frame_idx(fname)
-            ts = _extract_timestamp(fname)
             grounding = item.get("grounding", {})
             caption = grounding.get("caption", "")
             tags = item.get("tags", [])
@@ -115,128 +391,56 @@ def parse_jsonl(jsonl_path: Path) -> Dict[str, List[RegionObs]]:
                 bbox = reg.get("bbox", None)
                 if bbox is None or len(bbox) != 4:
                     continue
-                phrase = reg.get("phrase", "")
-                label_id = _region_to_label(phrase, tags, caption)
+                label_id = _region_to_label(reg.get("phrase", ""), tags, caption)
                 if label_id is None:
                     continue
-                by_video[video_id].append(
+                by_video[_extract_video_id(fname)].append(
                     RegionObs(
                         filename=fname,
-                        frame_idx=frame_idx,
-                        timestamp=ts,
-                        video_id=video_id,
+                        frame_idx=_extract_frame_idx(fname),
+                        video_id=_extract_video_id(fname),
                         bbox_xyxy=[float(x) for x in bbox],
                         label_id=label_id,
                     )
                 )
     for vid in by_video:
-        by_video[vid].sort(key=lambda x: (x.frame_idx, x.timestamp, x.filename))
+        by_video[vid].sort(key=lambda x: (x.frame_idx, x.filename))
     return by_video
 
 
-def assign_tracks(video_regions: List[RegionObs], iou_thr: float = 0.35) -> Dict[int, List[RegionObs]]:
-    tracks: Dict[int, List[RegionObs]] = defaultdict(list)
-    last_bbox: Dict[int, List[float]] = {}
-    next_tid = 1
-
-    grouped_by_frame: Dict[Tuple[int, str, str], List[RegionObs]] = defaultdict(list)
-    for obs in video_regions:
-        grouped_by_frame[(obs.frame_idx, obs.timestamp, obs.filename)].append(obs)
-
-    for _, frame_obs in sorted(grouped_by_frame.items(), key=lambda x: x[0]):
-        used = set()
-        for tid in list(last_bbox.keys()):
-            best_j = -1
-            best_iou = 0.0
-            for j, obs in enumerate(frame_obs):
-                if j in used:
-                    continue
-                ov = _iou(last_bbox[tid], obs.bbox_xyxy)
-                if ov > best_iou:
-                    best_iou = ov
-                    best_j = j
-            if best_j >= 0 and best_iou >= iou_thr:
-                tracks[tid].append(frame_obs[best_j])
-                last_bbox[tid] = frame_obs[best_j].bbox_xyxy
-                used.add(best_j)
-
-        for j, obs in enumerate(frame_obs):
-            if j in used:
-                continue
-            tid = next_tid
-            next_tid += 1
-            tracks[tid].append(obs)
-            last_bbox[tid] = obs.bbox_xyxy
-
-    return tracks
-
-
-def build_sequences(
-    jsonl_path: Path,
-    image_root: Path,
-    output_dir: Path,
-    min_track_len: int = 8,
-    max_track_len: int = 128,
-) -> None:
-    output_dir.mkdir(parents=True, exist_ok=True)
-    seq_dir = output_dir / "sequences"
-    seq_dir.mkdir(exist_ok=True)
-
-    extractor = StudentFeatureExtractor()
-    by_video = parse_jsonl(jsonl_path)
-    sample_idx = 0
-    meta_rows = []
-
-    for video_id, obs_list in by_video.items():
-        tracks = assign_tracks(obs_list)
-        for tid, track_obs in tracks.items():
-            if len(track_obs) < min_track_len:
-                continue
-            track_obs = track_obs[:max_track_len]
-            feats = []
-            labels = []
-            for obs in track_obs:
-                img_path = image_root / obs.filename
-                if not img_path.exists():
-                    continue
-                frame = cv2.imread(str(img_path))
-                if frame is None:
-                    continue
-                feat = extractor.extract(frame, obs.bbox_xyxy)
-                feats.append(feat)
-                labels.append(obs.label_id)
-            if len(feats) < min_track_len:
-                continue
-
-            x = np.stack(feats, axis=0).astype(np.float32)
-            y = int(np.bincount(np.array(labels, dtype=np.int64)).argmax())
-            out_name = f"sample_{sample_idx:06d}.npz"
-            np.savez_compressed(seq_dir / out_name, x=x, y=np.array(y, dtype=np.int64))
-            meta_rows.append({"file": out_name, "video_id": video_id, "track_id": tid, "length": int(x.shape[0]), "label": y})
-            sample_idx += 1
-
-    with (output_dir / "meta.json").open("w", encoding="utf-8") as f:
-        json.dump({"num_samples": sample_idx, "class_names": CLASS_NAMES, "samples": meta_rows}, f, indent=2)
-    print(f"Built {sample_idx} temporal samples in {seq_dir}")
-
-
 def parse_args():
-    p = argparse.ArgumentParser(description="Build temporal training sequences from student JSONL annotations.")
-    p.add_argument("--jsonl", type=str, required=True, help="Path to annotation JSONL file.")
-    p.add_argument("--image-root", type=str, required=True, help="Path to directory containing images.")
-    p.add_argument("--output-dir", type=str, required=True, help="Output directory for NPZ sequences.")
+    p = argparse.ArgumentParser(description="Build temporal training sequences.")
+    p.add_argument("--format", type=str, default="llmstu", choices=["llmstu", "legacy"])
+    p.add_argument("--labels", type=str, required=True,
+                   help="LLMSTU labels dir (shard_*.jsonl) or a single jsonl file.")
+    p.add_argument("--image-root", type=str, required=True,
+                   help="Directory with source frames (grounding_data/stu_img/frames).")
+    p.add_argument("--output-dir", type=str, required=True)
+    p.add_argument("--frame-to-video", type=str,
+                   default="../grounding_data/llmstu_tools/frame_to_video.json")
     p.add_argument("--min-track-len", type=int, default=8)
     p.add_argument("--max-track-len", type=int, default=128)
+    p.add_argument("--val-fraction", type=float, default=0.2)
+    p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--allow-filename-video-fallback", action="store_true")
+    p.add_argument("--allow-clip-fallback", action="store_true",
+                   help="Continue with zeroed CLIP features if CLIP fails to load.")
     return p.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    build_sequences(
-        jsonl_path=Path(args.jsonl),
+    if args.format != "llmstu":
+        raise SystemExit("Legacy path is deprecated for building; use --format llmstu.")
+    build_sequences_llmstu(
+        label_dir=Path(args.labels),
         image_root=Path(args.image_root),
         output_dir=Path(args.output_dir),
+        frame_to_video_path=Path(args.frame_to_video),
         min_track_len=args.min_track_len,
         max_track_len=args.max_track_len,
+        val_fraction=args.val_fraction,
+        seed=args.seed,
+        allow_filename_fallback=args.allow_filename_video_fallback,
+        allow_clip_fallback=args.allow_clip_fallback,
     )
-

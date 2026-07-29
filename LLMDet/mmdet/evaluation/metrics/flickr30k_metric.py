@@ -3,6 +3,7 @@ from collections import defaultdict
 from typing import Dict, List, Optional, Sequence
 
 import numpy as np
+import torch
 from mmengine.evaluator import BaseMetric
 from mmengine.logging import MMLogger
 
@@ -108,7 +109,20 @@ class Flickr30kMetric(BaseMetric):
             phrases = data_sample['phrases']
             assert len(gt) == len(gt_label)
 
-            self.results.append((pred, gt, gt_label, phrases))
+            # Keep tensors on CPU so distributed result collection does not
+            # pickle CUDA storages and OOM on rank0 during evaluate().
+            pred_cpu = {
+                'bboxes': pred['bboxes'].detach().cpu(),
+                'labels': pred['labels'].detach().cpu(),
+            }
+            if torch.is_tensor(gt):
+                gt = gt.detach().cpu()
+            if torch.is_tensor(gt_label):
+                gt_label = gt_label.detach().cpu().numpy()
+            else:
+                gt_label = np.asarray(gt_label, dtype=np.int64)
+
+            self.results.append((pred_cpu, gt, gt_label, phrases))
 
     def compute_metrics(self, results: list) -> Dict[str, float]:
         """Compute the metrics from processed results.
