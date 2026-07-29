@@ -165,13 +165,16 @@ class StudentFeatureExtractor:
         feats = []
         for ch in chans:
             chf = ch.astype(np.float32)
+            # one partition-based call for all three percentiles: identical
+            # values to separate np.percentile calls at ~1/3 the sort cost
+            p25, p50, p75 = np.percentile(chf, (25, 50, 75))
             feats.extend(
                 [
                     float(chf.mean()),
                     float(chf.std()),
-                    float(np.percentile(chf, 25)),
-                    float(np.percentile(chf, 50)),
-                    float(np.percentile(chf, 75)),
+                    float(p25),
+                    float(p50),
+                    float(p75),
                     float(chf.min()),
                     float(chf.max()),
                     float((chf > 200).mean()),
