@@ -189,8 +189,10 @@ def run_pass(cfg, args, student_count=None):
             tracks = tracker.update(dets, det_feats)
 
         with timer("features"):
-            for t in tracks:
-                feats[t.track_id].append(feat.extract(frame, t.bbox_xyxy))
+            if tracks:
+                batch = feat.extract_batch(frame, [t.bbox_xyxy for t in tracks])
+                for t, f in zip(tracks, batch):
+                    feats[t.track_id].append(f)
 
         with timer("temporal_model"):
             for t in tracks:

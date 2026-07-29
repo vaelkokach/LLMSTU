@@ -301,6 +301,9 @@ def build_sequences_llmstu(
                         frame_cache = (str(img_path), frame)
                     if frame is None:
                         continue
+                    # TODO: regroup this per-track loop by frame so all students
+                    # of a frame share one extract_batch() CLIP call (5-10x
+                    # faster builds); requires restructuring the track loop.
                     feats.append(extractor.extract(frame, obs.bbox_xyxy))
                     labels.append(obs.label_id)
                     times.append(obs.time_s)

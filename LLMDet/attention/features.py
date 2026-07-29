@@ -92,36 +92,60 @@ class StudentFeatureExtractor:
         return d
 
     def extract(self, frame_bgr: np.ndarray, bbox_xyxy: List[float]) -> np.ndarray:
-        x1, y1, x2, y2 = [int(v) for v in bbox_xyxy]
+        return self.extract_batch(frame_bgr, [bbox_xyxy])[0]
+
+    def extract_batch(self, frame_bgr: np.ndarray, bboxes_xyxy: List[List[float]]) -> np.ndarray:
+        """Features for every box of one frame with a single CLIP forward pass.
+
+        Per-crop CLIP calls cost ~20 ms/student and dominated the real-time
+        budget at high student counts; batching flattens that to one call per
+        frame. Returns [N, output_dim()]; degenerate boxes yield zero rows.
+        """
+        n = len(bboxes_xyxy)
+        out = np.zeros((n, self.output_dim()), dtype=np.float32)
+        if n == 0:
+            return out
+
         h, w = frame_bgr.shape[:2]
-        x1 = max(0, min(x1, w - 1))
-        x2 = max(0, min(x2, w - 1))
-        y1 = max(0, min(y1, h - 1))
-        y2 = max(0, min(y2, h - 1))
-        if x2 <= x1 or y2 <= y1:
-            return np.zeros((self.output_dim(),), dtype=np.float32)
+        crops, clipped, valid_idx = [], [], []
+        for i, bbox in enumerate(bboxes_xyxy):
+            x1, y1, x2, y2 = [int(v) for v in bbox]
+            x1 = max(0, min(x1, w - 1))
+            x2 = max(0, min(x2, w - 1))
+            y1 = max(0, min(y1, h - 1))
+            y2 = max(0, min(y2, h - 1))
+            if x2 <= x1 or y2 <= y1:
+                continue
+            crops.append(frame_bgr[y1:y2, x1:x2])
+            clipped.append((x1, y1, x2, y2))
+            valid_idx.append(i)
 
-        crop = frame_bgr[y1:y2, x1:x2]
-        parts = [
-            self._clip(crop),
-            self._geom(x1, y1, x2, y2, w, h),
-            self._color_stats(crop),
-            self._posture_geom(crop, x1, y1, x2, y2, w, h),
-        ]
-        if self.head_pose is not None and self.head_pose.available():
-            head_h = max(1, int(0.35 * (y2 - y1)))
-            parts.append(self.head_pose.estimate(crop[:head_h]).astype(np.float32))
-        return np.concatenate(parts, axis=0).astype(np.float32)
+        if not crops:
+            return out
 
-    def _clip(self, crop_bgr: np.ndarray) -> np.ndarray:
+        clip_feats = self._clip_batch(crops)
+        for row, (crop, (x1, y1, x2, y2), i) in enumerate(zip(crops, clipped, valid_idx)):
+            parts = [
+                clip_feats[row],
+                self._geom(x1, y1, x2, y2, w, h),
+                self._color_stats(crop),
+                self._posture_geom(crop, x1, y1, x2, y2, w, h),
+            ]
+            if self.head_pose is not None and self.head_pose.available():
+                head_h = max(1, int(0.35 * (y2 - y1)))
+                parts.append(self.head_pose.estimate(crop[:head_h]).astype(np.float32))
+            out[i] = np.concatenate(parts, axis=0).astype(np.float32)
+        return out
+
+    def _clip_batch(self, crops_bgr: List[np.ndarray]) -> np.ndarray:
         if not self.clip_enabled or self.clip_model is None or self.clip_processor is None:
-            return np.zeros((self.clip_dim,), dtype=np.float32)
-        rgb = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2RGB)
-        inp = self.clip_processor(images=Image.fromarray(rgb), return_tensors="pt").to(self.device)
+            return np.zeros((len(crops_bgr), self.clip_dim), dtype=np.float32)
+        images = [Image.fromarray(cv2.cvtColor(c, cv2.COLOR_BGR2RGB)) for c in crops_bgr]
+        inp = self.clip_processor(images=images, return_tensors="pt").to(self.device)
         with torch.inference_mode():
             f = self.clip_model.get_image_features(**inp)
             f = f / (f.norm(dim=-1, keepdim=True) + 1e-6)
-        return f[0].detach().float().cpu().numpy()
+        return f.detach().float().cpu().numpy()
 
     def _geom(self, x1: int, y1: int, x2: int, y2: int, w: int, h: int) -> np.ndarray:
         bw = max(1.0, float(x2 - x1))

@@ -179,9 +179,11 @@ def main():
         preds: Dict[int, Tuple[str, float]] = {}
 
         active_ids = set()
-        for t in tracks:
+        track_feats = (
+            feat.extract_batch(frame, [t.bbox_xyxy for t in tracks]) if tracks else []
+        )
+        for t, f in zip(tracks, track_feats):
             active_ids.add(t.track_id)
-            f = feat.extract(frame, t.bbox_xyxy)
             feats[t.track_id].append(f)
             if len(feats[t.track_id]) < int(cfg["inference"].get("min_frames_for_pred", 4)):
                 continue
