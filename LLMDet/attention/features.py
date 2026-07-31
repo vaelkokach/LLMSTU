@@ -12,33 +12,17 @@ except ImportError:
     CLIPProcessor = None
 
 
-class HeadPoseEstimator:
-    """Pluggable head-pose interface (yaw/pitch/roll in degrees).
-
-    No estimator is bundled yet: :meth:`available` returns False unless a
-    backend is configured, and callers must skip the block in that case. This
-    exists so a real model (e.g. 6DRepNet / SynergyNet on the head crop) can
-    be added later without touching the feature-assembly code.
-    """
-
-    OUTPUT_DIM = 3
-
-    def __init__(self, backend: Optional[str] = None, device: str = "cuda:0"):
-        self.backend = backend
-        self.device = device
-        self._model = None
-        if backend:
-            raise NotImplementedError(
-                f"Head-pose backend '{backend}' is not implemented yet."
-            )
-
-    def available(self) -> bool:
-        return self._model is not None
-
-    def estimate(self, head_crop_bgr: np.ndarray) -> np.ndarray:
-        if not self.available():
-            raise RuntimeError("No head-pose backend configured.")
-        raise NotImplementedError
+# Real implementation lives in attention/head_pose.py. Re-exported here so
+# existing imports (`from attention.features import HeadPoseEstimator`) keep
+# working and there is exactly ONE implementation rather than a stub plus a
+# real class that can drift apart.
+#
+# backend=None  -> unavailable, feature block omitted, 552-dim (unchanged;
+#                  existing checkpoints stay loadable)
+# backend="opencv"    -> +3 dims = 555-dim; requires rebuilding sequences and
+#                  retraining the temporal model
+# backend="mediapipe" -> same 555 dims, metric angles, needs mediapipe installed
+from .head_pose import HeadPoseEstimator  # noqa: F401  (re-export)
 
 
 class StudentFeatureExtractor:

@@ -24,7 +24,32 @@ train_dataloader = dict(dataset=dict(ann_file=llmstu_train_ann))
 val_dataloader = dict(dataset=dict(ann_file=llmstu_val_ann))
 test_dataloader = dict(dataset=dict(ann_file=llmstu_val_ann))
 
-max_iter = 40000
+# --- Schedule: complete 25k run, resumable ---------------------------------
+# 25000 iters at global batch 8 over 36,339 images = 5.5 epochs.
+#
+# WHY 25k AND NOT 40k: the 40k figure was inherited from the March
+# student_only config, where R@1 climbed all the way to iter 37500 on a
+# TEMPORALLY LEAKED split — i.e. the apparent gain past 25k is consistent with
+# memorising near-duplicate val frames, not generalisation. On the clean
+# video-wise split, ARM B converged in 3.3 epochs (10k iters / 24,218 images;
+# its last two validations differ by 0.0001). 5.5 epochs is already well past
+# that, so 40k has no evidential support on leak-free data.
+#
+# Milestones are at 70% / 90% of the horizon — the same proportions the March
+# schedule used (28000/36000 of 40000) — so the LR decays INSIDE this run and
+# the final checkpoint is converged and directly citable.
+#
+# RESUMING: `max_iter` and `sched_horizon` are kept as separate names on
+# purpose. To extend the run, raise BOTH and relaunch with --resume; changing
+# max_iter alone would leave the LR floored at 4e-7 for the extension. To
+# resume an interrupted run unchanged, just relaunch with --resume:
+#   bash dist_train.sh configs/student_llmstu_exact.py 4 --amp --resume
+# `--resume` (no argument) sets cfg.resume=True and cfg.load_from=None, so the
+# runner auto-finds the latest checkpoint and restores optimizer, AMP-scaler,
+# scheduler and iteration state. Do NOT pass --resume on the first launch.
+max_iter = 25000
+sched_horizon = 25000
+
 train_cfg = dict(
     _delete_=True,
     type='IterBasedTrainLoop',
@@ -34,8 +59,8 @@ train_cfg = dict(
 param_scheduler = [
     dict(type='LinearLR', start_factor=0.001, by_epoch=False, begin=0,
          end=1000),
-    dict(type='MultiStepLR', begin=0, end=max_iter, by_epoch=False,
-         milestones=[28000, 36000], gamma=0.1),
+    dict(type='MultiStepLR', begin=0, end=sched_horizon, by_epoch=False,
+         milestones=[17500, 22500], gamma=0.1),
 ]
 
 default_hooks = dict(
