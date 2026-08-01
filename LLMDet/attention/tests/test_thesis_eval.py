@@ -494,3 +494,68 @@ def test_logits_from_probs_roundtrips_through_softmax():
     rng = np.random.default_rng(5)
     p = rng.dirichlet(np.ones(6), size=100)
     assert np.allclose(C.apply_temperature(p, 1.0), p, atol=1e-9)
+
+
+# ---------------------------------------------------------------- ordinal (CMOSE)
+
+from attention.thesis_eval import cmose as CM
+
+
+def test_cmose_subject_parsing():
+    assert CM.subject_of("video5_146_person5") == "v5_p5"
+    assert CM.subject_of("video12_3_person1") == "v12_p1"
+    with pytest.raises(ValueError):
+        CM.subject_of("not_a_cmose_clip")
+
+
+def test_subject_disjoint_split_shares_no_subject():
+    subj = np.array([f"s{i // 10}" for i in range(500)])
+    y = np.arange(500) % 4
+    tr, va, te = CM.subject_disjoint_split(subj, y)
+    assert tr.sum() + va.sum() + te.sum() == 500
+    assert not (set(subj[tr]) & set(subj[te]))
+    assert not (set(subj[tr]) & set(subj[va]))
+    assert not (set(subj[va]) & set(subj[te]))
+
+
+def test_quadratic_weighted_kappa_bounds():
+    y = np.array([0, 1, 2, 3] * 25)
+    assert CM.quadratic_weighted_kappa(y, y) == pytest.approx(1.0)
+    # systematic reversal is worse than chance
+    assert CM.quadratic_weighted_kappa(y, 3 - y) < 0.0
+
+
+def test_qwk_penalises_distant_confusions_more():
+    """The property that makes QWK the right ordinal statistic."""
+    y = np.array([0] * 50 + [3] * 50)
+    near = np.array([1] * 50 + [2] * 50)      # off by 1 and 1
+    far = np.array([3] * 50 + [0] * 50)       # off by 3 and 3
+    assert CM.quadratic_weighted_kappa(y, near) > CM.quadratic_weighted_kappa(y, far)
+
+
+def test_ordinal_mae_uses_the_level_distance():
+    y = np.array([0, 0]); p = np.array([1, 3])
+    assert CM.ordinal_metrics(y, p)["mae"] == pytest.approx(2.0)
+
+
+def test_spearman_monotone_and_reversed():
+    a = np.arange(50)
+    assert CM.spearman(a, a * 3.0) == pytest.approx(1.0)
+    assert CM.spearman(a, -a * 1.0) == pytest.approx(-1.0)
+
+
+def test_average_accuracy_is_not_accuracy_under_imbalance():
+    """CMOSE is 69% one level, so the two must be reported separately."""
+    y = np.array([2] * 90 + [0] * 10)
+    p = np.full(100, 2)
+    m = CM.ordinal_metrics(y, p)
+    assert m["accuracy"] == pytest.approx(0.9)
+    assert m["average_accuracy"] == pytest.approx(0.5)
+
+
+def test_ordinal_metrics_preserve_level_order():
+    y = np.arange(4); p = np.arange(4)
+    m = CM.ordinal_metrics(y, p)
+    assert m["level_order"] == CM.LEVELS
+    assert list(m["per_class_f1"].keys()) == CM.LEVELS
+    assert m["macro_f1"] == pytest.approx(1.0)
