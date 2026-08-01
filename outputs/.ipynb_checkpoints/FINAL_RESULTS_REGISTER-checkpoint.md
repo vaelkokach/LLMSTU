@@ -4,7 +4,7 @@
 
 Every entry carries `citable`. A false value is not an oversight — it records a number that exists in the repository or in FINDINGS.md and must NOT enter the thesis, together with the reason. Never mix metrics from different tables into one leaderboard: accuracy, macro-F1, mAP, MSE, retrieval R@1 and event recall answer different questions.
 
-134 of 207 entries are citable.
+99 of 170 entries are citable.
 
 ## A (external)
 
@@ -201,55 +201,13 @@ Every entry carries `citable`. A false value is not an oversight — it records 
 | mstcn::570_full · accuracy | 0.7752 | [0.7571, 0.7934] | val | ✅ | mean over 3 seeds (sd 0.0160); seed-42 video-bootstrap CI [0.7275, 0.8159] |
 | mstcn::570_full · macro_auprc | 0.5048 | [0.4946, 0.5151] | val | ✅ | mean over 3 seeds (sd 0.0091); seed-42 video-bootstrap CI [0.4005, 0.5500] |
 | mstcn::570_full · ece | 0.0211 | [0.0014, 0.0409] | val | ✅ | mean over 3 seeds (sd 0.0174); seed-42 video-bootstrap CI [0.0088, 0.0310] |
-| asrf::556_hp · macro_f1 | 0.4771 | [0.4588, 0.4953] | test | ✅ | mean over 3 seeds (sd 0.0161); seed-42 video-bootstrap CI [0.4061, 0.5125] |
-| asrf::556_hp · balanced_accuracy | 0.5127 | [0.4734, 0.552] | test | ✅ | mean over 3 seeds (sd 0.0348); seed-42 video-bootstrap CI [0.4498, 0.5484] |
-| asrf::556_hp · accuracy | 0.7096 | [0.6846, 0.7345] | test | ✅ | mean over 3 seeds (sd 0.0221); seed-42 video-bootstrap CI [0.6781, 0.7682] |
-| asrf::556_hp · macro_auprc | 0.4734 | [0.4576, 0.4891] | test | ✅ | mean over 3 seeds (sd 0.0139); seed-42 video-bootstrap CI [0.4111, 0.5118] |
-| asrf::556_hp · ece | 0.0333 | [0.0099, 0.0566] | test | ✅ | mean over 3 seeds (sd 0.0207); seed-42 video-bootstrap CI [0.0381, 0.0835] |
-| asrf::570_full · macro_f1 | 0.4924 | [0.4713, 0.5136] | test | ✅ | mean over 3 seeds (sd 0.0187); seed-42 video-bootstrap CI [0.3985, 0.5156] |
-| asrf::570_full · balanced_accuracy | 0.5213 | [0.5192, 0.5233] | test | ✅ | mean over 3 seeds (sd 0.0018); seed-42 video-bootstrap CI [0.4461, 0.5636] |
-| asrf::570_full · accuracy | 0.7348 | [0.7092, 0.7604] | test | ✅ | mean over 3 seeds (sd 0.0227); seed-42 video-bootstrap CI [0.6506, 0.7595] |
-| asrf::570_full · macro_auprc | 0.4822 | [0.4676, 0.4969] | test | ✅ | mean over 3 seeds (sd 0.0129); seed-42 video-bootstrap CI [0.3946, 0.5154] |
-| asrf::570_full · ece | 0.0309 | [0.0231, 0.0388] | test | ✅ | mean over 3 seeds (sd 0.0069); seed-42 video-bootstrap CI [0.0183, 0.0757] |
-| mstcn::556_hp · macro_f1 | 0.4998 | [0.4869, 0.5127] | test | ✅ | mean over 3 seeds (sd 0.0114); seed-42 video-bootstrap CI [0.4363, 0.5449] |
-| mstcn::556_hp · balanced_accuracy | 0.519 | [0.4929, 0.5452] | test | ✅ | mean over 3 seeds (sd 0.0231); seed-42 video-bootstrap CI [0.4706, 0.5851] |
-| mstcn::556_hp · accuracy | 0.7589 | [0.7563, 0.7615] | test | ✅ | mean over 3 seeds (sd 0.0023); seed-42 video-bootstrap CI [0.7194, 0.7985] |
-| mstcn::556_hp · macro_auprc | 0.4888 | [0.4784, 0.4992] | test | ✅ | mean over 3 seeds (sd 0.0092); seed-42 video-bootstrap CI [0.4170, 0.5422] |
-| mstcn::556_hp · ece | 0.0317 | [0.0283, 0.0351] | test | ✅ | mean over 3 seeds (sd 0.0030); seed-42 video-bootstrap CI [0.0148, 0.0532] |
-| mstcn::570_full · macro_f1 | 0.4881 | [0.4625, 0.5137] | test | ✅ | mean over 3 seeds (sd 0.0226); seed-42 video-bootstrap CI [0.4447, 0.5398] |
-| mstcn::570_full · balanced_accuracy | 0.481 | [0.4476, 0.5144] | test | ✅ | mean over 3 seeds (sd 0.0295); seed-42 video-bootstrap CI [0.4410, 0.5481] |
-| mstcn::570_full · accuracy | 0.7651 | [0.7446, 0.7857] | test | ✅ | mean over 3 seeds (sd 0.0182); seed-42 video-bootstrap CI [0.7392, 0.8132] |
-| mstcn::570_full · macro_auprc | 0.4767 | [0.4633, 0.49] | test | ✅ | mean over 3 seeds (sd 0.0118); seed-42 video-bootstrap CI [0.4205, 0.5340] |
-| mstcn::570_full · ece | 0.0246 | [0.021, 0.0282] | test | ✅ | mean over 3 seeds (sd 0.0032); seed-42 video-bootstrap CI [0.0122, 0.0446] |
 | DDP shard-averaged macro-F1 (552 / 556 / 570) | 0.4096, 0.4364, 0.4400 | — | rank-0 validation shard | ⛔ | DO NOT CITE. Computed on one rank's shard, not the full validation set. Under correct measurement the 556/570 ordering reverses. |
 | legacy single-process macro-F1 (552 / 556 / 570) | 0.3835, 0.4098, 0.4080 | — | validation on the sequence builder's own 102/25 split | ⛔ | Superseded. Correct as far as it goes, but (a) it is a VALIDATION number on a split with no test set, (b) single seed, (c) no confidence interval, (d) checkpoint selected by argmax over a metric that swings ±0.05 between epochs. Use the thesis_eval ladder instead. |
-
-## external (CMOSE, separate task)
-
-| metric | value | 95% CI | split | citable | caveat |
-|---|---|---|---|:--:|---|
-| CMOSE · subjects appearing in >1 official split | 101/103 | — | CMOSE official release | ✅ | CMOSE's released split assigns clips, not subjects. The same person, webcam and session therefore appear in train and test. This is not a defect of the dataset — the paper reports a random segment split — but any number computed under it measures something weaker than subject-level generalisation. |
-| CMOSE · accuracy (official split) | 0.7179 | — | CMOSE test (official) | ✅ | mean over 3 seeds (sd 0.0030). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP. |
-| CMOSE · average_accuracy (official split) | 0.6007 | — | CMOSE test (official) | ✅ | mean over 3 seeds (sd 0.0086). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP. |
-| CMOSE · macro_f1 (official split) | 0.5733 | — | CMOSE test (official) | ✅ | mean over 3 seeds (sd 0.0027). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP. |
-| CMOSE · mae (official split) | 0.3123 | — | CMOSE test (official) | ✅ | mean over 3 seeds (sd 0.0029). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP. |
-| CMOSE · quadratic_weighted_kappa (official split) | 0.5369 | — | CMOSE test (official) | ✅ | mean over 3 seeds (sd 0.0039). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP. |
-| CMOSE · spearman (official split) | 0.5354 | — | CMOSE test (official) | ✅ | mean over 3 seeds (sd 0.0086). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP. |
-| CMOSE · accuracy (subject_disjoint split) | 0.6006 | — | CMOSE test (subject_disjoint) | ✅ | mean over 3 seeds (sd 0.0058). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP. |
-| CMOSE · average_accuracy (subject_disjoint split) | 0.4347 | — | CMOSE test (subject_disjoint) | ✅ | mean over 3 seeds (sd 0.0084). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP. |
-| CMOSE · macro_f1 (subject_disjoint split) | 0.4111 | — | CMOSE test (subject_disjoint) | ✅ | mean over 3 seeds (sd 0.0051). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP. |
-| CMOSE · mae (subject_disjoint split) | 0.4459 | — | CMOSE test (subject_disjoint) | ✅ | mean over 3 seeds (sd 0.0123). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP. |
-| CMOSE · quadratic_weighted_kappa (subject_disjoint split) | 0.3167 | — | CMOSE test (subject_disjoint) | ✅ | mean over 3 seeds (sd 0.0319). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP. |
-| CMOSE · spearman (subject_disjoint split) | 0.3221 | — | CMOSE test (subject_disjoint) | ✅ | mean over 3 seeds (sd 0.0305). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP. |
 
 ## runtime
 
 | metric | value | 95% CI | split | citable | caveat |
 |---|---|---|---|:--:|---|
-| DEPLOYED real-scene throughput | 3.05 FPS | — | 0325.mp4, 120 frames, ~6 students | ✅ | THIS is the deployed configuration. Single A100. Detector ~124-159 ms, features 141.6 ms (head pose is ~100 ms of that), temporal 47.6 ms. p95 367 ms. Describe the system as NEAR-real-time: 100% of frames miss a 10 fps budget. |
-| DEPLOYED throughput with 30 students | 0.88 FPS | — | 0325.mp4 with synthesised detections | ✅ | p99 1557 ms. Per-student feature extraction dominates beyond ~5 students. |
-| same-session throughput WITHOUT head pose | 5.32 FPS | — | 0325.mp4, 120 frames, ~6 students | ✅ | Like-for-like control measured in the same session as the deployed figure. The head-pose block therefore costs ~100 ms/frame at ~6 students - more than the detector. |
-| archived 2026-07-31 throughput | 7.1 FPS | — | 0325.mp4, 110 frames | ⛔ | DO NOT CITE as the system's speed. Measured with a 552-dim extractor, i.e. WITHOUT the head-pose block the deployed model requires, so it is not the deployed configuration. It is also not reproducible on this shared machine even for its own config (5.32 in-session). |
-| dashboard end-to-end verification (2026-08-01, first attempt) | INVALID | — | 0325.mp4 | ⛔ | DO NOT CITE. The config declared input_dim 570 against a 552-dim checkpoint; strict=False raises on a size mismatch, a bare except swallowed it, and the dashboard served cues from a RANDOMLY INITIALISED network. Re-verified 2026-08-01 with MS-TCN-556. |
-| dashboard alert threshold | 0.64 | — | fitted on validation, frozen | ✅ | Lowest threshold with selective accuracy >= 85%: retains 72.1% of frames at 85.4% accuracy vs 75.6% at full coverage. Display threshold 0.48 retains 90.4% at 79.4%. Neither is tuned on test or on the human-gold set. |
+| real-scene throughput | 7.1 FPS | — | 0325.mp4, 110 frames | ✅ | Single A100, batched CLIP. Detector is a fixed ~122 ms of the ~140 ms frame budget. Describe the system as NEAR-real-time; 7.1 FPS does not meet a 25 fps camera rate. |
+| throughput with 30 synthetic students | 2.0 FPS | — | 0325.mp4 with synthesised detections | ✅ | Scaling limitation: per-student feature extraction dominates beyond ~10 students. |
 

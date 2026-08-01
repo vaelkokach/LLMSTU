@@ -233,18 +233,49 @@ STATIC_ENTRIES: List[Dict] = [
                  "on a split with no test set, (b) single seed, (c) no confidence interval, "
                  "(d) checkpoint selected by argmax over a metric that swings ±0.05 between "
                  "epochs. Use the thesis_eval ladder instead."),
-    entry("real-scene throughput", 7.1, unit="FPS", split="0325.mp4, 110 frames",
-          evidence="work_dirs/profiling/report_scaling_batched.json; FINDINGS.md §7",
+    entry("DEPLOYED real-scene throughput", 3.05, unit="FPS",
+          split="0325.mp4, 120 frames, ~6 students",
+          evidence="work_dirs/profiling/report_deployed_mstcn556.json; FINDINGS.md §11.12",
           evaluator="profiling/profile_pipeline.py", citable=True, branch="runtime",
-          caveat="Single A100, batched CLIP. Detector is a fixed ~122 ms of the ~140 ms "
-                 "frame budget. Describe the system as NEAR-real-time; 7.1 FPS does not "
-                 "meet a 25 fps camera rate."),
-    entry("throughput with 30 synthetic students", 2.0, unit="FPS",
+          config="configs/attention_runtime.yaml (MS-TCN, 556-dim, MediaPipe head pose)",
+          caveat="THIS is the deployed configuration. Single A100. Detector ~124-159 ms, "
+                 "features 141.6 ms (head pose is ~100 ms of that), temporal 47.6 ms. "
+                 "p95 367 ms. Describe the system as NEAR-real-time: 100% of frames miss "
+                 "a 10 fps budget."),
+    entry("DEPLOYED throughput with 30 students", 0.88, unit="FPS",
           split="0325.mp4 with synthesised detections",
-          evidence="work_dirs/profiling/report_scaling_batched.json", citable=True,
+          evidence="work_dirs/profiling/report_deployed_mstcn556.json", citable=True,
           evaluator="profiling/profile_pipeline.py", branch="runtime",
-          caveat="Scaling limitation: per-student feature extraction dominates beyond ~10 "
-                 "students."),
+          caveat="p99 1557 ms. Per-student feature extraction dominates beyond ~5 students."),
+    entry("same-session throughput WITHOUT head pose", 5.32, unit="FPS",
+          split="0325.mp4, 120 frames, ~6 students",
+          evidence="work_dirs/profiling/report_legacy_552_samesession.json", citable=True,
+          evaluator="profiling/profile_pipeline.py", branch="runtime",
+          config="configs/attention_temporal.yaml (552-dim, no head pose)",
+          caveat="Like-for-like control measured in the same session as the deployed "
+                 "figure. The head-pose block therefore costs ~100 ms/frame at ~6 "
+                 "students - more than the detector."),
+    entry("archived 2026-07-31 throughput", 7.1, unit="FPS", split="0325.mp4, 110 frames",
+          evidence="work_dirs/profiling/report_scaling_batched.json; FINDINGS.md §7",
+          evaluator="profiling/profile_pipeline.py", citable=False, branch="runtime",
+          caveat="DO NOT CITE as the system's speed. Measured with a 552-dim extractor, "
+                 "i.e. WITHOUT the head-pose block the deployed model requires, so it is "
+                 "not the deployed configuration. It is also not reproducible on this "
+                 "shared machine even for its own config (5.32 in-session)."),
+    entry("dashboard end-to-end verification (2026-08-01, first attempt)", "INVALID",
+          split="0325.mp4", evidence="FINDINGS.md §6d.3, §11.12", citable=False,
+          evaluator="tools/dashboard/pipeline_bridge.py", branch="runtime",
+          caveat="DO NOT CITE. The config declared input_dim 570 against a 552-dim "
+                 "checkpoint; strict=False raises on a size mismatch, a bare except "
+                 "swallowed it, and the dashboard served cues from a RANDOMLY "
+                 "INITIALISED network. Re-verified 2026-08-01 with MS-TCN-556."),
+    entry("dashboard alert threshold", 0.64, split="fitted on validation, frozen",
+          evidence="work_dirs/thesis/runtime/mstcn_556_thresholds.json", citable=True,
+          evaluator="thesis_eval/runtime.py", branch="runtime",
+          caveat="Lowest threshold with selective accuracy >= 85%: retains 72.1% of "
+                 "frames at 85.4% accuracy vs 75.6% at full coverage. Display threshold "
+                 "0.48 retains 90.4% at 79.4%. Neither is tuned on test or on the "
+                 "human-gold set."),
 ]
 
 

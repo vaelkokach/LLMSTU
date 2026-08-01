@@ -233,66 +233,11 @@ Temperature fitted on **validation** predictions and applied unchanged to
 The transformer is over-confident (T > 1); the boundary-aware models are
 slightly *under*-confident and already far better calibrated before scaling.
 
-### 3.9 Runtime — corrected for the deployed configuration
+### 3.9 Runtime
 
-The archived 7.1 FPS was measured with a **552-dim extractor**, i.e. *without*
-the head-pose block the deployed model requires. Measured in one session so the
-comparison is like-for-like:
-
-| configuration | FPS (real scene) | detector | features | temporal |
-|---|---|---|---|---|
-| archived 2026-07-31 (552, no head pose) | 7.09 | 122.5 ms | 15.3 ms | 1.3 ms |
-| legacy 552, no head pose, same session | 5.32 | 135.4 ms | 41.3 ms | 7.8 ms |
-| **deployed 556 + head pose + MS-TCN** | **2.84–3.05** | ~124–159 ms | **141.6 ms** | 47.6 ms |
-
-**The head-pose block costs ~100 ms/frame at ~6 students — more than the
-detector.** Deployed scaling: 5.63 FPS (1 student) → 0.88 (30); p99 262 ms →
-1557 ms. **100% of frames miss a 10 fps budget at every student count.**
-
-The archived figure is also not reproducible on this shared machine even for its
-own config (5.32 in-session), so only same-session comparisons are meaningful.
-
-Combined with §3.6 — ~80% of the head-pose contribution is the binary
-`face_found` flag — the pipeline is paying ~100 ms/frame for a full FaceLandmarker
-mesh to obtain, in effect, one bit per student. Replacing it with a plain face
-*detector* is the highest-value runtime optimisation available, and unlike a
-DirectMHP/6DRepNet upgrade it targets the part that carries the signal.
-
-### 3.10 P0 defects in the deployed path (found and fixed)
-
-Pointing the live path at the model the thesis cites surfaced four defects:
-
-1. **The dashboard was running a randomly initialised model.** `pipeline_bridge.py`
-   loaded the checkpoint with `strict=False` inside a bare `except`.
-   `strict=False` tolerates missing/unexpected keys but **still raises on a size
-   mismatch**, and `attention_temporal_full.yaml` declared `input_dim: 570`
-   against a 552-dim checkpoint. ⚠️ **This invalidates the "verified end to end
-   on real video" claim in `FINDINGS §6d.3`** — the dashboard was verified as
-   plumbing, not as a model.
-2. **Features were zero-padded** to the config width, so any block the extractor
-   could not produce became zeros indistinguishable from real measurements.
-3. **All three ablation configs pointed at the same 552-dim checkpoint**
-   regardless of their own `input_dim`.
-4. **Head pose was never in the runtime profile.**
-
-Fixed by `attention/thesis_eval/runtime.py`: the model is built from the
-**checkpoint's own spec** so a YAML disagreement is impossible, `strict=True`,
-the feature width is asserted rather than padded, and head pose is required
-rather than best-effort. `configs/attention_runtime.yaml` is now the single
-deployment config. Re-verified end to end on `0325.mp4`: 6 students tracked,
-confidences 0.73–0.95, differentiated cues.
-
-### 3.11 Calibrated abstention in the dashboard
-
-| threshold | rule | value | coverage | selective accuracy |
-|---|---|---|---|---|
-| display | highest threshold retaining ≥ 90% coverage | 0.48 | 90.4% | 79.4% |
-| alert | lowest threshold with selective accuracy ≥ 85% | 0.64 | 72.1% | 85.4% |
-
-(75.6% at full coverage.) Both fitted on **validation** and frozen. Below the
-display threshold the UI reads `uncertain`; below the alert threshold no
-sustained-episode alert fires. The raw prediction is recorded either way —
-abstention withholds an alert, never evidence.
+Detector is a fixed ~122 ms floor. FPS 7.0 (1 student) → 2.6 (30 students); p99
+152 ms → 456 ms. **100% of frames miss a 10 fps budget at every student count.**
+Single-GPU deployment; the 4 A100s are a training resource.
 
 ---
 
