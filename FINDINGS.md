@@ -1,7 +1,7 @@
 # Experimental findings — running log
 
 **Project:** Deep Learning-Based Real-Time Student Behavior Analysis and Attention Loss Detection
-**Started:** 2026-07-29 · **Last updated:** 2026-07-31 06:40 UTC
+**Started:** 2026-07-29 · **Last updated:** 2026-07-31 20:30 UTC
 
 This is the living record of what has been measured and what it means. Companion
 documents:
@@ -23,15 +23,20 @@ documents:
 | Video identity recovery | anchor accuracy | 4660/4660 = 100% | ✅ |
 | Deduplication | 283,913 → 84,950 crops | 70% removed | ✅ |
 | Split integrity | video-wise, 73/27/27 | leak-free | ✅ |
-| Caption→box matching | ordinal vs Hungarian | 26.1% → 92.3% ⚠️ | ⚠️ caveat §3.2 |
+| Caption→box matching | ordinal vs Hungarian (clean, sw=0) | **26.1% → 79.0%** | ✅ §3.2 |
 | Matching calibration | AUROC / ECE | 0.760 / 0.011 | ✅ |
 | Detector ARM A (ordinal) | R@1 @10k | 0.3230 | ✅ done |
 | Detector ARM B (hungarian) | R@1 @10k | **0.4954 (+17.2 vs A)** | ✅ done |
 | Detector ARM C (p90) | R@1 @10k | 0.4787 (−1.7 vs B) | ✅ done |
-| Detector main (exact) | R@1 @25k | — | 🔄 running (ETA ~12:35) |
-| Temporal model | macro-F1 (6-class) | 0.384 | ✅ |
+| **Detector main (exact)** | **R@1 @25k** | **0.6343** (vs leaked 0.6103) | ✅ done |
+| **Temporal model** | **macro-F1, single-process** | **0.3835 → 0.4098 → 0.4080** (552→556→570) | ✅ §6f |
 | Teacher label quality | frame cue agreement | 87.4% | ✅ |
-| Event layer | model vs teacher miss rate | 89% | ❌ open gap |
+| **Event layer** | **model vs HUMAN gold** | **10/24 (556) · 8/24 (570, tighter bounds); teacher 18/24** | ⚠️ §6e |
+| Zero-shot SCB transfer | R@1 | 0.0322 ⚠️ confounded | ⚠️ §6b |
+| **DIPSER cue↔engagement** | **Spearman ρ** | **+0.172 (p<0.0001) — REVERSED** | ★ §6c |
+| **Facial expression → boredom** | **AUROC vs expert** | **0.544** (chance 0.5) | ⚠️ §6d.1 |
+| **Body language + gaze** | temporal features | 7 dims, built | ✅ §6d.2 |
+| **Dashboard** | instructor UI | built + verified | ✅ §6d.3 |
 | Real-time | FPS (real scene) | 7.1 | ✅ |
 
 ---
@@ -124,46 +129,48 @@ order* — an ordering with no relationship to whatever order the captioner used
 missed detection shifts every subsequent student by one and silently mislabels the
 whole frame.
 
-### 3.2 Matching accuracy ⚠️
+### 3.2 Matching accuracy — RESOLVED 2026-07-31 (clean, full scale)
 
-Evaluated against LLMSTU exact correspondences, **72,398 frames / 261,397 assignments**:
+Evaluated against LLMSTU exact correspondences, **72,398 frames / 261,397
+assignments**, `spatial_weight = 0.0` (pure content-based CLIP matching):
 
 | method | assignment acc | wrong rate |
 |---|---|---|
-| ordinal (confidence order) | 0.2607 | 0.7393 |
-| **hungarian** | **0.9231** ⚠️ | 0.0769 |
-| **sinkhorn** | **0.9231** ⚠️ | 0.0769 |
-| ordinal_lr (left-to-right) | **1.0000** ⚠️⚠️ | 0.0000 |
+| ordinal (detector-confidence order) | **0.2607** | 0.7393 |
+| **hungarian** | **0.7896** | 0.2104 |
+| sinkhorn | 0.7896 | 0.2104 |
+| ordinal_lr (left-to-right) | 1.0000 † | 0.0000 |
 
-By student count: Hungarian 0.987 (n=2), 0.964 (n=3), 0.897 (n≥4). Ordinal degrades
-hard with crowding — 0.502 (n=2) → 0.193 (n≥4).
-→ `LLMDet/work_dirs/matching/results_lr_sw0.5.json`
+By student count — Hungarian degrades gracefully with crowding, ordinal collapses:
 
-> ### ⚠️ CAVEAT — the 92.3% figure is contaminated
->
-> That sweep ran with `spatial_weight = 0.5`. The spatial term
-> (`compatibility.py:72`) scores 1.0 "when unit ordinal rank equals the box's
-> left-to-right rank" — and `ordinal_lr` scores **exactly 1.0** on this benchmark,
-> proving that unit order *is* left-to-right box order in the ground truth by
-> construction. **The spatial prior therefore encodes the answer**, and 92.3% is
-> inflated by an unknown amount.
->
-> The clean CLIP-only measurement (`spatial_weight = 0.0`) is **81.5% Hungarian /
-> 81.7% Sinkhorn vs 26.5% ordinal** — but only over 500 stand-in frames, not the
-> full sweep.
-> → `LLMDet/work_dirs/matching/results_lr_sw0.0.json`
->
-> **Action required:** re-run the full sweep with `spatial_weight = 0.0` before
-> citing any matching accuracy. Cite **81.5%**, not 92.3%, until that lands.
->
-> **The training arms are unaffected.** `build_ablation_odvg.py:313` calls
-> `build_cost_matrix(sim, weights=CompatibilityWeights())`, whose defaults are
-> `clip=1.0, spatial=0.0`, and the source comment reads "deployable: no spatial
-> prior". ARM B/C labels are CLIP-only and clean.
->
-> That `ordinal_lr = 1.0` went unremarked until 2026-07-30 is itself an instance of
-> the post-mortem's central pattern: a benchmark shortcut that produces a *better*
-> number and therefore reads as success.
+| n students | ordinal | hungarian |
+|---|---|---|
+| 2 | 0.5020 | 0.9363 |
+| 3 | 0.3169 | 0.8617 |
+| ≥4 | 0.1932 | 0.7372 |
+
+→ `LLMDet/work_dirs/matching/results_lr_sw0.0.json`
+
+**CITE 0.7896, NOT 0.9231.** The earlier 92.3% came from a sweep with
+`spatial_weight = 0.5`, whose spatial term scores 1.0 when a unit's ordinal rank
+equals the box's left-to-right rank — and the ground truth *is* ordered
+left-to-right by construction, so the prior was feeding the answer into the cost
+matrix. Re-running at `spatial_weight = 0.0` costs **13.4 points** (0.9231 →
+0.7896) and is the honest number. Ordinal is unaffected at 0.2607, so the
+headline contrast is **26.1% → 79.0%, a 3.0× improvement**.
+
+† `ordinal_lr = 1.0` is correct **by construction, not a result**: the benchmark
+orders units left-to-right and the GT is built the same way. The tool's own help
+documents this. It is reported only to show the benchmark contains that shortcut
+— which is precisely why the spatial prior had to be disabled.
+
+**The training arms were never affected**: `build_ablation_odvg.py:313` uses
+`CompatibilityWeights()` defaults (`clip=1.0, spatial=0.0`), so ARM B/C labels
+were always CLIP-only. The A/B/C ablation and its +17.2 R@1 result stand.
+
+That `ordinal_lr = 1.0` sat unremarked in the results file for a day is another
+instance of the post-mortem's central pattern: a shortcut that produces a
+*better* number reads as success and draws no scrutiny.
 
 ### 3.3 Confidence calibration
 
@@ -304,6 +311,47 @@ bindings sharpen the whole ranking, not only the top-1 decision.
 | **10000 (final)** | **0.4787** | **0.9441** | **0.9913** |
 
 Same monotone-climb-then-plateau shape as ARM B, converged.
+
+### 3.4b MAIN RUN — thesis Table 1 (completed 2026-07-31 12:17)
+
+`student_llmstu_exact`, 25,000 iters (5.5 epochs over 36,339 frames / 141,522
+annotated students), 4×A100, leak-free video-wise split, LR milestones 17.5k/22.5k.
+
+| iter | R@1 | R@5 | R@10 |
+|---|---|---|---|
+| 2500 | 0.5630 | 0.9619 | 0.9932 |
+| 5000 | 0.5946 | 0.9722 | 0.9950 |
+| 7500 | 0.6031 | 0.9748 | 0.9954 |
+| 10000 | 0.6100 | 0.9751 | 0.9954 |
+| 12500 | 0.6158 | 0.9773 | 0.9952 |
+| 15000 | 0.6187 | 0.9785 | 0.9960 |
+| 17500 | 0.6292 | 0.9797 | 0.9957 |
+| 20000 | 0.6332 | 0.9807 | 0.9966 |
+| 22500 | **0.6351** (best) | 0.9810 | 0.9962 |
+| **25000 (final)** | **0.6343** | **0.9808** | **0.9963** |
+
+Converged — final two validations differ by 0.0008.
+
+**THE CITABLE GROUNDING NUMBER: R@1 = 0.6343** (report final-iteration as primary
+per the scoring convention in §3.4; best-val 0.6351 differs negligibly).
+
+Two comparisons that matter:
+
+| reference | R@1 | note |
+|---|---|---|
+| **main run, clean split** | **0.6343** | this result |
+| March 2026, *leaked* split, 40k iters | 0.6103 | ✗ invalid — val frames within ±2.5 s of train |
+| ARM B (Hungarian-inferred labels), 10k | 0.4954 | +13.9 pts for exact correspondences |
+
+**The honest number exceeds the compromised one.** The corrected pipeline does not
+merely restore credibility relative to March — it beats the inflated result on a
+split where memorisation is impossible, while using 25k iters instead of 40k. This
+is the strongest single argument that the data-pipeline rebuild (leak-free splits,
+dedup, exact correspondences) was the right call.
+
+Checkpoints preserved and byte-verified (`cmp`):
+`thesis_bundle/checkpoints/main_llmstu_exact_iter25000_final.pth`,
+`..._iter22500_bestR1.pth`.
 
 ### 3.5 FINAL ABLATION TABLE — thesis Table 2
 
@@ -461,6 +509,169 @@ behind the main run. Scores model / teacher / majority against the same human go
 the comparison is like-for-like, and excludes the detector and tracker by design
 (track identity comes from the manifest) so the number isolates the cue+event layers.
 
+### 6.0 P0.3 — MODEL vs HUMAN event gold (2026-07-31) ★ THESIS BRANCH-B HEADLINE
+
+Replaces the uninterpretable model-vs-teacher 89%. All three systems scored against
+the same 24 human episodes over 10 tracks; detector and tracker excluded by design
+(track identity from the manifest), so this isolates the cue + event layers.
+
+| system | frame acc | events | miss | onset err | dur err | FA/h |
+|---|---|---|---|---|---|---|
+| **model** (temporal transformer) | **0.755** | **6/24** | **0.750** | **1.6 s** | **2.3 s** | **1.6** |
+| teacher (Qwen3.5) — the ceiling | 0.874 | 18/24 | 0.250 | 1.7 s | 4.7 s | 4.7 |
+| majority-class control | — | 0/24 | 1.000 | — | — | 0.0 |
+
+→ `work_dirs/attention_temporal_v2/events_vs_human.json`
+
+**Reading this honestly:**
+- Frame level, the model reaches **86% of the teacher's accuracy** (0.755 / 0.874).
+- Event level, it reaches only **33% of the teacher's recall** (6 / 18). Frame
+  accuracy does not convert into episode detection — the errors cluster where
+  episodes begin and end.
+- It decisively beats the majority control (6 vs 0), so the model is doing real
+  work; this is not a degenerate classifier like the March one.
+- **On the events it does catch, it is more precise than the teacher**: duration
+  error 2.3 s vs 4.7 s, and 1.6 false alerts/hour vs 4.7. The model is
+  *conservative* — it under-fires but is accurate when it fires. For an
+  instructor-facing alert system that is the preferable failure direction, and
+  worth stating as such rather than treating 6/24 as simply bad.
+- Ceiling-relative framing for the write-up: 18/24 is the best any student of this
+  teacher could do. Report both, never 6/24 alone.
+
+**Two evaluator bugs found and fixed before these numbers were trusted** — both of
+the silent-plausibility type this project keeps hitting:
+
+1. `AttentionTransformer(per_frame=...)` was not passed, so it defaulted to
+   `False` and returned one label per *sequence* instead of per *frame*. The
+   checkpoint loads cleanly either way (identical head shape), so it failed
+   silently. Now raises if `per_frame` is false.
+2. Features were extracted from the **pre-cropped** image with the whole image as
+   the box, while `sequence_builder.py:300-307` extracts from the **full frame
+   with `bbox_person`**. That made 16 of 552 dims (8 geometry + 8 posture)
+   constant and information-free instead of frame-relative.
+
+Impact of fixing #2 alone: frame accuracy **0.342 → 0.755**, events **0/24 → 6/24**.
+The pre-fix numbers would have been reported as a catastrophic model failure.
+Lesson repeated: an evaluation harness that silently disagrees with the training
+harness produces a confident, wrong answer.
+
+### 6.0a P0.4 RESULT — head pose helps, most at event level (2026-07-31) ★
+
+Controlled ablation: identical sequences, split, schedule and seed; the ONLY
+difference is the 4-dim head-pose block (552 vs 556).
+
+**Frame level (val sequences, DDP-sharded — see caveat):**
+
+| class | 552 | 556 | Δ |
+|---|---|---|---|
+| screen_oriented | 0.835 | 0.862 | +0.027 |
+| **head_down** | 0.310 | **0.392** | **+0.082** |
+| uncertain | 0.351 | 0.382 | +0.031 |
+| looking_away | 0.294 | 0.312 | +0.018 |
+| **turned_to_peer** | 0.182 | 0.194 | +0.012 |
+| phone_use | 0.486 | 0.476 | −0.010 |
+| **macro-F1** | **0.4096** | **0.4364** | **+0.027** |
+
+**Event level vs HUMAN gold (the number that matters):**
+
+| | 552 | 556 | teacher |
+|---|---|---|---|
+| frame acc | 0.755 | **0.772** | 0.874 |
+| **events matched** | **6/24** | **10/24** | 18/24 |
+| miss rate | 0.750 | **0.583** | 0.250 |
+| onset err | 1.6 s | 10.4 s | 1.7 s |
+| duration err | 2.3 s | 10.6 s | 4.7 s |
+| false alerts/h | 1.6 | 2.4 | 4.7 |
+
+→ `work_dirs/attention_temporal_hp/events_vs_human.json`
+
+**Honest reading:**
+
+1. **Event recall improved 6 → 10 of 24 (+67% relative)** — from 33% to 56% of the
+   teacher ceiling (18/24). This is the largest single improvement to the thesis's
+   headline Branch B metric, and it validates the decision to treat `face_found`
+   as a feature rather than a failure flag.
+2. **The gain landed where `face_found` predicted, not where it was aimed.**
+   `head_down` (+0.082) was the biggest class gain, matching its 8%-vs-92%
+   detection signature. The two classes head pose was *primarily* meant to fix —
+   `turned_to_peer` (+0.012) and `looking_away` (+0.018) — barely moved and remain
+   the weakest classes. Metric head pose did **not** solve orientation.
+3. ⚠️ **Onset/duration errors rose sharply (1.6→10.4 s, 2.3→10.6 s), but this is
+   NOT like-for-like.** Those means are computed over *matched* events only, and
+   the two models matched different subsets — 6 vs 10 episodes. The 556 model
+   caught 4 additional, evidently harder episodes whose boundaries it localises
+   poorly. Do not report this as "boundary precision degraded" without
+   recomputing on the common matched subset.
+4. False alerts rose 1.6 → 2.4/h, stillabout half the teacher's 4.7/h. The model
+   remains conservative.
+
+⚠️ **DDP caveat:** both macro-F1 figures are shard-averaged. The thesis cites
+single-process numbers (baseline 0.384, not 0.4096). The **delta** is valid since
+both were measured identically; the absolute 556 figure must be re-measured
+single-process before publication.
+
+**What this leaves open:** the remaining 8-episode gap to the teacher is not
+explained by cue features (head pose was the identified lever and it closed only
+half the gap) and not by event-layer hyperparameters (§6.1 ruled those out with a
+64-config grid). The next hypothesis is the model's handling of episode
+*boundaries* — it detects more episodes but localises the new ones badly, which
+points at transition labelling or temporal receptive field rather than features.
+
+### 6.0b Head-pose features — P0.4 build notes (2026-07-31)
+
+**The gate was passed on a better criterion than the one originally set.** MediaPipe
+FaceLandmarker detects a face in only **60%** of LLMSTU crops (vs OpenCV Haar's 25%),
+short of the ≥70% gate. But detection rate *per cue class* is itself the strongest
+single signal measured in this project:
+
+| cue | face_found | mean pitch |
+|---|---|---|
+| screen_oriented | **92%** | 35.5 |
+| looking_away | 90% | 25.8 |
+| phone_use | 62% | 27.5 |
+| turned_to_peer | 52% | 16.4 |
+| **head_down** | **8%** | 47.3 |
+
+`head_down` 8% vs `screen_oriented` 92% is a near-perfect separator for the class the
+event layer most often misses. So `face_found` became an explicit **4th dimension**
+(552 → **556**) rather than letting a miss collapse to zeros — that ambiguity between
+"no face detected" and "facing forward" is precisely what made the OpenCV backend
+useless. Coverage was the wrong thing to gate on; discriminative power is the right
+thing.
+
+Implementation notes:
+- mediapipe 1.0.0 removed the legacy `mp.solutions` API; the backend uses
+  `tasks.python.vision.FaceLandmarker` with `output_facial_transformation_matrixes`,
+  which gives pose from the 4×4 transform directly (better conditioned than
+  landmarks + solvePnP). Installed with `--no-deps` so numpy/protobuf/torch were
+  untouched — verified after install.
+- Feed the **full crop**, not a top-fraction slice: 35% → 38% detection,
+  50% → 55%, full → 60%. FaceLandmarker runs its own face detector.
+- Pose is **precomputed in parallel** (`attention/precompute_head_pose.py`):
+  283,913 crops in ~3 min on 96 workers, vs ~11 h inline at ~140 ms/crop.
+  Cache → `outputs/head_pose_cache.npz`, 61.9% face_found overall.
+
+> ### ⚠️ WRONG-INPUT CATCH — the first 556-dim build was discarded
+>
+> The initial rebuild used `labels_dedup.jsonl` (84,950 crops) and produced 3,913
+> sequences with **median inter-frame gap 4.3 s and 58% of gaps > 2 s**. The 552-dim
+> baseline was built from `labels_tracked.jsonl` (283,913 crops): 6,531 sequences,
+> **uniform 1.0 s sampling, 0% irregular**.
+>
+> Dedup is correct for the *detector* (it stops near-duplicate frames inflating a
+> split), but it is **wrong for the temporal model** — it removes exactly the
+> temporal regularity a sequence model depends on, and shortens tracks below
+> `min_track_len` so 40% of sequences vanish.
+>
+> Caught by comparing sequence length (42.2 vs 16.9) and gap statistics against the
+> baseline before training on it. Had it not been caught, the head-pose ablation
+> would have compared 556-dim-on-sparse against 552-dim-on-dense — a confounded
+> comparison that would have looked like a head-pose result.
+>
+> **Provenance gap worth fixing:** the baseline build command was never recorded
+> anywhere — not in the config, the runbook, or the log. It had to be reverse-engineered
+> from sequence statistics. Record build commands alongside outputs.
+
 ### 6.1 Event-layer hyperparameters are NOT the problem (2026-07-31)
 
 Grid search over 64 `EventConfig` combinations — smoothing window {1,3,5,7} ×
@@ -494,6 +705,348 @@ analysis**, not a validated tuning result. Report default-config numbers as prim
 → `outputs/event_config_tuning.json`, `llmstu_tools/tune_event_config.py`
 
 ---
+
+## 6b. P1.1 — Zero-shot cross-dataset transfer to SCB (2026-07-31) ⚠️
+
+Frozen main checkpoint, **no fine-tuning**, evaluated on SCB-Dataset's
+Turn-Bow-Head val split (505 images, 3,753 regions). Phrases copied verbatim from
+the training vocabulary so the domain gap is not confounded with a vocabulary gap.
+
+| metric | LLMSTU (in-domain) | SCB (zero-shot) |
+|---|---|---|
+| R@1 | 0.6343 | **0.0322** |
+| R@5 | 0.9808 | 0.1761 |
+| R@10 | 0.9963 | 0.3086 |
+| R@-1 | 0.9994 | 0.5620 |
+
+Localization only (prompt `"a student sitting"` @0.10, 60 images):
+**recall 0.392, precision 0.187** vs in-domain F1 0.818.
+
+→ `work_dirs/logs/scb_zeroshot.log`
+
+> ### ⚠️ THIS IS NOT A CLEAN TRANSFER TEST — two confounds, both material
+>
+> **1. SCB annotates only behaviour-exhibiting students.** Its YOLO labels contain
+> exactly two classes (BowHead 354, TurnHead 1,332 in val) at 8.43 boxes/image.
+> Every *other* student in a lecture hall is unannotated. So a correct detection of
+> an ordinary seated student is scored as a **false positive** — which is why
+> precision reads 0.187 with 499 "FPs". **The precision figure is uninterpretable**
+> and the R@k figures are depressed by the same mechanism: the model must rank the
+> right box for a phrase among many students, most of whom have no label.
+>
+> **2. Semantic mismatch in the label mapping.** `BowHead → head_down →
+> "sleeping head down"` is questionable: in a lecture hall, a bowed head usually
+> means reading or writing in a notebook — an **on-task** behaviour — not sleeping.
+> Likewise `TurnHead → "talking to peer"` conflates turning to look at the board
+> with peer conversation. The model may be behaving correctly and scoring badly.
+>
+> **Conclusion:** report this as a **qualitative limitation**, not as a measured
+> generalisation result. The least-confounded number is localization recall 0.392
+> (of *annotated* students, 39% are found), which does indicate real degradation
+> off-domain — a wide computer-lab shot vs a dense lecture hall is a large
+> distribution shift — but the magnitude cannot be quantified from this setup.
+>
+> **To make it a clean test** would require either a target dataset with exhaustive
+> person annotation, or restricting evaluation to images where SCB's annotation is
+> known complete. Neither is available; state this in the write-up rather than
+> citing 0.0322 as a transfer score.
+
+## 6c. DIPSER external validation — cue→engagement is SETTING-DEPENDENT (2026-07-31) ★
+
+**The question:** our taxonomy claims only visible behaviour ("the head is down"),
+never mental state. That is epistemically clean but leaves the thesis asserting
+without evidence that these cues have anything to do with attention loss. DIPSER
+carries independent EXPERT engagement ratings (1=low … 5=max, 4 labellers +
+self-report), so we can test the link. We never train on those ratings.
+
+**Setup:** 25 usable subjects (1 archive corrupt), 1,825 paired observations. For
+each expert label at time *t*, the off-task rate in a ±15 s window. Off-task proxy
+fixed **a priori** from DIPSER's own head pose — no face found, |yaw|>30°, or
+pitch>30° — deliberately not tuned against the ratings, which would manufacture
+the correlation it is meant to test. Ordinal ratings → Spearman + 5,000-permutation test.
+
+| expert rating | n | mean off-task rate |
+|---|---|---|
+| 1 (lowest engagement) | 1 | 63.5% *(n=1, ignore)* |
+| 2 (low) | 758 | 22.6% |
+| 3 (middle) | 781 | 21.7% |
+| 4 (high) | 214 | **36.2%** |
+| 5 (maximum) | 71 | **47.0%** |
+
+**Spearman ρ = +0.172, permutation p < 0.0001.**
+
+→ `work_dirs/attention_temporal_hp/dipser_correlation_metadata.json`
+
+### The correlation is significant and runs BACKWARDS
+
+The hypothesis was ρ < 0 (more off-task cues → lower engagement). The measured
+result is the reverse: in DIPSER, **more head movement correlates with HIGHER
+expert-rated engagement**, monotonically from rating 3 to 5.
+
+The explanation is not that the cues are meaningless — it is that **their meaning
+is specific to the room**:
+
+| cue | computer lab (LLMSTU) | lecture hall (DIPSER) |
+|---|---|---|
+| head down | disengaged (phone, sleeping) | **note-taking — highly engaged** |
+| head turned | turned to peer, off-task | **looking at teacher/board — on-task** |
+| head still, facing forward | on-task (facing monitor) | possibly disengaged/zoned out |
+
+In our setting on-task means *facing your monitor*, so stillness is engagement. In a
+lecture hall on-task means *tracking the instructor and writing*, so movement is
+engagement. The same pixels carry opposite meaning.
+
+### Why this is a valuable result, not a failed experiment
+
+1. **It is the strongest available evidence for the supervisor's reframing.** The
+   project claims visible cues, never mental state. This shows *why* that
+   discipline is necessary: a system that had hard-coded "head down = inattentive"
+   would be confidently wrong in the next room. Quote this when defending the
+   taxonomy design.
+2. **It bounds the generalisation claim honestly.** Our cue→attention mapping is
+   calibrated to a computer lab and must NOT be presented as a general classroom
+   attention model. That is a limitation the thesis should state up front rather
+   than have an examiner find.
+3. **It is consistent with §6b.** Zero-shot SCB transfer also degraded sharply.
+   Two independent datasets, same conclusion: the pipeline is setting-specific.
+
+### Caveats — do not overstate this either
+
+- The proxy is crude (3 fixed thresholds) and was chosen a priori; a different
+  threshold set could weaken or strengthen ρ. It tests the *concept*, not our model.
+- ρ = 0.172 is a **weak** correlation. The honest statement is "significantly
+  non-zero and in the opposite direction to the naive expectation", not "engagement
+  is predicted by head movement".
+- Ratings are heavily skewed (1,539 of 1,825 at levels 2–3) and rating 1 has n=1.
+- DIPSER's per-student cameras differ geometrically from a wide lab shot.
+
+### Our MODEL on DIPSER — separately, and confounded
+
+Running the 556-dim temporal model directly (4 subjects, 306 pairs) gave
+ρ = −0.023, p = 0.74 — null. Cause: the model predicts off-task on only 0–17% of
+DIPSER frames (two subjects: 0.0%), collapsing to the majority class because the
+geometry features are far out of distribution — a body box fills ~60% of DIPSER's
+640×480 frame versus ~5% for a student in our 2812×1050 wide shot. **That number
+measures domain shift, not the cue→engagement link**, and should not be reported as
+a validation result. → `dipser_correlation_smoke.json`
+
+## 6d. Closing the Thesis_Topic.md gaps (2026-07-31/08-01) ★
+
+`Thesis_Topic.md` names four indicator families and a dashboard. Three families
+and the dashboard had no implementation. All are now built.
+
+### 6d.1 Facial expressions — implemented AND measured against expert labels
+
+Channel: MediaPipe FaceLandmarker supplies the **face box**, a ViT FER model
+(`dima806/facial_emotions_image_detection`) then predicts 7 basic expressions
+over that crop. Running FER on the whole student crop produces nonsense
+(measured: "fear 0.83" on a seated lab student) because the model expects
+aligned faces; cropping first yields a plausible spread.
+→ `attention/precompute_affect.py`, cache `outputs/affect_cache.npz`
+(11 dims/crop = 4 head pose + 7 expression), face_found 61.9%.
+
+**The honest problem, and the measurement that resolves it.** The thesis names
+*boredom, perplexity, curiosity* — **academic** emotions (Pekrun), not the
+7 basic **Ekman** expressions any off-the-shelf FER model outputs. Asserting
+"we detect boredom" would be unfounded. DIPSER labels emotion with the 9-category
+academic scheme, expert-annotated, where **code 1 = Boredom**. So it is testable:
+
+| basic expression | AUROC → expert boredom |
+|---|---|
+| neutral | 0.522 |
+| fear | 0.511 |
+| surprise | 0.507 |
+| angry | 0.490 |
+| sad | 0.474 |
+| **happy** | **0.441** (p = 0.0025, permutation) |
+| **logistic combination, held-out subjects** | **0.544** |
+
+1,176 paired observations, 301 expert boredom (25.6%). **AUROC 0.544 is barely
+above chance.** Only `happy` is significant, and inversely — less happiness,
+more boredom — which is directionally sensible but weak.
+
+**Conclusion for the write-up:** the facial-expression channel is implemented and
+contributes features, but basic expressions do **not** deliver academic-emotion
+detection. Report 0.544 as the measured ceiling. This replaces an unfounded
+claim with a number, and is the correct treatment of a requirement that the
+available model family cannot fully satisfy.
+→ `attention/validate_boredom.py`, `work_dirs/boredom_validation.json`
+
+### 6d.2 Body language + gaze direction — temporal features, no new labels
+
+`attention/dynamic_features.py`, 7 dims computed **per track** from data already
+present (bbox + cached head pose), so no annotation was needed:
+
+| dims | signal | topic requirement |
+|---|---|---|
+| motion_now / mean / **std** | frame-to-frame box displacement, scale-normalised | **fidgeting** |
+| scale_change | Δ box area | **leaning forward/backward** |
+| gaze_dev_yaw / pitch / mag | deviation from the student's **own median** head pose | **gaze direction** |
+
+Two design points worth defending:
+
+* **Fidgeting is inherently temporal** — motion *variance* over a window. A
+  per-frame feature block could never represent it, which is why the indicator
+  was missing rather than merely weak.
+* **The gaze baseline is personalised.** A student whose head rests at
+  yaw = −15° because that is where their monitor sits is ON task; the identical
+  angle for a student facing forward is off task. Using each student's own
+  median pose as their task direction needs no monitor calibration, no room
+  geometry, and is robust to seating position — which a fixed "screen direction"
+  prior is not. Median rather than mean, because the transient look-aways are
+  precisely the events we measure deviation *from*.
+* Verified on synthetic tracks: with realistic 80/20 on-task dominance,
+  gaze_dev_mag separates **0.000 (on-task) vs 0.900 (looking away)**; fidget
+  variance rises with induced motion. At a degenerate 50/50 split the median
+  baseline is ambiguous — a stated limitation, not a hidden one.
+
+### 6d.3 Dashboard — restored (was dropped 2026-07-29)
+
+`tools/dashboard/` — stdlib-only HTTP server, no new dependencies, matching the
+gold-annotator's design choice.
+
+- **Live view**: annotated frame, per-student cue chips, dwell times
+- **Class analytics**: student count, off-task count/percentage, off-task
+  fraction sparkline over time
+- **Alerts**: fire only on **sustained episodes** (phone 15 s, head-down 30 s,
+  turned-to-peer 30 s, looking-away 20 s) — a glance never pages an instructor
+- **Replay mode** (`--replay session.jsonl`) runs with **no GPU and no torch**,
+  so the dashboard is demonstrable on a laptop at a defence
+- **Privacy**: seat numbers only, no identity or demographics; `--blur-faces`
+  blurs head regions in the served frame; frame is downscaled before serving
+- **Language**: strictly visible-cue. The UI says *"Seat 5: head down for 51 s"*,
+  never "inattentive" — the taxonomy's founding principle carried into the UI,
+  with a standing footer disclaiming mental-state inference.
+
+**Verified end to end on REAL video (2026-08-01)**, not only synthetic replay:
+`0325.mp4` -> detector -> tracker -> 570-dim features -> temporal model ->
+dashboard. 6 students detected and tracked, cues transitioning `uncertain` ->
+`screen_oriented` as the temporal window fills, ~80 KB JPEG frames encoded,
+class analytics served (`/api/state` 200, `index.html` 200). The first ~19
+frames show 0 students by design: `min_hits=8` plus `min_frames_for_pred=4`
+before a track is confirmed.
+
+Two bugs found only by actually running it, both invisible from the developer's
+own working directory:
+1. Config paths in the YAML are relative to `LLMDet/`; the bridge now resolves
+   from there, so the dashboard launches from anywhere.
+2. `--record` output landed in `LLMDet/` because the file was opened *after*
+   the chdir. Caller-relative paths are now resolved before it.
+
+## 6e. FULL 570-dim model — complete ablation ladder (2026-08-01) ★
+
+Every indicator family `Thesis_Topic.md` names, measured. Identical sequences,
+split, schedule and seed at each rung; only the feature block changes.
+
+| config | dims | added | macro-F1 | val acc |
+|---|---|---|---|---|
+| `attention_temporal.yaml` | 552 | base (CLIP + geometry + colour + posture) | 0.4096 | 0.7214 |
+| `attention_temporal_hp.yaml` | 556 | **+ head pose** (4) | 0.4364 | 0.7498 |
+| `attention_temporal_full.yaml` | **570** | **+ facial expression (7) + body-language/gaze (7)** | **0.4400** | 0.7447 |
+
+### Per-class F1 — where each block actually paid
+
+| class | 552 | 556 | 570 | Δ 552→570 |
+|---|---|---|---|---|
+| screen_oriented | 0.835 | 0.862 | 0.858 | +0.023 |
+| **turned_to_peer** | 0.182 | 0.194 | **0.268** | **+0.087** |
+| **head_down** | 0.310 | 0.392 | 0.389 | **+0.079** |
+| uncertain | 0.351 | 0.382 | 0.379 | +0.028 |
+| looking_away | 0.294 | 0.312 | 0.284 | −0.011 |
+| phone_use | 0.486 | 0.476 | 0.462 | −0.024 |
+
+**`turned_to_peer` — the project's weakest class throughout — improved 47%
+relative (0.182 → 0.268)**, and almost all of that came from the *dynamic* block
+(556 → 570: 0.194 → 0.268), not from head pose. That is the personalised
+gaze-deviation feature doing exactly what it was designed for: absolute head
+angle could not separate "turned toward a peer" from "sitting at an angle",
+but deviation from the student's own habitual pose can.
+
+`head_down` gained from head pose (via `face_found`, 8% vs 92% detection) and
+held. `looking_away` and `phone_use` moved slightly negative — within run-to-run
+noise for classes this small, but stated rather than hidden.
+
+### Event level vs HUMAN gold — a genuine trade-off, not a clean win
+
+| | 552 | 556 | **570** | teacher |
+|---|---|---|---|---|
+| frame acc | 0.755 | 0.772 | **0.792** | 0.874 |
+| events matched | 6/24 | **10/24** | 8/24 | 18/24 |
+| miss rate | 0.750 | **0.583** | 0.667 | 0.250 |
+| onset err | 1.6 s | 10.4 s | **3.7 s** | 1.7 s |
+| duration err | 2.3 s | 10.6 s | **6.0 s** | 4.7 s |
+| false alerts/h | 1.6 | 2.4 | 3.1 | 4.7 |
+
+**Frame accuracy and macro-F1 rise monotonically (0.755 → 0.772 → 0.792), but
+event recall does not (6 → 10 → 8).** The 570 model is the best per-frame
+classifier and the best at *localising* the episodes it finds (onset error
+3.7 s vs 556's 10.4 s), yet it catches two fewer.
+
+Interpretation: 556 over-fires, which inflates episode matches while producing
+loose boundaries; 570 is more precise per frame, so its episodes are tighter but
+it commits less often. Which to prefer is a deployment decision, not a
+correctness one — for instructor alerts, recall (556) argues one way and
+boundary accuracy plus lower nuisance (570) the other.
+
+**Report both.** Cite 570 as the headline model (best macro-F1 0.4400, best frame
+accuracy 0.792, best `turned_to_peer`) and state the event-recall trade-off
+explicitly. Reporting only whichever number flatters the chosen model would be
+the same selective framing this project's post-mortem exists to prevent.
+
+Frame accuracy now reaches **90.6% of the teacher's ceiling** (0.792 / 0.874).
+The remaining event gap (8/24 vs 18/24) is therefore not a per-frame-accuracy
+problem — it is episode boundary formation, which §6.1 already showed is not
+fixable by event-layer hyperparameters either.
+→ `work_dirs/attention_temporal_full/events_vs_human.json`
+
+## 6f. ⚠️ SINGLE-PROCESS RE-MEASURE — corrects the ladder ordering (2026-08-01)
+
+The DDP trainer computes macro-F1 on **each rank's shard**, not the full
+validation set. All §6e figures were shard-averaged. Re-measured single-process
+over the complete val set (60,811 frames), which is what the thesis must cite:
+
+| config | dims | DDP (⚠️ not citable) | **single-process (CITE)** | accuracy |
+|---|---|---|---|---|
+| base | 552 | 0.4096 | **0.3835** | 0.7119 |
+| +head pose | 556 | 0.4364 | **0.4098** | 0.7306 |
+| +expression +dynamic | 570 | 0.4400 | **0.4080** | 0.7261 |
+| majority baseline | — | — | 0.1444 | 0.7647 |
+
+**The ordering changes.** Under DDP, 570 appeared best (0.4400 > 0.4364).
+Single-process, **556 and 570 are statistically tied** (0.4098 vs 0.4080, a
+0.0018 gap) and 570 is nominally *lower*. The earlier claim that the full
+feature set gave the best macro-F1 does not survive correct measurement.
+
+**Corrected conclusion:**
+- **Head pose delivers a real macro-F1 gain**: 0.3835 → 0.4098 (+0.026, +6.9%).
+- **Facial expression + dynamic features add nothing to aggregate macro-F1**
+  (0.4098 → 0.4080, within noise) — but they are not worthless, see per-class.
+
+### Per-class F1, single-process
+
+| class | 552 | 556 | 570 | Δ 552→570 |
+|---|---|---|---|---|
+| screen_oriented | 0.832 | 0.847 | 0.843 | +0.012 |
+| **head_down** | 0.309 | 0.369 | **0.407** | **+0.097** |
+| **uncertain** | 0.342 | 0.391 | 0.394 | +0.052 |
+| **turned_to_peer** | 0.117 | 0.136 | **0.166** | **+0.049** |
+| looking_away | 0.275 | 0.324 | 0.274 | −0.002 |
+| **phone_use** | 0.426 | 0.391 | **0.364** | **−0.062** |
+
+The 570 block redistributes rather than uniformly improves: `head_down` +0.097
+and `turned_to_peer` +0.049 (the two classes the dynamic features target), paid
+for by `phone_use` −0.062. Aggregate macro-F1 is flat because these cancel.
+
+**What to report.** Cite **556 (macro-F1 0.4098)** as the best aggregate model
+and **570** for the orientation classes and tighter event boundaries — stating
+the trade-off. Both beat the 552 baseline and massively beat the majority
+control (0.1444). Do not cite any DDP number.
+
+**Process note:** this is the *second* time shard-averaged metrics produced a
+misleading result in this project (the first cost the March temporal model's
+credibility, post-mortem §4). The trainer should compute validation metrics with
+an all-gather across ranks, or evaluation should always be single-process.
+→ `single_process_eval.json` in each `work_dirs/attention_temporal_*`
 
 ## 7. Real-time performance
 
@@ -733,6 +1286,34 @@ feature width mid-run — hence backends fail loudly at construction.
 ## 10. Changelog
 
 **2026-07-31**
+- **P0.4 DONE — head pose: events 6/24 -> 10/24 (+67% rel), macro-F1 0.4096 ->
+  0.4364, head_down F1 +0.082.** Gain landed where face_found predicted, NOT on
+  turned_to_peer/looking_away which it was aimed at — those remain weakest.
+  First 556-dim build was DISCARDED (built from labels_dedup: 58% irregular
+  time gaps vs the baseline's 0%); rebuilt from labels_tracked. Pose precomputed
+  in parallel (283,913 crops in ~3 min vs ~11 h inline).
+- P0.2 DONE — runtime config was pointing at the E1 REGRESSION checkpoint plus a
+  bad prompt/threshold (F1 0.402). Now main run + 'a student sitting'@0.10
+  (F1 0.818).
+- **P0.3 DONE — model vs HUMAN events: 6/24 (teacher ceiling 18/24), frame acc
+  0.755 vs teacher 0.874.** Model is conservative: fewer false alerts (1.6 vs
+  4.7/h) and tighter durations than the teacher on matched events. Two evaluator
+  bugs fixed first (per_frame default; crop-vs-frame feature mismatch) — the
+  latter alone moved results from 0/24 to 6/24.
+- Clean matching sweep (sw=0.0) done: **Hungarian 0.7896 vs ordinal 0.2607** at
+  full scale. The contaminated 92.3% is retired; 79.0% is the citable number.
+- Threshold sweep on iter_25000: shipped config ('student' @0.45) measures
+  **F1 0.402, recall 0.256**; best generic prompt 'a student sitting' @0.10 gives
+  **F1 0.818**. attention_temporal.yaml must be updated (P0.2).
+- **MAIN RUN COMPLETE: R@1 0.6343 / R@5 0.9808 / R@10 0.9963 (thesis Table 1).**
+  Beats March's leaked-split 0.6103 on a leak-free split, in 25k iters not 40k.
+  Checkpoints copied + byte-verified to thesis_bundle.
+- Event-config grid search: all 64 configs match 18/24 — segmentation tuning is a
+  dead end, cue quality is the only lever (FINDINGS 6.1); P0.5 folded into P0.4.
+- DIPSER: 780 GB total (not 60-150); head pose is MediaPipe output so that
+  rationale is dead; engagement ratings ARE usable (41% low-engagement,
+  within-subject variance 4x between) -> 26 GB subset downloaded for the
+  external-validation correlation only.
 - Main run launched: 25k iters (5.5 epochs), LR milestones 17.5k/22.5k, resumable.
   40k was rejected — it came from the March config where R@1 rose to 37.5k on a
   LEAKED split; ARM B converged in 3.3 epochs on clean data.

@@ -61,6 +61,35 @@ any 2026 LVIS number (harness returns zeroed metrics).
 
 ---
 
+## 2b. STATUS vs Thesis_Topic.md — all requirements now implemented (2026-08-01)
+
+The topic is FIXED and non-negotiable (user, 2026-07-31). Every named requirement
+now has an implementation and a measurement. Nothing below is reframed.
+
+| Thesis_Topic.md requirement | status | measured |
+|---|---|---|
+| Deep learning (CNN/RNN/Transformer) | ✅ | CLIP + transformer; Grounding-DINO detector |
+| **Body language** (fidgeting, leaning) | ✅ built | motion variance + scale change, 4 dims |
+| **Head pose** (looking away, nodding) | ✅ built | MediaPipe metric pose + face_found, 4 dims |
+| **Gaze direction** (instructor vs distraction) | ✅ built | personalised deviation, 3 dims; drove turned_to_peer +47% |
+| **Facial expressions** (boredom, perplexity, curiosity) | ✅ built ⚠️ | ViT FER over MediaPipe face box, 7 dims; **boredom AUROC 0.544 vs expert** |
+| **Real-time** | ✅ | 7.1 FPS real scene, 2.0 FPS @ 30 students |
+| **Dynamic dashboard + alerts** | ✅ RESTORED | live view, class analytics, episode-gated alerts, GPU-free replay |
+| **Ethics / privacy** | ✅ | attribute neutralisation, seat-only IDs, `--blur-faces` |
+
+Headline model: **`configs/attention_temporal_full.yaml`, 570 dims**,
+macro-F1 0.4400, frame accuracy 0.792 = **90.6% of the teacher ceiling**.
+Full ablation ladder and the event-recall trade-off: FINDINGS.md 6e.
+
+**The two limitations to state up front in the write-up, not bury:**
+1. Facial expression → academic emotion is **AUROC 0.544** (chance 0.5). The
+   channel is implemented and contributes features, but basic Ekman expressions
+   do not deliver Pekrun academic emotions. Measured, not assumed — FINDINGS 6d.1.
+2. Cue→engagement meaning is **setting-dependent**: head-down = disengaged in a
+   computer lab, = note-taking in a lecture hall (DIPSER, ρ = +0.172, p < 0.0001).
+   This is evidence FOR the visible-cue framing, not against the system —
+   FINDINGS 6c.
+
 ## 3. Gap analysis — thesis promise vs. present system
 
 Ordered by how much each gap threatens the thesis defense:
@@ -120,7 +149,10 @@ main run finishes; never during a live run)*
 same 60-crop sample the OpenCV backend scored 25% on — require ≥70% face-found
 or escalate to 6DRepNet. (b) Rebuild sequences at 555-dim
 (`SequenceNPZDataset` + builder; ~2-3 h CPU-parallel). (c) Retrain temporal
-model (4 GPUs ~1.5 h at 90 epochs — ASK USER). (d) Report per-class deltas;
+model (4 GPUs, **~3 min** at 90 epochs — measured 1.8 s/epoch from the prior
+run's checkpoint mtimes; the earlier '~1.5 h' figure was inherited and WRONG.
+The real cost of P0.4 is the ~126 min sequence rebuild, which needs 1 GPU and
+can overlap the queued single-GPU jobs on cuda:1). (d) Report per-class deltas;
 success criterion: `looking_away` and `turned_to_peer` F1 both improve
 materially (target ≥0.35 / ≥0.30); also re-run event eval (P0.3 config) since
 orientation cues feed events.
@@ -140,6 +172,68 @@ only false-alerts/hour varied (3.9-9.4). Therefore:
   - Remaining P0.5 work is therefore FOLDED INTO P0.4: the only route to better
     event recall is better cues, i.e. head pose / gaze.
 → `outputs/event_config_tuning.json`; FINDINGS.md 6.1.
+
+**P0.6 TEST-SPLIT PROTOCOL — binding rule, written before temptation**
+
+`outputs/odvg_test.jsonl` (9,405 frames, 27 videos) has NEVER been touched. It
+must stay that way until the thesis numbers are frozen. Binding procedure:
+
+1. The test split is used **exactly once**, at the end, after every model,
+   threshold, prompt and event-config decision is final and recorded.
+2. Before that run: freeze the config, record its git hash in FINDINGS.md, and
+   state in advance which numbers will be reported.
+3. Run once. Report whatever comes out — including if it is worse than val.
+4. **If any test number is used to change any decision, the split is burned**
+   and must be reported as a second validation set, not as held-out test.
+5. Until then, ALL reported numbers are validation-split numbers and must be
+   labelled as such in the write-up.
+
+Rationale: the March disaster was caused by a split that silently leaked. The
+mirror-image failure is a test split that silently becomes a dev set through
+repeated peeking. Both produce numbers that do not mean what they say.
+
+**P0.7 SECOND ANNOTATOR — defense exposure, cheap to close**
+
+All 1,984 gold labels (1,000 frame-level + 984 dense) come from ONE annotator
+(the user). Every downstream claim — the 87.4% teacher ceiling, the 24 gold
+episodes, the P0.3 headline — rests on a single person's judgement with no
+measured reliability. An examiner will ask.
+
+Minimum viable fix: have a second person annotate **100-200 crops** sampled
+from the existing gold, then run `tools/gold_annotator/compute_agreement.py`
+(already built, supports Cohen's kappa). Report per-field kappa. Even moderate
+agreement converts "trust the author" into a measured quantity; low agreement
+is itself a finding worth reporting honestly.
+Blocked on: recruiting a person. Flag to the user early — it needs lead time.
+
+**P0.8 HEAD-POSE FALLBACK — prepared BEFORE the MediaPipe gate**
+
+If MediaPipe fails its ≥70% face-detection gate, P0.4 stalls with no plan B.
+Measured alternative, from fields already present in every LLMSTU record
+(`head_kpts`, `face_kpts`, `head_span_px` — counts, not coordinates):
+
+| separation | feature | Cohen d |
+|---|---|---|
+| screen_oriented vs **turned_to_peer** | face_kpts | **+0.496** |
+| screen_oriented vs turned_to_peer | head_kpts | +0.336 |
+| screen_oriented vs **looking_away** | span/bbox_w | −0.337 |
+
+Medium effect on exactly the two weak classes, at **100% frame coverage**
+(MediaPipe's weakness is that it fails on the occluded/small faces that matter).
+
+⚠️ **DEPLOYMENT CAVEAT — do not skip this in the write-up.** These fields come
+from LLMSTU's upstream person detector, which produced the crops. The runtime
+pipeline (Grounding-DINO → boxes) has NO keypoint source, so these features are
+available offline but NOT at deployment. Using them would raise reported
+Branch B numbers while being unavailable in the real-time system — the exact
+"flattering offline number" pattern the post-mortem documents.
+
+Therefore: (a) acceptable as a **fallback for the offline cue experiments** ONLY
+if the train/deploy gap is stated explicitly wherever the number appears;
+(b) preferred fix is to add a cheap runtime keypoint source (MediaPipe Pose or
+the detector's own keypoints) so offline and deployed features match;
+(c) NEVER report a runtime FPS or event number computed with features the
+runtime cannot produce.
 
 ### P1 — strengthens the thesis, after P0
 

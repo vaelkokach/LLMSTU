@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Classroom Attention Cues — Instructor Dashboard</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --line:#252a34; --txt:#e6e9ef;
+    --muted:#8b93a3; --ok:#3ddc84; --warn:#ffb454; --alert:#ff5f56; --accent:#6aa9ff;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#f5f6f8; --panel:#fff; --line:#e2e5ea; --txt:#1a1d23;
+           --muted:#5c6472; --accent:#2563eb; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+       font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  header{padding:14px 20px;border-bottom:1px solid var(--line);
+         display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  h1{font-size:17px;margin:0;font-weight:600}
+  .pill{font-size:12px;padding:3px 10px;border-radius:20px;
+        background:var(--panel);border:1px solid var(--line);color:var(--muted)}
+  .live{color:var(--ok)} .live::before{content:"● "}
+  .wrap{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);
+        gap:16px;padding:16px;align-items:start}
+  @media(max-width:900px){.wrap{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);
+        border-radius:10px;padding:14px;min-width:0}
+  .card h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;
+           color:var(--muted);margin:0 0 10px}
+  #frame{width:100%;border-radius:8px;display:block;background:#000}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:10px}
+  .kpi{background:var(--bg);border:1px solid var(--line);border-radius:8px;
+       padding:10px;text-align:center}
+  .kpi b{display:block;font-size:22px;line-height:1.2}
+  .kpi span{font-size:11px;color:var(--muted)}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:6px 4px;border-bottom:1px solid var(--line);font-size:13px}
+  th{color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase}
+  .cue{padding:2px 8px;border-radius:12px;font-size:12px;white-space:nowrap}
+  .c-screen_oriented{background:rgba(61,220,132,.15);color:var(--ok)}
+  .c-looking_away,.c-turned_to_peer{background:rgba(255,180,84,.15);color:var(--warn)}
+  .c-head_down,.c-phone_use{background:rgba(255,95,86,.15);color:var(--alert)}
+  .c-uncertain{background:rgba(139,147,163,.15);color:var(--muted)}
+  #alerts{list-style:none;margin:0;padding:0;max-height:260px;overflow:auto}
+  #alerts li{padding:8px 10px;border-left:3px solid var(--alert);
+             background:var(--bg);border-radius:0 6px 6px 0;margin-bottom:6px}
+  #alerts time{color:var(--muted);font-size:11px;display:block}
+  .empty{color:var(--muted);font-style:italic;padding:12px 0}
+  canvas{width:100%;height:90px;display:block}
+  footer{padding:10px 20px;color:var(--muted);font-size:11px;
+         border-top:1px solid var(--line)}
+  .scroll{overflow-x:auto}
+</style>
+</head>
+<body>
+<header>
+  <h1>Classroom Attention Cues</h1>
+  <span class="pill" id="status">connecting…</span>
+  <span class="pill" id="clock">t = 0.0 s</span>
+  <span class="pill" id="src"></span>
+</header>
+
+<div class="wrap">
+  <div style="display:grid;gap:16px;min-width:0">
+    <div class="card">
+      <h2>Live view</h2>
+      <img id="frame" alt="live classroom view">
+      <p class="empty" id="noframe">No video frame (replay mode shows cue data only).</p>
+    </div>
+
+    <div class="card">
+      <h2>Class overview</h2>
+      <div class="kpis">
+        <div class="kpi"><b id="k-students">–</b><span>students</span></div>
+        <div class="kpi"><b id="k-off">–</b><span>off-task now</span></div>
+        <div class="kpi"><b id="k-pct">–</b><span>% off-task</span></div>
+        <div class="kpi"><b id="k-alerts">–</b><span>alerts</span></div>
+      </div>
+      <h2 style="margin-top:14px">Off-task fraction over time</h2>
+      <canvas id="spark" width="600" height="90"></canvas>
+    </div>
+
+    <div class="card scroll">
+      <h2>Per-student cues</h2>
+      <table>
+        <thead><tr><th>Seat</th><th>Visible cue</th><th>Duration</th></tr></thead>
+        <tbody id="students"></tbody>
+      </table>
+      <p class="empty" id="nostudents">No students detected yet.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Alerts</h2>
+    <ul id="alerts"></ul>
+    <p class="empty" id="noalerts">No sustained off-task episodes.</p>
+  </div>
+</div>
+
+<footer>
+  Reports <strong>visible behavioural cues</strong> only — e.g. “head down for 45 s”.
+  It does not infer attention, engagement, or any mental state. Alerts require a
+  sustained episode, not a single frame. Students appear as seat numbers; no
+  identity or demographic data is processed.
+</footer>
+
+<script>
+const CUES = ["screen_oriented","looking_away","head_down","turned_to_peer","phone_use","uncertain"];
+
+function fmt(s){ s=Math.round(s); return s<60 ? s+"s" : Math.floor(s/60)+"m "+(s%60)+"s"; }
+
+function drawSpark(hist){
+  const c=document.getElementById("spark"), x=c.getContext("2d");
+  const W=c.width, H=c.height;
+  x.clearRect(0,0,W,H);
+  if(!hist.length) return;
+  const css=getComputedStyle(document.documentElement);
+  x.strokeStyle=css.getPropertyValue("--line"); x.lineWidth=1;
+  [0.25,0.5,0.75].forEach(f=>{ x.beginPath(); x.moveTo(0,H*f); x.lineTo(W,H*f); x.stroke(); });
+  x.beginPath();
+  hist.forEach((p,i)=>{
+    const px=(i/Math.max(hist.length-1,1))*W, py=H-(p[1]*H);
+    i?x.lineTo(px,py):x.moveTo(px,py);
+  });
+  x.strokeStyle=css.getPropertyValue("--accent"); x.lineWidth=2; x.stroke();
+  x.lineTo(W,H); x.lineTo(0,H); x.closePath();
+  x.fillStyle="rgba(106,169,255,.12)"; x.fill();
+}
+
+async function tick(){
+  try{
+    const r = await fetch("/api/state",{cache:"no-store"});
+    const s = await r.json();
+
+    document.getElementById("status").textContent = s.running ? "live" : "idle";
+    document.getElementById("status").className = "pill" + (s.running?" live":"");
+    document.getElementById("clock").textContent = "t = " + s.t.toFixed(1) + " s";
+    document.getElementById("src").textContent = s.source || "";
+
+    const img=document.getElementById("frame"), nf=document.getElementById("noframe");
+    if(s.frame){ img.src="data:image/jpeg;base64,"+s.frame; img.style.display="block"; nf.style.display="none"; }
+    else { img.style.display="none"; nf.style.display="block"; }
+
+    const cs=s.class_summary||{};
+    document.getElementById("k-students").textContent = cs.n_students ?? "–";
+    document.getElementById("k-off").textContent      = cs.off_task ?? "–";
+    document.getElementById("k-pct").textContent      = (cs.off_task_pct ?? "–")+(cs.off_task_pct!=null?"%":"");
+    document.getElementById("k-alerts").textContent   = (s.alerts||[]).length;
+
+    const tb=document.getElementById("students"); tb.innerHTML="";
+    const seats=Object.keys(s.students||{}).sort((a,b)=>a-b);
+    document.getElementById("nostudents").style.display = seats.length?"none":"block";
+    for(const seat of seats){
+      const st=s.students[seat];
+      const tr=document.createElement("tr");
+      tr.innerHTML = `<td>${seat}</td>`+
+        `<td><span class="cue c-${st.cue}">${st.cue.replace(/_/g," ")}</span></td>`+
+        `<td>${fmt(st.dwell||0)}</td>`;
+      tb.appendChild(tr);
+    }
+
+    const ul=document.getElementById("alerts"); ul.innerHTML="";
+    const al=(s.alerts||[]).slice().reverse();
+    document.getElementById("noalerts").style.display = al.length?"none":"block";
+    for(const a of al){
+      const li=document.createElement("li");
+      li.innerHTML=`<time>t = ${a.t}s</time>${a.text}`;
+      ul.appendChild(li);
+    }
+    drawSpark(s.history||[]);
+  }catch(e){
+    document.getElementById("status").textContent="disconnected";
+    document.getElementById("status").className="pill";
+  }
+}
+tick(); setInterval(tick, 1000);
+</script>
+</body>
+</html>
