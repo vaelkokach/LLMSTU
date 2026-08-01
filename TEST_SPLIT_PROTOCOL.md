@@ -38,6 +38,40 @@ Closing this properly would mean rebuilding the sequences under the detector's
 video split and retraining (~2.5 h). Recorded as a known limitation rather than
 silently reporting a validation figure as a test figure.
 
-## Result
+## Result — single run, 2026-08-01 07:58 UTC
 
-*(filled in immediately after the single run — see below)*
+`Flickr30kMetric`, IoU 0.5, 9,405 frames / 27 held-out videos:
+
+| metric | validation | **TEST (held-out)** | Δ |
+|---|---|---|---|
+| **R@1** | 0.6343 | **0.6462** | **+0.0119** |
+| R@5 | 0.9808 | **0.9891** | +0.0083 |
+| R@10 | 0.9963 | **0.9982** | +0.0019 |
+| R@-1 | 0.9994 | 0.9997 | +0.0003 |
+
+→ `LLMDet/work_dirs/logs/FINAL_test_split.log`, config
+`LLMDet/configs/eval_test_split.py`
+
+### Reading this
+
+**Test slightly EXCEEDS validation.** That is the healthiest outcome available:
+
+1. **No validation overfitting.** Every threshold, prompt and configuration
+   decision in this project was made against the validation split. If those
+   choices had been fitted to validation noise, test would sit below it. It does
+   not.
+2. **Independent confirmation the split is leak-free.** Two disjoint video sets
+   agree to within ~1 point. Compare March, where the leaked split produced
+   0.6103 that no clean set could reproduce.
+3. The +1.2 point gap is ordinary between-split variance over 27 videos, not
+   evidence the test set is easier. It should not be presented as an improvement.
+
+**CITE 0.6462 as the final test result** and 0.6343 as validation. The protocol
+is now closed: the test split has been used, and any further tuning would
+invalidate this number. Re-using it would make it a second validation set.
+
+### Not claimed
+
+No temporal-model test figure, for the reason pre-registered above — 23 of these
+27 videos are in the cue model's training set. Its macro-F1 **0.4098 remains a
+validation number** and is labelled as such throughout.

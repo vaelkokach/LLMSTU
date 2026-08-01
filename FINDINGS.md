@@ -28,7 +28,7 @@ documents:
 | Detector ARM A (ordinal) | R@1 @10k | 0.3230 | ✅ done |
 | Detector ARM B (hungarian) | R@1 @10k | **0.4954 (+17.2 vs A)** | ✅ done |
 | Detector ARM C (p90) | R@1 @10k | 0.4787 (−1.7 vs B) | ✅ done |
-| **Detector main (exact)** | **R@1 @25k** | **0.6343** (vs leaked 0.6103) | ✅ done |
+| **Detector main (exact)** | **R@1 TEST / val** | **0.6462 test** · 0.6343 val | ✅ §3.4c |
 | **Temporal model** | **macro-F1, single-process** | **0.3835 → 0.4098 → 0.4080** (552→556→570) | ✅ §6f |
 | Teacher label quality | frame cue agreement | 87.4% | ✅ |
 | **Event layer** | **model vs HUMAN gold** | **10/24 (556) · 8/24 (570, tighter bounds); teacher 18/24** | ⚠️ §6e |
@@ -352,6 +352,33 @@ dedup, exact correspondences) was the right call.
 Checkpoints preserved and byte-verified (`cmp`):
 `thesis_bundle/checkpoints/main_llmstu_exact_iter25000_final.pth`,
 `..._iter22500_bestR1.pth`.
+
+### 3.4c FINAL TEST-SPLIT RESULT (2026-08-01) ★ CITE THIS
+
+Single permitted run under the pre-registered protocol
+(`TEST_SPLIT_PROTOCOL.md`, registered at commit `87bb2db` **before** the run).
+9,405 frames over 27 held-out videos, never read before.
+
+| metric | validation | **TEST** | Δ |
+|---|---|---|---|
+| **R@1** | 0.6343 | **0.6462** | +0.0119 |
+| R@5 | 0.9808 | **0.9891** | +0.0083 |
+| R@10 | 0.9963 | **0.9982** | +0.0019 |
+
+**Test exceeds validation**, which is the strongest available evidence that the
+project's many validation-guided decisions (thresholds, prompts, configs) did not
+overfit, and that the video-wise split is genuinely leak-free — two disjoint video
+sets agreeing within ~1 point. The gap is ordinary between-split variance, not an
+improvement to claim.
+
+The protocol is now **closed**: further tuning would invalidate this number.
+
+⚠️ **No temporal-model test number exists.** The cue model's sequences were split
+independently of the detector's, so **23 of these 27 test videos are in its
+training set**. Evaluating it here would be training-set contamination. Its
+macro-F1 **0.4098 is a VALIDATION number** and must be labelled as such.
+Fixing this means rebuilding sequences under the detector's split and retraining
+(~2.5 h) — recorded as a known limitation, not silently reported as a test figure.
 
 ### 3.5 FINAL ABLATION TABLE — thesis Table 2
 
