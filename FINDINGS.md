@@ -1819,8 +1819,72 @@ both use the same cache, so they are internally consistent. The mismatch is a
 suggestion — rebuild the head-pose cache from the *full frame with
 `bbox_person`* so training matches deployment. That can patch columns 552:556 of
 the existing NPZs in place, with no CLIP re-extraction, but it would require
-retraining, and the Branch-B test protocol is closed. Logged as a decision, not
-silently actioned.
+retraining, and the Branch-B test protocol is closed. **Actioned and then rejected — see §11.15.**
+
+### 11.15 ★ The head-pose mismatch was fixed, measured, and the fix REJECTED
+
+The §11.14 mismatch was carried through to a full resolution rather than left as
+a caveat. Pose was recomputed the way deployment does it — full frame +
+`bbox_person`, 283,913 crops in 125 s on 64 workers
+(`attention/precompute_head_pose_frames.py`) — and applied to the built
+sequences by replaying the builder's grouping and **proving** the alignment:
+every recovered chunk's timestamps had to equal the stored `t` array exactly,
+for all 6,531 sequences (`attention/thesis_eval/patch_pose_columns.py`). 0 crops
+missing; **7.7% of frames changed `face_found`**. Columns 563:570 were recomputed
+too, since the dynamic block derives its gaze features from pose. No CLIP was
+re-extracted — 552 of 570 columns are untouched.
+
+Then 9 models retrained (transformer / MS-TCN / ASRF x 3 seeds) on the corrected
+sequences.
+
+**Result 1 — the mismatch costs nothing.** Feeding the *existing* crop-trained
+MS-TCN its actual deployment features (bbox_person pose) instead of its training
+features, paired video-level bootstrap over 3 seeds:
+
+| metric | Δ | seeds significant |
+|---|---|---|
+| macro-F1 | **+0.0007** | 0/3 |
+| balanced accuracy | +0.0006 | 0/3 |
+| accuracy | +0.0002 | 0/3 |
+| every per-class F1 | < 0.005 | 0–1/3 |
+
+The 7.7% `face_found` change does not propagate to the output. The deployed
+model is **not** meaningfully off-distribution.
+
+**Result 2 — retraining on `bbox_person` pose is actively WORSE**, judged with
+both systems on deployment features:
+
+| metric | Δ (retrained − crop-trained) | seeds significant |
+|---|---|---|
+| macro-F1 | **−0.0338** | **2/3** |
+| balanced accuracy | **−0.0513** | **3/3** |
+| accuracy | +0.0216 | 2/3 |
+
+**Result 3 — why.** The tighter `bbox_crop` region makes face detection a
+*sharper* cue indicator, because it excludes surrounding context that triggers
+spurious detections. `face_found` rate by cue:
+
+| cue | crop (`bbox_crop`) | frame (`bbox_person`) |
+|---|---|---|
+| screen_oriented | 67.3% | 66.2% |
+| looking_away | 72.9% | 71.0% |
+| phone_use | **75.5%** | 72.3% |
+| turned_to_peer | 58.5% | 58.3% |
+| head_down | 14.3% | 14.8% |
+| uncertain | **4.5%** | 5.1% |
+| **spread (max − min)** | **71.0%** | **67.2%** |
+
+**Decision: keep the crop-trained models; the deployment path is unchanged.**
+The frozen test table stands. This is a negative result on a fix that looked
+obviously correct on paper: a train/deploy inconsistency that is real, is
+measurable in the *feature* (7.7% of frames), and is nonetheless immaterial in
+the *output* — while removing it costs 0.034 macro-F1 because the "inconsistent"
+feature was the better one.
+
+The corrected cache, patched sequences and 9 retrained models are retained
+(`grounding_data/llmstu_sequences_full_bp`, `work_dirs/thesis/posefix`) so the
+comparison is reproducible, and are **not** used by anything the thesis cites.
+
 
 ---
 

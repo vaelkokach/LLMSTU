@@ -37,6 +37,14 @@ def sweep_jobs(name: str) -> List[Dict]:
         for model, seed in itertools.product(("mstcn", "asrf"), SEEDS):
             jobs.append({"experiment_id": f"{model}_570_full_s{seed}",
                          "model": model, "feature_config": "570_full", "seed": seed})
+    elif name == "posefix":
+        # Same 556-dim rung on sequences whose pose block was recomputed from
+        # the full frame + bbox_person, so training matches deployment
+        # (FINDINGS 11.14). 552_base is unaffected — it contains no pose
+        # columns — so the existing 552 runs remain the valid control.
+        for model, seed in itertools.product(("transformer", "mstcn", "asrf"), SEEDS):
+            jobs.append({"experiment_id": f"{model}_556_hp_bp_s{seed}",
+                         "model": model, "feature_config": "556_hp", "seed": seed})
     elif name == "headpose":
         # Decomposes the one feature block that demonstrably works, to decide
         # whether a stronger head-pose estimator could add anything.
@@ -50,13 +58,16 @@ def sweep_jobs(name: str) -> List[Dict]:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--sweep", required=True, choices=["ladder", "arch", "headpose"])
+    ap.add_argument("--sweep", required=True,
+                    choices=["ladder", "arch", "headpose", "posefix"])
     ap.add_argument("--out-root", required=True)
     # Hard project constraint: at most 4 GPUs may be occupied at once, even
     # though the host exposes 8. Do not widen this default.
     ap.add_argument("--gpus", default="0,1,2,3")
     ap.add_argument("--epochs", type=int, default=90)
     ap.add_argument("--threads", type=int, default=8)
+    ap.add_argument("--sequence-root",
+                    default="../grounding_data/llmstu_sequences_full")
     ap.add_argument("--skip-existing", action="store_true", default=True)
     args = ap.parse_args()
 
@@ -86,7 +97,8 @@ def main():
                    "--experiment-id", j["experiment_id"], "--model", j["model"],
                    "--feature-config", j["feature_config"], "--seed", str(j["seed"]),
                    "--epochs", str(args.epochs), "--output-dir", str(d),
-                   "--device", f"cuda:{g}", "--threads", str(args.threads)]
+                   "--device", f"cuda:{g}", "--threads", str(args.threads),
+                   "--sequence-root", args.sequence_root]
             log = open(log_dir / f"{j['experiment_id']}.log", "w")
             p = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT)
             running.append((p, g, j["experiment_id"], log))

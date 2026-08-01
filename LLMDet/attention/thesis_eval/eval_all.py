@@ -25,6 +25,8 @@ def main():
     ap.add_argument("--refine-asrf", action="store_true",
                     help="use boundary-refined labels for ASRF runs")
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--sequence-root",
+                    default="../grounding_data/llmstu_sequences_full")
     args = ap.parse_args()
 
     root = Path(args.root)
@@ -42,7 +44,8 @@ def main():
         cmd = [sys.executable, "-m", "attention.thesis_eval.run_eval",
                "--ckpt", str(d / "checkpoints" / args.ckpt_name),
                "--split", args.split, "--out", str(out),
-               "--device", args.device, "--n-boot", str(args.n_boot)]
+               "--device", args.device, "--n-boot", str(args.n_boot),
+               "--sequence-root", args.sequence_root]
         if args.refine_asrf and "asrf" in d.name:
             cmd.append("--refine")
         print("+", " ".join(cmd), flush=True)

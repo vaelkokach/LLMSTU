@@ -52,6 +52,12 @@ def main():
     ap.add_argument("--affect-cache", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--device", default="cuda:0")
+    ap.add_argument("--pose-cache", default=None,
+                    help="npz from precompute_head_pose_frames.py. When given, it "
+                         "OVERRIDES the affect cache's pose columns (0:4) so the gold "
+                         "features match a model trained on bbox_person pose. The "
+                         "dynamic block is derived from pose and is recomputed either "
+                         "way, further down.")
     args = ap.parse_args()
 
     import cv2
@@ -68,6 +74,12 @@ def main():
     avecs = d["vecs"].astype(np.float32)
     if avecs.shape[1] != 11:
         raise SystemExit(f"affect cache has {avecs.shape[1]} dims, expected 11")
+    pose_override = None
+    if args.pose_cache:
+        pc = np.load(args.pose_cache, allow_pickle=False)
+        pose_override = ({str(n): i for i, n in enumerate(pc["names"])},
+                         pc["vecs"].astype(np.float32))
+        print(f"pose override: {len(pose_override[0])} crops from {args.pose_cache}")
 
     tracks = defaultdict(list)
     n_rej = n_hum = 0
@@ -110,7 +122,13 @@ def main():
                 n_missing_affect += 1
                 av = np.zeros(11, dtype=np.float32)
             else:
-                av = avecs[j]
+                av = avecs[j].copy()
+            if pose_override is not None:
+                pmap, pvecs = pose_override
+                k = pmap.get(fname)
+                # A miss must not silently leave crop-derived pose in place: that
+                # is the very mismatch this override exists to remove.
+                av[:4] = pvecs[k] if k is not None else 0.0
             feats.append(np.concatenate([fv, av]).astype(np.float32))
         arr = np.stack(feats)
         dyn = compute_dynamic(boxes, arr[:, base_dim:base_dim + 4])
