@@ -58,7 +58,9 @@ class StageTimer:
                 "n": int(a.size),
                 "mean_ms": float(a.mean()),
                 "p50_ms": float(np.percentile(a, 50)),
+                "p90_ms": float(np.percentile(a, 90)),
                 "p95_ms": float(np.percentile(a, 95)),
+                "p99_ms": float(np.percentile(a, 99)),
                 "max_ms": float(a.max()),
             }
         return out
@@ -172,6 +174,7 @@ def run_pass(cfg, args, student_count=None):
     min_frames = int(cfg["inference"].get("min_frames_for_pred", 4))
 
     frame_times = []
+    track_counts = []
     n_done = 0
     while n_done < args.max_frames:
         ok, frame = cap.read()
@@ -214,6 +217,7 @@ def run_pass(cfg, args, student_count=None):
 
         if n_done >= args.warmup:
             frame_times.append(time.perf_counter() - f0)
+            track_counts.append(len(tracks))
         else:  # warmup frames pollute per-stage stats too
             timer.samples = defaultdict(list) if n_done == args.warmup - 1 else timer.samples
         n_done += 1
@@ -224,14 +228,32 @@ def run_pass(cfg, args, student_count=None):
         "student_count": student_count if student_count is not None else "real",
         "frames_measured": int(ft.size),
         "fps_mean": float(1.0 / ft.mean()) if ft.size else None,
+        "fps_p50": float(1.0 / np.percentile(ft, 50)) if ft.size else None,
+        "frame_ms_mean": float(ft.mean() * 1000) if ft.size else None,
         "frame_ms_p50": float(np.percentile(ft * 1000, 50)) if ft.size else None,
+        "frame_ms_p90": float(np.percentile(ft * 1000, 90)) if ft.size else None,
         "frame_ms_p95": float(np.percentile(ft * 1000, 95)) if ft.size else None,
+        "frame_ms_p99": float(np.percentile(ft * 1000, 99)) if ft.size else None,
+        "frame_ms_max": float(ft.max() * 1000) if ft.size else None,
+        # Fraction of frames a live 25 fps camera would have had to drop. FPS
+        # alone hides tail latency, and the tail is what an instructor notices.
+        "dropped_frame_rate_at_25fps": float((ft > 1.0 / 25.0).mean()) if ft.size else None,
+        "dropped_frame_rate_at_10fps": float((ft > 1.0 / 10.0).mean()) if ft.size else None,
+        "n_tracks_mean": float(np.mean(track_counts)) if track_counts else None,
         "stages": timer.summary(),
     }
     if device.type == "cuda":
         import torch
         report["gpu_peak_mem_mb"] = float(torch.cuda.max_memory_allocated(device)) / 1e6
+        report["gpu_reserved_mem_mb"] = float(torch.cuda.max_memory_reserved(device)) / 1e6
         report["gpu_name"] = torch.cuda.get_device_name(device)
+        report["n_gpus_used"] = 1
+    try:
+        import resource
+        report["host_peak_rss_mb"] = (
+            resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0)
+    except Exception:
+        pass
     return report
 
 
