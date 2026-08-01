@@ -71,6 +71,32 @@ def from_table_a(path: Path) -> List[Dict]:
     return out
 
 
+def from_cmose(path: Path) -> List[Dict]:
+    if not path.exists():
+        return []
+    d = json.loads(path.read_text())
+    a = d["audit"]
+    out = [entry(
+        "CMOSE · subjects appearing in >1 official split",
+        f"{a['subjects_in_more_than_one_official_split']}/{a['n_subjects']}",
+        split="CMOSE official release", evidence=str(path), citable=True,
+        branch="external (CMOSE, separate task)", evaluator="thesis_eval/cmose.py",
+        caveat=a["note"])]
+    for proto, blk in d["protocols"].items():
+        for m, v in blk["test_over_seeds"].items():
+            out.append(entry(
+                f"CMOSE · {m} ({proto} split)", round(v["mean"], 4),
+                split=f"CMOSE test ({proto})", evidence=str(path), citable=True,
+                branch="external (CMOSE, separate task)",
+                evaluator="thesis_eval/cmose.py",
+                config=f"MLP over 1024-d I3D; {blk['split_sizes']}; "
+                       f"{blk['subject_overlap_train_test']} subjects shared train/test",
+                caveat=(f"mean over 3 seeds (sd {v['std']:.4f}). SEPARATE TASK — "
+                        "four-level ordinal engagement. Never place beside the "
+                        "six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.")))
+    return out
+
+
 def from_events(path: Path) -> List[Dict]:
     if not path.exists():
         return []
@@ -226,6 +252,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tables", default="work_dirs/thesis/tables")
     ap.add_argument("--events", default="work_dirs/thesis/events/summary.json")
+    ap.add_argument("--cmose", default="work_dirs/thesis/cmose/cmose_results.json")
     ap.add_argument("--out", default="../outputs")
     args = ap.parse_args()
 
@@ -233,6 +260,7 @@ def main():
     entries += from_table_a(Path(args.tables) / "table_a_val.json")
     entries += from_table_a(Path(args.tables) / "table_a_test.json")
     entries += from_events(Path(args.events))
+    entries += from_cmose(Path(args.cmose))
     entries += STATIC_ENTRIES
 
     reg = {

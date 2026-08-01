@@ -37,6 +37,12 @@ def sweep_jobs(name: str) -> List[Dict]:
         for model, seed in itertools.product(("mstcn", "asrf"), SEEDS):
             jobs.append({"experiment_id": f"{model}_570_full_s{seed}",
                          "model": model, "feature_config": "570_full", "seed": seed})
+    elif name == "headpose":
+        # Decomposes the one feature block that demonstrably works, to decide
+        # whether a stronger head-pose estimator could add anything.
+        for cfg, seed in itertools.product(("553_facefound", "555_angles"), SEEDS):
+            jobs.append({"experiment_id": f"transformer_{cfg}_s{seed}",
+                         "model": "transformer", "feature_config": cfg, "seed": seed})
     else:
         raise KeyError(name)
     return jobs
@@ -44,7 +50,7 @@ def sweep_jobs(name: str) -> List[Dict]:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--sweep", required=True, choices=["ladder", "arch"])
+    ap.add_argument("--sweep", required=True, choices=["ladder", "arch", "headpose"])
     ap.add_argument("--out-root", required=True)
     # Hard project constraint: at most 4 GPUs may be occupied at once, even
     # though the host exposes 8. Do not widen this default.

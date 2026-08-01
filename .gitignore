@@ -54,3 +54,6 @@ gold_annotation_bundle*
 tools/gold_annotator/gold_annotations_*.jsonl
 tools/gold_annotator/gold_events_*.jsonl
 .claude/
+
+# External datasets (re-downloadable; CMOSE is 13.6 GB)
+grounding_data/external/

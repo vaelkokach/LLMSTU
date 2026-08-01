@@ -1,7 +1,7 @@
 # Experimental findings — running log
 
 **Project:** Deep Learning-Based Real-Time Student Behavior Analysis and Attention Loss Detection
-**Started:** 2026-07-29 · **Last updated:** 2026-07-31 20:30 UTC
+**Started:** 2026-07-29 · **Last updated:** 2026-08-01
 
 This is the living record of what has been measured and what it means. Companion
 documents:
@@ -29,9 +29,13 @@ documents:
 | Detector ARM B (hungarian) | R@1 @10k | **0.4954 (+17.2 vs A)** | ✅ done |
 | Detector ARM C (p90) | R@1 @10k | 0.4787 (−1.7 vs B) | ✅ done |
 | **Detector main (exact)** | **R@1 TEST / val** | **0.6462 test** · 0.6343 val | ✅ §3.4c |
-| **Temporal model** | **macro-F1, single-process** | **0.3835 → 0.4098 → 0.4080** (552→556→570) | ✅ §6f |
+| Temporal model (legacy split) | macro-F1, single-process, **validation** | 0.3835 → 0.4098 → 0.4080 (552→556→570) | ⚠️ §6f — superseded, §11 |
+| **Temporal model** | **macro-F1, val, 3 seeds, leak-free split** | **transformer 0.402 · MS-TCN 0.503 · ASRF 0.506** (556-dim) | ✅ §11.3 |
+| **Feature ablation** | **isolated, 3 seeds, paired bootstrap** | **head pose +0.029 (3/3 sig); expression +0.001, dynamics −0.011 (0/3)** | ★ §11.4 |
 | Teacher label quality | frame cue agreement | 87.4% | ✅ |
-| **Event layer** | **model vs HUMAN gold** | **10/24 (556) · 8/24 (570, tighter bounds); teacher 18/24** | ⚠️ §6e |
+| **Event layer** | **model vs HUMAN gold** | **10/24 (556) · 8/24 (570, tighter bounds); teacher 18/24** | ⚠️ §6e — but the gold contains 8 duplicate episodes, §11.2 |
+| **Event layer, corrected** | **event recall vs 16 DISTINCT gold episodes** | **transformer 0.21 · MS-TCN 0.31 · teacher 0.63** | ⚠️ §11.5 |
+| **Segmentation quality** | **edit score (fragmentation)** | **transformer 38 · MS-TCN 60 · teacher 77** | ★ §11.5 |
 | Zero-shot SCB transfer | R@1 | 0.0322 ⚠️ confounded | ⚠️ §6b |
 | **DIPSER cue↔engagement** | **Spearman ρ** | **+0.172 (p<0.0001) — REVERSED** | ★ §6c |
 | **Facial expression → boredom** | **AUROC vs expert** | **0.544** (chance 0.5) | ⚠️ §6d.1 |
@@ -1121,26 +1125,36 @@ Fixed by `llmstu_tools/add_conversations.py` (127,099 records, 0 empty fallbacks
 
 ## 9. Open items
 
-**Blocking the thesis tables**
+*Rewritten 2026-08-01. Items 1–4 were listed as blocking after they had been
+completed, and the dashboard was listed as dropped after it had been rebuilt and
+verified; both contradictions are removed. See `outputs/thesis_audit_report.md` §8.*
 
-1. Re-run the matching full sweep with `spatial_weight = 0.0` — §3.2. Until then the
-   citable matching number is 81.5%, not 92.3%.
-2. ~~ARM B and ARM C detector runs~~ — **done 2026-07-30**, see §3.5.
-3. Main `student_llmstu_exact` run (40k iters, ~11–12 h) — the headline grounding
-   number. Use the ARM B recipe (unfiltered Hungarian).
-4. Model-vs-human event metrics on the 984 dense crops.
+**Closed**
 
-**Improvements identified**
+1. ~~Matching sweep at `spatial_weight = 0.0`~~ — **done 2026-07-31**, §3.2. The
+   citable number is **0.7896**. (The "81.5%" this item used to quote was itself
+   stale and agreed with neither 0.9231 nor 0.7896.)
+2. ~~ARM B and ARM C detector runs~~ — **done 2026-07-30**, §3.5.
+3. ~~Main `student_llmstu_exact` run~~ — **done 2026-07-31** at 25k iters, §3.4b;
+   superseded by the test-split result, §3.4c.
+4. ~~Model-vs-human event metrics on the 984 dense crops~~ — **done 2026-07-31**,
+   §6.0; extended with the full segmentation metric family 2026-08-01, §11.
+5. ~~Head-pose / gaze features~~ — **done**, §6.0a/§6e; re-measured under control
+   in §11.4, where only the head-pose block survives.
+6. ~~Live dashboard~~ — **restored and verified on real video 2026-08-01**, §6d.3.
+   It was never actually dropped.
+7. ~~Branch B has no test split~~ — **fixed 2026-08-01**, §11.1.
 
-5. Head-pose / gaze features — the lever for `looking_away` (F1 0.29),
-   `turned_to_peer` (F1 0.18), and (per §5.4) `phone_use` when the object is hidden.
-6. Batch CLIP in `sequence_builder` as in the runtime path.
-7. Failure-mode analysis tooling (to-do item 32).
-8. Task-context metadata (to-do item 19) — needs which recording was which task type.
+**Still open**
 
-**Dropped from scope**
-
-- Live dashboard (to-do item 7) — user decision, 2026-07-29.
+8. Batch CLIP in `sequence_builder` as in the runtime path (build-time speedup only).
+9. Failure-mode analysis tooling (to-do item 32).
+10. Task-context metadata (to-do item 19) — needs which recording was which task type.
+11. `inactivity` is an alias of `head_down` in `attention/events.py` and carries no
+    distinct signal. The `dynamic` feature block now provides motion statistics that
+    could give it one. See §11.2.
+12. Pseudo-label model identity is not recorded anywhere in the pipeline outputs.
+    §2.1 and `outputs/thesis_audit_report.md` §7.
 
 ---
 
@@ -1310,7 +1324,397 @@ feature width mid-run — hence backends fail loudly at construction.
 
 ---
 
+## 11. Rebuild on a leak-free Branch-B split, with statistics (2026-08-01) ★
+
+Everything in this section is produced by one evaluator, `attention/thesis_eval/`,
+on one split, with three seeds per configuration and video-level cluster bootstrap
+intervals. It supersedes the absolute numbers in §4.2, §6.0a, §6e and §6f.
+Full audit: `outputs/thesis_audit_report.md`. Test protocol, registered before the
+run: `BRANCH_B_TEST_PROTOCOL.md`.
+
+### 11.1 Branch B had no test split — fixed
+
+`attention/sequence_builder.py:213` draws its **own** 80/20 video shuffle and never
+reads `outputs/splits.json`. Consequences: the cue model had a 102/25 split with no
+test set, and **23 of the detector's 27 test videos were in its training set**.
+§3.4c flagged this and estimated a 2.5 h rebuild.
+
+It is far cheaper than that. The split is a property of `video_id`, which
+`meta.json` records for every sequence, so the datasets were **re-partitioned by
+metadata alone** — no feature re-extraction:
+
+| split | videos | sequences | frames |
+|---|---|---|---|
+| train | 73 | 4,390 | 185,050 |
+| val | 27 | 1,085 | 42,702 |
+| test | 27 | 1,056 | 43,733 |
+
+→ `grounding_data/llmstu_seq_split_manifest.json`. Zero video overlap. Both branches
+now share one split. **All models were retrained from scratch**; the archived
+552/556/570 checkpoints cannot be evaluated here because they trained on 23 of the
+27 test videos.
+
+### 11.2 The human-gold set contains 8 duplicate episodes
+
+`attention/events.py:26-35` maps **both** `head_down` and `inactivity` to the single
+cue `head_down`, so every head-down episode is emitted twice. The gold file confirms
+it: 7 `head_down` and 7 `inactivity` episodes with byte-identical `(t_start, t_end)`.
+One track also carries `return_to_task (51.9, 51.9)` twice — and since matching is
+greedy one-to-one, that duplicate is **unmatchable by construction**, a guaranteed
+miss for every system ever scored against it.
+
+**The "24 gold episodes" are 16 distinct ones**: 7 head_down + 5 phone_use +
+2 return_to_task + 2 peer_interaction. Recall *ratios* like 10/24 are not badly
+wrong, because the duplication inflates numerator and denominator together, but
+`head_down` is double-weighted in every aggregate and in false-alerts/hour. The new
+evaluator reports `gold_raw` (24, continuity) and `gold_dedup` (16, honest).
+
+### 11.3 ★ Architecture is worth far more than features
+
+Boundary-aware temporal-segmentation baselines (MS-TCN, ASRF) on **identical**
+sequences, split, seeds, optimiser, schedule and evaluator. Validation, mean ± sd
+over 3 seeds:
+
+| model | dims | params | accuracy | balanced acc | macro-F1 | macro-AUPRC | ECE |
+|---|---|---|---|---|---|---|---|
+| transformer (project's) | 552 | 12.6 M | 0.673 ± 0.015 | 0.399 ± 0.006 | 0.373 ± 0.005 | 0.373 | 0.049 |
+| transformer | 556 | 12.6 M | 0.710 ± 0.015 | 0.428 ± 0.011 | 0.402 ± 0.007 | 0.411 | 0.050 |
+| **MS-TCN** | 556 | **2.7 M** | 0.758 ± 0.001 | 0.522 ± 0.007 | **0.503 ± 0.005** | 0.509 | 0.026 |
+| **ASRF** | 556 | 4.7 M | 0.729 ± 0.019 | **0.532 ± 0.028** | **0.506 ± 0.020** | 0.516 | 0.040 |
+| MS-TCN | 570 | 2.7 M | 0.775 ± 0.016 | 0.489 ± 0.012 | 0.504 ± 0.012 | 0.505 | 0.021 |
+| ASRF | 570 | 4.7 M | 0.752 ± 0.006 | 0.529 ± 0.008 | 0.507 ± 0.010 | 0.515 | 0.020 |
+
+Paired video-level bootstrap, seed-matched, at 556 dims:
+
+| contrast | Δ macro-F1 | Δ balanced acc | significant |
+|---|---|---|---|
+| **ASRF − transformer** | **+0.1043** | +0.1040 | **3/3 seeds** |
+| **MS-TCN − transformer** | **+0.1007** | +0.0940 | **3/3 seeds** |
+| ASRF − MS-TCN | +0.0036 | +0.0100 | 0/3 — a tie |
+
+Per class, ASRF − transformer (mean Δ F1, seeds significant):
+`looking_away` **+0.156 (3/3)** · `phone_use` +0.147 (2/3) ·
+`uncertain` +0.123 (3/3) · **`turned_to_peer` +0.110 (3/3)** ·
+`head_down` +0.076 (3/3) · `screen_oriented` +0.013 (1/3).
+
+**This is the largest single improvement measured in the project, and it lands
+precisely on the two classes every previous attempt failed to move.** A dilated
+multi-stage TCN with a truncated-MSE smoothing term has ~5× fewer parameters than
+the transformer and does better on every class. The transformer's problem was never
+the features: a 4-layer post-LN encoder over 128-frame windows was simply the wrong
+inductive bias for a task whose labels are piecewise-constant runs.
+
+### 11.4 ⚠️ The isolated feature ablation overturns §6e
+
+The 556→570 comparison added facial expression and body-language/gaze dynamics
+**together**, so neither was isolated. The 570-dim NPZ column layout
+(`[0:552] base | [552:556] head pose | [556:563] expression | [563:570] dynamics`)
+makes each rung a pure **column slice** of one array, so the ladder was run with no
+feature re-extraction and therefore no possibility of extraction drift.
+
+Validation, 3 seeds, paired video-level bootstrap:
+
+| contrast | Δ macro-F1 | 95% CI (seed means) | significant | verdict |
+|---|---|---|---|---|
+| **+ head pose** (556 − 552) | **+0.0294** | — | **3/3** | ✅ real |
+| + facial expression, isolated (563expr − 556) | +0.0009 | — | 0/3 | ✗ none |
+| + dynamics/gaze, isolated (563dyn − 556) | −0.0105 | — | 0/3 | ✗ none |
+| + both (570 − 556) — the historic contrast | −0.0031 | — | 0/3 | ✗ none |
+| + both, under MS-TCN | +0.0012 | — | 0/3 (balanced acc **−0.0327, 3/3**) | ✗ none |
+| + both, under ASRF | +0.0008 | — | 0/3 | ✗ none |
+
+**§6e's claim does not survive.** It read: *"`turned_to_peer` improved 47% relative
+… almost all of that came from the dynamic block … that is the personalised
+gaze-deviation feature doing exactly what it was designed for."* Under the isolated
+ablation, `563dyn − 556` on `turned_to_peer` is **−0.0120, CI [−0.050, +0.032],
+0/3 seeds significant** — nominally *negative*. The original observation was a
+single-seed difference on a different split, measured with shard-averaged metrics.
+
+The honest statement: **head pose earns its place; facial expression and the
+dynamic/gaze block do not improve aggregate macro-F1 under any of three
+architectures, and cost balanced accuracy under MS-TCN.** They remain justified as
+*implementations* of indicator families `Thesis_Topic.md` names — the thesis can say
+the channels exist and were measured — but not as accuracy contributions.
+
+### 11.5 Temporal-event and segmentation metrics
+
+16 distinct gold episodes over 10 tracks, mean ± sd over 3 seeds, tIoU 0.30.
+Detector and tracker excluded by design.
+
+| system | frame acc | F1@10 | F1@25 | F1@50 | **edit** | event P | event R | event F1 | FA/h |
+|---|---|---|---|---|---|---|---|---|---|
+| transformer 552 | 0.738 | 0.309 | 0.244 | 0.169 | 30.9 | 0.560 | 0.292 | 0.383 | 9.4 |
+| transformer 556 | 0.782 | 0.307 | 0.265 | 0.211 | 38.2 | **0.622** | 0.208 | 0.312 | **5.1** |
+| transformer 570 | 0.740 | 0.268 | 0.237 | 0.183 | 28.8 | 0.450 | 0.167 | 0.242 | 9.4 |
+| MS-TCN 556 | 0.788 | 0.321 | 0.291 | 0.150 | 48.5 | 0.554 | 0.271 | 0.353 | 11.1 |
+| **MS-TCN 570** | 0.771 | **0.397** | **0.362** | 0.227 | **59.9** | 0.454 | **0.312** | 0.368 | 15.3 |
+| ASRF 556 | 0.775 | 0.336 | 0.277 | 0.169 | 36.4 | 0.496 | 0.229 | 0.309 | 10.2 |
+| ASRF 570 | 0.785 | 0.340 | 0.291 | 0.175 | 53.4 | 0.506 | 0.229 | 0.315 | 9.4 |
+| **teacher** (Qwen3-VL family) | 0.874 | 0.720 | 0.700 | 0.670 | 76.5 | 0.588 | 0.625 | 0.606 | 17.9 |
+| majority control | 0.341 | 0.090 | 0.067 | 0.022 | 34.9 | 0.000 | 0.000 | 0.000 | 0.0 |
+
+Three readings, none of them flattering by itself:
+
+1. **Over-segmentation is the failure mode, and boundary-aware models fix half of
+   it.** Edit score — which penalises exactly the fragmentation frame accuracy is
+   blind to — rises from 28.8–38.2 (transformer) to 48.5–59.9 (MS-TCN), against a
+   teacher at 76.5. `F1@25` rises 0.265 → 0.362. This is the addendum's central
+   hypothesis, confirmed.
+2. **Event recall stays far below the teacher for every model** (0.17–0.31 vs 0.625).
+   The gap narrowed but did not close. Frame accuracy reaching 90% of the teacher's
+   does not convert into episode detection.
+3. **The models remain conservative, which is the right failure direction for an
+   instructor alert.** The best-precision configuration (transformer 556, precision
+   0.622 at 5.1 false alerts/hour) fires less than a third as often as the teacher
+   (17.9/h). Which to deploy is a recall-vs-nuisance decision, not a correctness one.
+
+The teacher row is an **empirical teacher benchmark**, not a theoretical ceiling.
+Earlier text in this file calls 18/24 "the ceiling"; that wording overclaims. It is
+what one particular pseudo-labeller achieved on 16 distinct episodes.
+
+⚠️ **Sample size.** 16 episodes. One episode changing hands moves recall by 0.0625.
+Seed spreads on event recall are ±0.04–0.07. These are **diagnostic** numbers from
+two densely annotated segments, and must never be presented as a classroom-wide
+estimate.
+
+### 11.6 Two training defects found by rebuilding
+
+1. **Clipping the *scaled* gradients is load-bearing, not a bug.** The historic
+   trainer calls `clip_grad_norm_` before `scaler.unscale_`. "Correcting" that
+   collapses training to the majority class. Measured over 20 epochs on 556_hp with
+   identical seed and data:
+
+   | gradient handling | loss @ ep19 | macro-F1 @ ep19 |
+   |---|---|---|
+   | clip scaled grads (historic) | 1.282 | **0.267** |
+   | `unscale_` then clip @ 1.0 | 1.558 | 0.144 (majority) |
+   | no clipping at all | 1.559 | 0.144 (majority) |
+
+   Because Adam is invariant to a constant gradient rescaling, clipping before
+   unscaling is *global gradient normalisation*. The recipe is now reproduced
+   deliberately and documented in `thesis_eval/train.py` rather than surviving by
+   accident.
+
+2. **Checkpoint selection was argmax over a noisy metric.** Validation macro-F1
+   swings ±0.05 between adjacent epochs (e.g. epochs 85–89 of the 552 run: 0.3492,
+   0.3826, 0.3930, 0.3933, 0.3433), while the 556-vs-570 gap being argued over was
+   0.0018. Selection is now the mean over a trailing 5-epoch window.
+
+### 11.7 Calibration and abstention
+
+Temperature scaling fitted on validation predictions only; it cannot change any
+argmax, which is asserted in the tests. On the transformer 556 (seed 42):
+
+| | ECE | Brier | NLL | accuracy | AURC |
+|---|---|---|---|---|---|
+| uncalibrated | 0.0527 | 0.4364 | 0.8972 | 0.6935 | 0.1759 |
+| T = 1.311 | **0.0322** | 0.4345 | **0.8682** | 0.6935 (unchanged) | **0.1632** |
+
+The boundary-aware models are already better calibrated before scaling
+(MS-TCN 570 ECE 0.010–0.041, ASRF 570 ECE 0.017–0.025, vs the transformer's
+0.042–0.056) — a second, unadvertised benefit of the architecture change.
+
+Coverage–risk curves are stored per model so an alert threshold can be chosen on
+validation for a stated deployment priority and then held fixed.
+
+### 11.8 Runtime, with latency percentiles
+
+Single A100, `0325.mp4`, 160 frames, batched CLIP. FPS alone was hiding the tail:
+
+| visible students | FPS | p50 (ms) | p90 | p95 | p99 | GPU peak (MB) |
+|---|---|---|---|---|---|---|
+| real scene (~6) | 5.8 | 171.5 | 175.8 | 178.3 | 192.6 | 3,388 |
+| 1 | 7.0 | 142.2 | 148.2 | 149.6 | 152.1 | 6,262 |
+| 5 | 5.9 | 171.9 | 173.7 | 174.9 | 176.8 | 6,275 |
+| 10 | 4.8 | 210.4 | 214.1 | 217.8 | 231.1 | 6,275 |
+| 20 | 3.4 | 296.0 | 301.9 | 305.6 | 308.1 | 6,275 |
+| 30 | 2.6 | 388.8 | 431.9 | 440.3 | 456.4 | 6,275 |
+
+The detector is a fixed ~122 ms floor; per-student feature extraction adds ~8 ms
+each. **100% of frames exceed a 10 fps budget at every student count**, so the
+system must be described as **near-real-time**, not real-time. Deployment is
+single-GPU; the 4 A100s are a training resource and must not be presented as
+classroom hardware.
+
+### 11.9 ★ TEST SPLIT — every conclusion replicates
+
+Single pre-registered run (`BRANCH_B_TEST_PROTOCOL.md`, registered at commit
+`8eaf5bb` **before** any Branch-B model read the split). 27 held-out videos,
+1,056 sequences, 43,733 frames. Mean ± sd over 3 seeds.
+
+| model | dims | accuracy | balanced acc | **macro-F1** | macro-AUPRC | ECE | val macro-F1 |
+|---|---|---|---|---|---|---|---|
+| transformer | 552 | 0.657 ± 0.003 | 0.396 ± 0.011 | 0.377 ± 0.007 | 0.357 | 0.065 | 0.373 |
+| transformer | 556 | 0.699 ± 0.011 | 0.424 ± 0.015 | 0.407 ± 0.004 | 0.392 | 0.068 | 0.402 |
+| transformer | 563 (+expr) | 0.701 ± 0.016 | 0.420 ± 0.032 | 0.405 ± 0.017 | 0.402 | 0.053 | 0.403 |
+| transformer | 563 (+dyn) | 0.685 ± 0.014 | 0.421 ± 0.011 | 0.399 ± 0.006 | 0.392 | 0.042 | 0.391 |
+| transformer | 570 | 0.660 ± 0.011 | 0.424 ± 0.004 | 0.390 ± 0.005 | 0.388 | 0.075 | 0.399 |
+| ASRF | 556 | 0.710 ± 0.022 | 0.513 ± 0.035 | **0.477 ± 0.016** | 0.473 | 0.033 | 0.506 |
+| ASRF | 570 | 0.735 ± 0.023 | 0.521 ± 0.002 | **0.492 ± 0.019** | 0.482 | 0.031 | 0.507 |
+| **MS-TCN** | **556** | 0.759 ± 0.002 | 0.519 ± 0.023 | **0.500 ± 0.011** | 0.489 | 0.032 | 0.503 |
+| MS-TCN | 570 | 0.765 ± 0.018 | 0.481 ± 0.030 | 0.488 ± 0.023 | 0.477 | 0.025 | 0.504 |
+
+Paired video-level bootstrap **on test**:
+
+| contrast | Δ macro-F1 | seeds significant |
+|---|---|---|
+| MS-TCN − transformer (556) | **+0.0933** | **3/3** |
+| ASRF − transformer (556) | **+0.0705** | **3/3** |
+| head pose (556 − 552) | **+0.0296** | **3/3** |
+| 570 − 556 (feature null) | **−0.0167** | 1/3 — *against* the extra features |
+
+**Every validation conclusion holds on the untouched test split**, and the
+transformer rungs agree with validation to within 0.005 macro-F1 — independent
+evidence that the video-wise partition is genuinely leak-free and that the
+validation-guided choices did not overfit.
+
+Two honest notes:
+
+* The pre-registered **primary model was ASRF-556** (validation-tied with MS-TCN,
+  +0.0036, 0/3 significant, chosen for its boundary head). On test **MS-TCN-556
+  scores higher** (0.500 vs 0.477). The selection is not revised — that is what
+  pre-registration is for. Report both, and note that the two remained within
+  each other's seed spread on validation.
+* All Branch-B test labels are **pseudo-labels** from the same teacher as
+  training, so this measures generalisation to unseen *videos*, not agreement
+  with humans.
+
+### 11.10 ★ The head-pose gain is `face_found`, not the angles
+
+The one feature family that works was decomposed into its two very different
+signals — the three metric angles and the binary "was a face detected at all"
+flag — by column-slicing the same array. 3 seeds, paired video-level bootstrap
+against the 552 base:
+
+| configuration | dims | macro-F1 | Δ vs base | seeds significant |
+|---|---|---|---|---|
+| base | 552 | 0.373 | — | — |
+| **+ `face_found` only** | 553 | **0.396** | **+0.0236** | 1/3 (balanced acc +0.0346, 2/3) |
+| + yaw/pitch/roll only | 555 | 0.378 | +0.0053 | 0/3 |
+| + full head-pose block | 556 | 0.402 | +0.0294 | 3/3 |
+| full block − `face_found` only | — | — | +0.0058 | 0/3 |
+
+**About 80% of the head-pose contribution is the detection flag; the metric
+angles add nothing measurable on top of it.** This confirms the hypothesis in
+§6.0b — MediaPipe detects a face on 92% of `screen_oriented` crops and 8% of
+`head_down` crops, and that contrast is the signal — but it was never before
+tested in isolation.
+
+**Consequence for the head-pose upgrade (addendum §2.2).** Swapping MediaPipe for
+DirectMHP or 6DRepNet would buy better *angles*, which is the part that does not
+help. Worse, a full-range estimator that succeeds on downward-facing heads would
+*destroy* the 92%-vs-8% coverage contrast that the useful feature depends on.
+The upgrade is therefore **not** a straightforward improvement: it should be
+evaluated on downstream cue macro-F1 with `face_found` recomputed from the new
+backend, not on pose coverage or angular error. Recorded as a redirected
+priority rather than a completed benchmark.
+
+### 11.11 ★ CMOSE — a separate ordinal engagement task, and a split-leakage finding
+
+Trained a **separate** four-level ordinal engagement head on CMOSE
+(arXiv 2312.09066, CC-BY-SA-4.0, 13.6 GB, HuggingFace `cwuau/CMOSE`). Kept
+strictly apart from the visible-cue model: CMOSE labels an *internal state*, our
+taxonomy labels *observable cues*, and merging them would destroy the
+distinction the thesis rests on. 11,902 of 12,197 clips (295 have empty I3D
+embeddings and are **dropped, not zero-filled** — a zero vector is a value the
+model would learn from, the same trap that made the OpenCV head-pose backend
+useless, §9a.3). Model: a small MLP over the released 1024-d I3D embeddings only
+(no audio, no text, no OpenFace), 3 seeds, selection on validation average
+accuracy.
+
+**Under CMOSE's own published split, our simple baseline reproduces the paper's
+reported range**: accuracy 0.718 and average accuracy 0.601, against the paper's
+78.14% overall and 60.94% best average accuracy. Close enough to confirm the
+pipeline is reading the data correctly, on a fraction of the modalities.
+
+**Then the finding.** Clip names encode the subject (`videoX_Y_personZ`). Of
+**103 subjects, 101 appear in more than one official split**, and 100 subjects
+are shared between official train and test — the released 70/20/10 split assigns
+*clips*, not people. Re-splitting by whole subjects (70/15/15, zero overlap,
+verified by assertion) with everything else identical:
+
+| metric | official split (100 shared subjects) | **subject-disjoint** (0 shared) | change |
+|---|---|---|---|
+| accuracy | 0.7179 ± 0.0030 | 0.6006 ± 0.0058 | **−0.117** |
+| average (balanced) accuracy | 0.6007 ± 0.0086 | 0.4347 ± 0.0084 | **−0.166** |
+| macro-F1 | 0.5733 ± 0.0027 | 0.4111 ± 0.0051 | **−0.162** |
+| MAE over ordered levels | 0.3123 ± 0.0029 | 0.4459 ± 0.0123 | **+0.134** |
+| quadratic weighted kappa | 0.5369 ± 0.0039 | 0.3167 ± 0.0319 | **−0.220** |
+| Spearman ρ | 0.5354 ± 0.0086 | 0.3221 ± 0.0305 | **−0.213** |
+
+→ `work_dirs/thesis/cmose/cmose_results.json`, `attention/thesis_eval/cmose.py`
+
+**Reading this fairly.** This is not a criticism of CMOSE: the paper states it
+uses a random segment split, and within-subject evaluation is a legitimate
+protocol for some questions. But a model evaluated that way has seen the same
+face, webcam, lighting and session in training, and **quadratic weighted kappa
+falls by 0.22 when it has not.** Any comparison between a published CMOSE number
+and this project's video-wise Branch-B numbers must state that the two split
+policies differ by this much.
+
+It is also the strongest external corroboration of this project's own most
+expensive lesson. The March pipeline was invalidated by a temporally leaked
+split (post-mortem §1); the same class of leakage is present in a published
+engagement benchmark, and here it is quantified rather than asserted.
+
+**Not comparable with anything else in this thesis.** CMOSE accuracy answers
+"how well can four ordered engagement levels be predicted from an online
+coaching clip". It must never appear beside the six-class visible-cue macro-F1,
+the grounding R@1, or SCB's mAP.
+
+---
+
 ## 10. Changelog
+
+**2026-08-01 (second session)**
+- **ARCHITECTURE IS THE LEVER: MS-TCN +0.1007 and ASRF +0.1043 macro-F1 over the
+  temporal transformer, 3/3 seeds significant** (paired video-level bootstrap,
+  identical features/split/seeds). Gains land on the classes every previous
+  attempt failed to move: `looking_away` +0.156, `turned_to_peer` +0.110. ASRF vs
+  MS-TCN is a tie (0/3). Edit score 38 -> 60 (teacher 77). §11.3, §11.5.
+- **ISOLATED FEATURE ABLATION OVERTURNS §6e.** Head pose is real (+0.0294, 3/3
+  significant); facial expression (+0.0009) and dynamics/gaze (-0.0105) are NOT,
+  under three architectures. The `turned_to_peer` gain previously attributed to
+  personalised gaze deviation is -0.0120 [-0.050, +0.032], 0/3 significant. §11.4.
+- **Branch B given a test split for the first time.** Sequences re-partitioned by
+  metadata onto the detector's leak-free 73/27/27 (no feature re-extraction);
+  all models retrained; protocol pre-registered in `BRANCH_B_TEST_PROTOCOL.md`
+  at commit 8eaf5bb before the run. §11.1.
+- **The human gold has 8 duplicate episodes**: `attention/events.py` aliases
+  `inactivity` onto `head_down`, and one `return_to_task` marker appears twice
+  (and is unmatchable by construction). 24 -> 16 distinct. §11.2.
+- Unified single-process evaluator `attention/thesis_eval/` replaces three
+  disagreeing harnesses: balanced accuracy, AUPRC/AUROC, ECE/classwise-ECE/Brier/
+  NLL, confusion matrices, video-level cluster bootstrap CIs, stored prediction
+  archives; segmental F1@10/25/50, edit score, event P/R/F1 at multiple tIoU,
+  onset/offset/duration MAE, detection delay, FA/h, common-matched-subset
+  boundary errors. 60 unit tests.
+- Clipping the SCALED gradients turns out to be load-bearing: "fixing" it (or
+  removing clipping) collapses training to the majority class. Adam's scale
+  invariance makes it global gradient normalisation. §11.6.
+- Checkpoint selection was argmax over a metric that swings +/-0.05 between
+  adjacent epochs; now a trailing 5-epoch mean. §11.6.
+- Temperature scaling: ECE 0.0527 -> 0.0322 with accuracy unchanged. The
+  boundary-aware models are better calibrated before scaling. §11.7.
+- Runtime latency percentiles and a 1/5/10/20/30-student curve added; 100% of
+  frames miss a 10 fps budget, so the system is **near-real-time**. §11.8.
+- **CMOSE ordinal engagement head trained (separate task).** Reproduces the
+  paper's range on its own split (accuracy 0.718 / average accuracy 0.601 vs
+  78.14 / 60.94). **101 of 103 CMOSE subjects appear in more than one official
+  split**; re-splitting by subject costs QWK 0.537 -> 0.317 and average accuracy
+  0.601 -> 0.435. §11.11.
+- **Head-pose gain is `face_found`, not the angles**: +0.0236 from the detection
+  flag alone vs +0.0053 from yaw/pitch/roll. Redirects the DirectMHP/6DRepNet
+  upgrade. §11.10.
+- **TEST SPLIT: every conclusion replicates.** MS-TCN +0.0933 and ASRF +0.0705
+  over the transformer (3/3 significant); head pose +0.0296 (3/3); 570-vs-556
+  -0.0167. Transformer rungs agree with validation to within 0.005. §11.9.
+- The 128/127 video gap resolved: `video_0162_...` has 1,358 recovered frames and
+  ZERO LLMSTU label records - the unique zero-coverage video.
+- Verified the three sequence datasets are bit-identical in shared columns, so
+  the historic 552/556/570 ablation was genuinely controlled.
+- §9 rewritten: four "blocking" items had been completed and the dashboard was
+  listed as dropped after being rebuilt.
 
 **2026-07-31**
 - **P0.4 DONE — head pose: events 6/24 -> 10/24 (+67% rel), macro-F1 0.4096 ->

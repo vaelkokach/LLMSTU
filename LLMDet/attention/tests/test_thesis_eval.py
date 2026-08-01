@@ -52,6 +52,18 @@ def test_563_variants_select_different_columns():
     assert set(d[556:]) == set(range(563, 570))
 
 
+def test_headpose_decomposition_partitions_the_headpose_block():
+    """553_facefound and 555_angles must split [552,556) with no overlap."""
+    ff = D.column_index("553_facefound")
+    an = D.column_index("555_angles")
+    base = D.column_index("552_base")
+    assert D.config_dim("553_facefound") == 553 and D.config_dim("555_angles") == 555
+    assert set(ff) - set(base) == {555}
+    assert set(an) - set(base) == {552, 553, 554}
+    assert (set(ff) | set(an)) - set(base) == set(range(552, 556))
+    assert (set(ff) & set(an)) == set(base), "the two halves must not overlap"
+
+
 def test_legacy_remap_folds_idle_other_and_uncertain():
     assert D.LEGACY_REMAP_LUT[5] == 5 and D.LEGACY_REMAP_LUT[6] == 5
     assert list(D.LEGACY_REMAP_LUT[:5]) == [0, 1, 2, 3, 4]

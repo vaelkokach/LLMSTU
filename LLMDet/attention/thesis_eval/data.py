@@ -41,12 +41,27 @@ from typing import Dict, List, Optional, Sequence, Tuple
 import numpy as np
 
 # Column layout of the 570-dim build. Slices are half-open, in column order.
+# These four tile [0, 570) exactly.
 FEATURE_BLOCKS: Dict[str, Tuple[int, int]] = {
     "base": (0, 552),
     "headpose": (552, 556),
     "express": (556, 563),
     "dynamic": (563, 570),
 }
+
+#: Sub-blocks that split ``headpose`` into its two very different signals.
+#: FINDINGS 6.0b argued that ``face_found`` — whether MediaPipe found a face at
+#: all — is the strongest single cue signal in the project (92% detection on
+#: `screen_oriented` vs 8% on `head_down`), and that the metric angles were the
+#: weaker part. That was never tested in isolation, and it decides whether a
+#: stronger head-pose estimator (DirectMHP, 6DRepNet) is worth integrating: if
+#: the gain is all ``face_found``, better angles cannot help much.
+SUB_BLOCKS: Dict[str, Tuple[int, int]] = {
+    "hp_angles": (552, 555),      # yaw, pitch, roll
+    "hp_facefound": (555, 556),   # the detection flag alone
+}
+
+ALL_BLOCKS: Dict[str, Tuple[int, int]] = {**FEATURE_BLOCKS, **SUB_BLOCKS}
 
 #: The controlled ladder. Each entry lists the blocks kept, in column order.
 #: ``563_expr`` and ``563_dyn`` isolate the two families that the historic
@@ -57,6 +72,9 @@ FEATURE_CONFIGS: Dict[str, List[str]] = {
     "563_expr": ["base", "headpose", "express"],
     "563_dyn": ["base", "headpose", "dynamic"],
     "570_full": ["base", "headpose", "express", "dynamic"],
+    # head-pose decomposition (see SUB_BLOCKS)
+    "553_facefound": ["base", "hp_facefound"],
+    "555_angles": ["base", "hp_angles"],
 }
 
 IGNORE_INDEX = -100
@@ -68,15 +86,14 @@ LEGACY_REMAP_LUT = np.array([0, 1, 2, 3, 4, 5, 5], dtype=np.int64)
 
 
 def config_dim(name: str) -> int:
-    return sum(hi - lo for hi, lo in
-               ((FEATURE_BLOCKS[b][1], FEATURE_BLOCKS[b][0]) for b in FEATURE_CONFIGS[name]))
+    return sum(ALL_BLOCKS[b][1] - ALL_BLOCKS[b][0] for b in FEATURE_CONFIGS[name])
 
 
 def column_index(name: str) -> np.ndarray:
     """Column indices selected by a feature config, in ascending order."""
     idx: List[int] = []
     for block in FEATURE_CONFIGS[name]:
-        lo, hi = FEATURE_BLOCKS[block]
+        lo, hi = ALL_BLOCKS[block]
         idx.extend(range(lo, hi))
     return np.asarray(sorted(idx), dtype=np.int64)
 
