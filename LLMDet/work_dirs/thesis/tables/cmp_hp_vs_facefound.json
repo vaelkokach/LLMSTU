@@ -1,0 +1,356 @@
+{
+  "evaluator_version": "thesis_eval/1.0.0",
+  "note": "Positive difference favours the --a system. Significance is a paired video-level cluster bootstrap at alpha=0.05; a difference is only reported as real when it holds in every seed pair.",
+  "aggregate": {
+    "accuracy": {
+      "mean_difference": 0.03114608215071894,
+      "sd_difference": 0.01828153378636312,
+      "n_pairs": 3,
+      "n_pairs_significant": 2,
+      "per_pair": {
+        "s42_vs_s42": {
+          "difference": 0.02547890028570088,
+          "ci": [
+            0.004540475586867207,
+            0.047604240093082
+          ],
+          "p": 0.013,
+          "significant": true
+        },
+        "s43_vs_s43": {
+          "difference": 0.05159008945716825,
+          "ci": [
+            0.018329932244752916,
+            0.08653964545196775
+          ],
+          "p": 0.0,
+          "significant": true
+        },
+        "s44_vs_s44": {
+          "difference": 0.016369256709287683,
+          "ci": [
+            -0.010456702117849942,
+            0.044735633195936826
+          ],
+          "p": 0.234,
+          "significant": false
+        }
+      }
+    },
+    "balanced_accuracy": {
+      "mean_difference": -0.005389838452025471,
+      "sd_difference": 0.02582862123110884,
+      "n_pairs": 3,
+      "n_pairs_significant": 1,
+      "per_pair": {
+        "s42_vs_s42": {
+          "difference": 0.006796763255583982,
+          "ci": [
+            -0.00986273113592975,
+            0.019657250595622476
+          ],
+          "p": 0.43,
+          "significant": false
+        },
+        "s43_vs_s43": {
+          "difference": -0.035057123458178185,
+          "ci": [
+            -0.0512456763039927,
+            -0.013308652331253215
+          ],
+          "p": 0.0,
+          "significant": true
+        },
+        "s44_vs_s44": {
+          "difference": 0.01209084484651779,
+          "ci": [
+            -0.022399990597180224,
+            0.03773293593526618
+          ],
+          "p": 0.54,
+          "significant": false
+        }
+      }
+    },
+    "macro_f1": {
+      "mean_difference": 0.005758662176631328,
+      "sd_difference": 0.003058460289824411,
+      "n_pairs": 3,
+      "n_pairs_significant": 0,
+      "per_pair": {
+        "s42_vs_s42": {
+          "difference": 0.0026858783553109777,
+          "ci": [
+            -0.018948864034741955,
+            0.020507165920522687
+          ],
+          "p": 0.846,
+          "significant": false
+        },
+        "s43_vs_s43": {
+          "difference": 0.008802594811453457,
+          "ci": [
+            -0.01798740511719655,
+            0.028888149977976934
+          ],
+          "p": 0.674,
+          "significant": false
+        },
+        "s44_vs_s44": {
+          "difference": 0.005787513363129548,
+          "ci": [
+            -0.016792406868464144,
+            0.02098145149135908
+          ],
+          "p": 0.623,
+          "significant": false
+        }
+      }
+    },
+    "weighted_f1": {
+      "mean_difference": 0.016724628807792203,
+      "sd_difference": 0.010191710214499411,
+      "n_pairs": 3,
+      "n_pairs_significant": 1,
+      "per_pair": {
+        "s42_vs_s42": {
+          "difference": 0.012878471591248997,
+          "ci": [
+            -0.00289814659483513,
+            0.03033849968844985
+          ],
+          "p": 0.107,
+          "significant": false
+        },
+        "s43_vs_s43": {
+          "difference": 0.02827975097366653,
+          "ci": [
+            0.003918180884142201,
+            0.054890651736843744
+          ],
+          "p": 0.022,
+          "significant": true
+        },
+        "s44_vs_s44": {
+          "difference": 0.009015663858461087,
+          "ci": [
+            -0.008926905420581378,
+            0.02722137988280777
+          ],
+          "p": 0.331,
+          "significant": false
+        }
+      }
+    },
+    "f1::screen_oriented": {
+      "mean_difference": 0.024216013685547932,
+      "sd_difference": 0.015217656458542277,
+      "n_pairs": 3,
+      "n_pairs_significant": 2,
+      "per_pair": {
+        "s42_vs_s42": {
+          "difference": 0.023512245675914256,
+          "ci": [
+            0.005748565951895388,
+            0.042744195761893346
+          ],
+          "p": 0.006,
+          "significant": true
+        },
+        "s43_vs_s43": {
+          "difference": 0.03977334411694744,
+          "ci": [
+            0.012602294378588206,
+            0.07173850051622618
+          ],
+          "p": 0.0,
+          "significant": true
+        },
+        "s44_vs_s44": {
+          "difference": 0.009362451263782101,
+          "ci": [
+            -0.010757288627754635,
+            0.031053705336769884
+          ],
+          "p": 0.373,
+          "significant": false
+        }
+      }
+    },
+    "f1::looking_away": {
+      "mean_difference": -0.04388166197255953,
+      "sd_difference": 0.026880722283842706,
+      "n_pairs": 3,
+      "n_pairs_significant": 2,
+      "per_pair": {
+        "s42_vs_s42": {
+          "difference": -0.05743270752859912,
+          "ci": [
+            -0.10042687154597416,
+            -0.008046652594633783
+          ],
+          "p": 0.021,
+          "significant": true
+        },
+        "s43_vs_s43": {
+          "difference": -0.061289813517410585,
+          "ci": [
+            -0.08548828466501691,
+            -0.03713566811746055
+          ],
+          "p": 0.0,
+          "significant": true
+        },
+        "s44_vs_s44": {
+          "difference": -0.012922464871668898,
+          "ci": [
+            -0.05183969458654156,
+            0.025250158289088002
+          ],
+          "p": 0.467,
+          "significant": false
+        }
+      }
+    },
+    "f1::head_down": {
+      "mean_difference": -0.004360643701935636,
+      "sd_difference": 0.043624520794794286,
+      "n_pairs": 3,
+      "n_pairs_significant": 0,
+      "per_pair": {
+        "s42_vs_s42": {
+          "difference": -0.04500088837487115,
+          "ci": [
+            -0.08888661681252258,
+            0.04639671095787069
+          ],
+          "p": 0.21,
+          "significant": false
+        },
+        "s43_vs_s43": {
+          "difference": -0.009816027165905461,
+          "ci": [
+            -0.06036362533428552,
+            0.03400616568620805
+          ],
+          "p": 0.728,
+          "significant": false
+        },
+        "s44_vs_s44": {
+          "difference": 0.0417349844349697,
+          "ci": [
+            -0.0024129042260468254,
+            0.07968931847969457
+          ],
+          "p": 0.069,
+          "significant": false
+        }
+      }
+    },
+    "f1::turned_to_peer": {
+      "mean_difference": 0.022192557936532784,
+      "sd_difference": 0.0380149897305449,
+      "n_pairs": 3,
+      "n_pairs_significant": 1,
+      "per_pair": {
+        "s42_vs_s42": {
+          "difference": 0.06272663784746903,
+          "ci": [
+            0.006013415995842829,
+            0.11855545886563795
+          ],
+          "p": 0.025,
+          "significant": true
+        },
+        "s43_vs_s43": {
+          "difference": 0.016515950412758065,
+          "ci": [
+            -0.0036514937477356815,
+            0.035899260814769865
+          ],
+          "p": 0.12,
+          "significant": false
+        },
+        "s44_vs_s44": {
+          "difference": -0.012664914450628742,
+          "ci": [
+            -0.05171722876363637,
+            0.03420558052875445
+          ],
+          "p": 0.571,
+          "significant": false
+        }
+      }
+    },
+    "f1::phone_use": {
+      "mean_difference": 0.039429419362888705,
+      "sd_difference": 0.019225352847163018,
+      "n_pairs": 3,
+      "n_pairs_significant": 0,
+      "per_pair": {
+        "s42_vs_s42": {
+          "difference": 0.05451049243374301,
+          "ci": [
+            -0.02324122927781621,
+            0.1080289458536022
+          ],
+          "p": 0.316,
+          "significant": false
+        },
+        "s43_vs_s43": {
+          "difference": 0.04599686348989457,
+          "ci": [
+            -0.03730404623195231,
+            0.09963800538168713
+          ],
+          "p": 0.453,
+          "significant": false
+        },
+        "s44_vs_s44": {
+          "difference": 0.017780902165028534,
+          "ci": [
+            -0.0545367248520916,
+            0.07413651280176033
+          ],
+          "p": 0.635,
+          "significant": false
+        }
+      }
+    },
+    "f1::uncertain": {
+      "mean_difference": -0.003043712250686189,
+      "sd_difference": 0.02243355153546851,
+      "n_pairs": 3,
+      "n_pairs_significant": 0,
+      "per_pair": {
+        "s42_vs_s42": {
+          "difference": -0.022200509921790124,
+          "ci": [
+            -0.07815390015424908,
+            0.01742570761541148
+          ],
+          "p": 0.247,
+          "significant": false
+        },
+        "s43_vs_s43": {
+          "difference": 0.02163525153243684,
+          "ci": [
+            -0.049849229542908734,
+            0.0688055673579715
+          ],
+          "p": 0.57,
+          "significant": false
+        },
+        "s44_vs_s44": {
+          "difference": -0.008565878362705281,
+          "ci": [
+            -0.07190492210038621,
+            0.031104459433548372
+          ],
+          "p": 0.649,
+          "significant": false
+        }
+      }
+    }
+  }
+}

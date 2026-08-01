@@ -1,0 +1,1 @@
+python -m attention.thesis_eval.run_eval --ckpt work_dirs/thesis/ladder/transformer_563_expr_s42/checkpoints/best.pth --split test --out work_dirs/thesis/ladder/transformer_563_expr_s42/eval_test --batch-size 1 --cluster video

@@ -1,0 +1,5 @@
+model,dims,added_features,split,n_seeds,accuracy,accuracy_sd,balanced_accuracy,balanced_accuracy_sd,macro_f1,macro_f1_sd,macro_f1_seed_ci,macro_f1_bootstrap_ci_seed42,macro_auprc,ece,brier,nll
+asrf,556,+ head pose (4),test,3,0.7096,0.0221,0.5127,0.0348,0.4771,0.0161,"[0.4588, 0.4953]","[0.4061, 0.5125]",0.4734,0.0333,0.4038,0.7981
+asrf,570,+ head pose + expression + dynamics (14),test,3,0.7348,0.0227,0.5213,0.0018,0.4924,0.0187,"[0.4713, 0.5136]","[0.3985, 0.5156]",0.4822,0.0309,0.3769,0.7440
+mstcn,556,+ head pose (4),test,3,0.7589,0.0023,0.5190,0.0231,0.4998,0.0114,"[0.4869, 0.5127]","[0.4363, 0.5449]",0.4888,0.0317,0.3526,0.7052
+mstcn,570,+ head pose + expression + dynamics (14),test,3,0.7651,0.0182,0.4810,0.0295,0.4881,0.0226,"[0.4625, 0.5137]","[0.4447, 0.5398]",0.4767,0.0246,0.3463,0.7025

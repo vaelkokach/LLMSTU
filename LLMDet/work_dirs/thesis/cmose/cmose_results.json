@@ -1,0 +1,1373 @@
+{
+  "audit": {
+    "n_clips_used": 11902,
+    "n_clips_dropped_empty_i3d": 295,
+    "n_subjects": 103,
+    "official_split_sizes": {
+      "train": 8571,
+      "unlabel": 2140,
+      "test": 1191
+    },
+    "label_distribution": {
+      "Highly Disengage": 342,
+      "Disengage": 2170,
+      "Engage": 8245,
+      "Highly Engage": 1145
+    },
+    "subjects_in_more_than_one_official_split": 101,
+    "fraction_of_subjects_leaked": 0.9805825242718447,
+    "annotator_agreement_min_max": [
+      0.25,
+      1.0
+    ],
+    "note": "CMOSE's released split assigns clips, not subjects. The same person, webcam and session therefore appear in train and test. This is not a defect of the dataset \u2014 the paper reports a random segment split \u2014 but any number computed under it measures something weaker than subject-level generalisation."
+  },
+  "protocols": {
+    "official": {
+      "split_sizes": {
+        "train": 8571,
+        "val": 2140,
+        "test": 1191
+      },
+      "n_subjects": {
+        "train": 103,
+        "val": 101,
+        "test": 100
+      },
+      "subject_overlap_train_test": 100,
+      "test_over_seeds": {
+        "accuracy": {
+          "mean": 0.7178841309823677,
+          "std": 0.003027331045729627,
+          "values": [
+            0.7170445004198153,
+            0.7153652392947103,
+            0.7212426532325776
+          ]
+        },
+        "average_accuracy": {
+          "mean": 0.6007130251076239,
+          "std": 0.008586796126497275,
+          "values": [
+            0.6106225079400507,
+            0.5960492823398749,
+            0.5954672850429462
+          ]
+        },
+        "macro_f1": {
+          "mean": 0.5732964389279149,
+          "std": 0.002690126583062689,
+          "values": [
+            0.5750011231772547,
+            0.5746929453398166,
+            0.5701952482666734
+          ]
+        },
+        "mae": {
+          "mean": 0.31234256926952136,
+          "std": 0.0029085655878570513,
+          "values": [
+            0.3157010915197313,
+            0.31066330814441645,
+            0.31066330814441645
+          ]
+        },
+        "quadratic_weighted_kappa": {
+          "mean": 0.5369239691859157,
+          "std": 0.003909662105571745,
+          "values": [
+            0.5334876283023977,
+            0.5411777123004531,
+            0.536106566954896
+          ]
+        },
+        "spearman": {
+          "mean": 0.5353896223942383,
+          "std": 0.008631756534363185,
+          "values": [
+            0.5262296333278901,
+            0.5433722880982439,
+            0.5365669457565806
+          ]
+        }
+      },
+      "per_seed": {
+        "42": {
+          "val": {
+            "n": 2140,
+            "accuracy": 0.7242990654205608,
+            "average_accuracy": 0.6426252709114735,
+            "macro_f1": 0.6010406265535674,
+            "mae": 0.2995327102803738,
+            "quadratic_weighted_kappa": 0.5665727774287117,
+            "spearman": 0.5488775223770308,
+            "per_class_f1": {
+              "Highly Disengage": 0.5277777777777777,
+              "Disengage": 0.5235602094240838,
+              "Engage": 0.8180876769071452,
+              "Highly Engage": 0.5347368421052631
+            },
+            "per_class_recall": {
+              "Highly Disengage": 0.6440677966101694,
+              "Disengage": 0.5154639175257731,
+              "Engage": 0.797442799461642,
+              "Highly Engage": 0.6135265700483091
+            },
+            "support": {
+              "Highly Disengage": 59,
+              "Disengage": 388,
+              "Engage": 1486,
+              "Highly Engage": 207
+            },
+            "confusion_matrix": [
+              [
+                38,
+                14,
+                4,
+                3
+              ],
+              [
+                26,
+                200,
+                150,
+                12
+              ],
+              [
+                19,
+                156,
+                1185,
+                126
+              ],
+              [
+                2,
+                6,
+                72,
+                127
+              ]
+            ],
+            "level_order": [
+              "Highly Disengage",
+              "Disengage",
+              "Engage",
+              "Highly Engage"
+            ]
+          },
+          "test": {
+            "n": 1191,
+            "accuracy": 0.7170445004198153,
+            "average_accuracy": 0.6106225079400507,
+            "macro_f1": 0.5750011231772547,
+            "mae": 0.3157010915197313,
+            "quadratic_weighted_kappa": 0.5334876283023977,
+            "spearman": 0.5262296333278901,
+            "per_class_f1": {
+              "Highly Disengage": 0.4235294117647058,
+              "Disengage": 0.4965197215777262,
+              "Engage": 0.8172177167810356,
+              "Highly Engage": 0.5627376425855514
+            },
+            "per_class_recall": {
+              "Highly Disengage": 0.5142857142857142,
+              "Disengage": 0.49537037037037035,
+              "Engage": 0.7949029126213593,
+              "Highly Engage": 0.6379310344827587
+            },
+            "support": {
+              "Highly Disengage": 35,
+              "Disengage": 216,
+              "Engage": 824,
+              "Highly Engage": 116
+            },
+            "confusion_matrix": [
+              [
+                18,
+                10,
+                5,
+                2
+              ],
+              [
+                17,
+                107,
+                83,
+                9
+              ],
+              [
+                14,
+                93,
+                655,
+                62
+              ],
+              [
+                1,
+                5,
+                36,
+                74
+              ]
+            ],
+            "level_order": [
+              "Highly Disengage",
+              "Disengage",
+              "Engage",
+              "Highly Engage"
+            ]
+          },
+          "test_majority_control": {
+            "n": 1191,
+            "accuracy": 0.691855583543241,
+            "average_accuracy": 0.25,
+            "macro_f1": 0.2044665012406948,
+            "mae": 0.33753148614609574,
+            "quadratic_weighted_kappa": 0.0,
+            "spearman": NaN,
+            "per_class_f1": {
+              "Highly Disengage": 0.0,
+              "Disengage": 0.0,
+              "Engage": 0.8178660049627792,
+              "Highly Engage": 0.0
+            },
+            "per_class_recall": {
+              "Highly Disengage": 0.0,
+              "Disengage": 0.0,
+              "Engage": 1.0,
+              "Highly Engage": 0.0
+            },
+            "support": {
+              "Highly Disengage": 35,
+              "Disengage": 216,
+              "Engage": 824,
+              "Highly Engage": 116
+            },
+            "confusion_matrix": [
+              [
+                0,
+                0,
+                35,
+                0
+              ],
+              [
+                0,
+                0,
+                216,
+                0
+              ],
+              [
+                0,
+                0,
+                824,
+                0
+              ],
+              [
+                0,
+                0,
+                116,
+                0
+              ]
+            ],
+            "level_order": [
+              "Highly Disengage",
+              "Disengage",
+              "Engage",
+              "Highly Engage"
+            ]
+          },
+          "selection_metric": "val average_accuracy",
+          "best_val_average_accuracy": 0.6426252709114735
+        },
+        "43": {
+          "val": {
+            "n": 2140,
+            "accuracy": 0.7214953271028037,
+            "average_accuracy": 0.6416521847963268,
+            "macro_f1": 0.6058916459733694,
+            "mae": 0.3,
+            "quadratic_weighted_kappa": 0.56632020116433,
+            "spearman": 0.5456125021806888,
+            "per_class_f1": {
+              "Highly Disengage": 0.5479452054794521,
+              "Disengage": 0.516209476309227,
+              "Engage": 0.812242090784044,
+              "Highly Engage": 0.5471698113207547
+            },
+            "per_class_recall": {
+              "Highly Disengage": 0.6779661016949152,
+              "Disengage": 0.5335051546391752,
+              "Engage": 0.7947510094212651,
+              "Highly Engage": 0.5603864734299517
+            },
+            "support": {
+              "Highly Disengage": 59,
+              "Disengage": 388,
+              "Engage": 1486,
+              "Highly Engage": 207
+            },
+            "confusion_matrix": [
+              [
+                40,
+                12,
+                5,
+                2
+              ],
+              [
+                23,
+                207,
+                152,
+                6
+              ],
+              [
+                23,
+                189,
+                1181,
+                93
+              ],
+              [
+                1,
+                6,
+                84,
+                116
+              ]
+            ],
+            "level_order": [
+              "Highly Disengage",
+              "Disengage",
+              "Engage",
+              "Highly Engage"
+            ]
+          },
+          "test": {
+            "n": 1191,
+            "accuracy": 0.7153652392947103,
+            "average_accuracy": 0.5960492823398749,
+            "macro_f1": 0.5746929453398166,
+            "mae": 0.31066330814441645,
+            "quadratic_weighted_kappa": 0.5411777123004531,
+            "spearman": 0.5433722880982439,
+            "per_class_f1": {
+              "Highly Disengage": 0.3950617283950617,
+              "Disengage": 0.5,
+              "Engage": 0.8086687306501549,
+              "Highly Engage": 0.5950413223140496
+            },
+            "per_class_recall": {
+              "Highly Disengage": 0.45714285714285713,
+              "Disengage": 0.5138888888888888,
+              "Engage": 0.7924757281553398,
+              "Highly Engage": 0.6206896551724138
+            },
+            "support": {
+              "Highly Disengage": 35,
+              "Disengage": 216,
+              "Engage": 824,
+              "Highly Engage": 116
+            },
+            "confusion_matrix": [
+              [
+                16,
+                11,
+                6,
+                2
+              ],
+              [
+                13,
+                111,
+                91,
+                1
+              ],
+              [
+                16,
+                104,
+                653,
+                51
+              ],
+              [
+                1,
+                2,
+                41,
+                72
+              ]
+            ],
+            "level_order": [
+              "Highly Disengage",
+              "Disengage",
+              "Engage",
+              "Highly Engage"
+            ]
+          },
+          "test_majority_control": {
+            "n": 1191,
+            "accuracy": 0.691855583543241,
+            "average_accuracy": 0.25,
+            "macro_f1": 0.2044665012406948,
+            "mae": 0.33753148614609574,
+            "quadratic_weighted_kappa": 0.0,
+            "spearman": NaN,
+            "per_class_f1": {
+              "Highly Disengage": 0.0,
+              "Disengage": 0.0,
+              "Engage": 0.8178660049627792,
+              "Highly Engage": 0.0
+            },
+            "per_class_recall": {
+              "Highly Disengage": 0.0,
+              "Disengage": 0.0,
+              "Engage": 1.0,
+              "Highly Engage": 0.0
+            },
+            "support": {
+              "Highly Disengage": 35,
+              "Disengage": 216,
+              "Engage": 824,
+              "Highly Engage": 116
+            },
+            "confusion_matrix": [
+              [
+                0,
+                0,
+                35,
+                0
+              ],
+              [
+                0,
+                0,
+                216,
+                0
+              ],
+              [
+                0,
+                0,
+                824,
+                0
+              ],
+              [
+                0,
+                0,
+                116,
+                0
+              ]
+            ],
+            "level_order": [
+              "Highly Disengage",
+              "Disengage",
+              "Engage",
+              "Highly Engage"
+            ]
+          },
+          "selection_metric": "val average_accuracy",
+          "best_val_average_accuracy": 0.6416521847963268
+        },
+        "44": {
+          "val": {
+            "n": 2140,
+            "accuracy": 0.7401869158878505,
+            "average_accuracy": 0.6719770984327671,
+            "macro_f1": 0.6382401160540723,
+            "mae": 0.28177570093457943,
+            "quadratic_weighted_kappa": 0.5854709590630935,
+            "spearman": 0.5593746743818934,
+            "per_class_f1": {
+              "Highly Disengage": 0.608695652173913,
+              "Disengage": 0.5414634146341463,
+              "Engage": 0.8273953649256313,
+              "Highly Engage": 0.5754060324825986
+            },
+            "per_class_recall": {
+              "Highly Disengage": 0.711864406779661,
+              "Disengage": 0.5721649484536082,
+              "Engage": 0.8048452220726783,
+              "Highly Engage": 0.5990338164251208
+            },
+            "support": {
+              "Highly Disengage": 59,
+              "Disengage": 388,
+              "Engage": 1486,
+              "Highly Engage": 207
+            },
+            "confusion_matrix": [
+              [
+                42,
+                10,
+                4,
+                3
+              ],
+              [
+                22,
+                222,
+                133,
+                11
+              ],
+              [
+                14,
+                190,
+                1196,
+                86
+              ],
+              [
+                1,
+                10,
+                72,
+                124
+              ]
+            ],
+            "level_order": [
+              "Highly Disengage",
+              "Disengage",
+              "Engage",
+              "Highly Engage"
+            ]
+          },
+          "test": {
+            "n": 1191,
+            "accuracy": 0.7212426532325776,
+            "average_accuracy": 0.5954672850429462,
+            "macro_f1": 0.5701952482666734,
+            "mae": 0.31066330814441645,
+            "quadratic_weighted_kappa": 0.536106566954896,
+            "spearman": 0.5365669457565806,
+            "per_class_f1": {
+              "Highly Disengage": 0.36781609195402304,
+              "Disengage": 0.49549549549549554,
+              "Engage": 0.8208307501549909,
+              "Highly Engage": 0.5966386554621848
+            },
+            "per_class_recall": {
+              "Highly Disengage": 0.45714285714285713,
+              "Disengage": 0.5092592592592593,
+              "Engage": 0.8033980582524272,
+              "Highly Engage": 0.6120689655172413
+            },
+            "support": {
+              "Highly Disengage": 35,
+              "Disengage": 216,
+              "Engage": 824,
+              "Highly Engage": 116
+            },
+            "confusion_matrix": [
+              [
+                16,
+                10,
+                7,
+                2
+              ],
+              [
+                20,
+                110,
+                78,
+                8
+              ],
+              [
+                16,
+                105,
+                662,
+                41
+              ],
+              [
+                0,
+                3,
+                42,
+                71
+              ]
+            ],
+            "level_order": [
+              "Highly Disengage",
+              "Disengage",
+              "Engage",
+              "Highly Engage"
+            ]
+          },
+          "test_majority_control": {
+            "n": 1191,
+            "accuracy": 0.691855583543241,
+            "average_accuracy": 0.25,
+            "macro_f1": 0.2044665012406948,
+            "mae": 0.33753148614609574,
+            "quadratic_weighted_kappa": 0.0,
+            "spearman": NaN,
+            "per_class_f1": {
+              "Highly Disengage": 0.0,
+              "Disengage": 0.0,
+              "Engage": 0.8178660049627792,
+              "Highly Engage": 0.0
+            },
+            "per_class_recall": {
+              "Highly Disengage": 0.0,
+              "Disengage": 0.0,
+              "Engage": 1.0,
+              "Highly Engage": 0.0
+            },
+            "support": {
+              "Highly Disengage": 35,
+              "Disengage": 216,
+              "Engage": 824,
+              "Highly Engage": 116
+            },
+            "confusion_matrix": [
+              [
+                0,
+                0,
+                35,
+                0
+              ],
+              [
+                0,
+                0,
+                216,
+                0
+              ],
+              [
+                0,
+                0,
+                824,
+                0
+              ],
+              [
+                0,
+                0,
+                116,
+                0
+              ]
+            ],
+            "level_order": [
+              "Highly Disengage",
+              "Disengage",
+              "Engage",
+              "Highly Engage"
+            ]
+          },
+          "selection_metric": "val average_accuracy",
+          "best_val_average_accuracy": 0.6719770984327671
+        }
+      },
+      "majority_control": {
+        "n": 1191,
+        "accuracy": 0.691855583543241,
+        "average_accuracy": 0.25,
+        "macro_f1": 0.2044665012406948,
+        "mae": 0.33753148614609574,
+        "quadratic_weighted_kappa": 0.0,
+        "spearman": NaN,
+        "per_class_f1": {
+          "Highly Disengage": 0.0,
+          "Disengage": 0.0,
+          "Engage": 0.8178660049627792,
+          "Highly Engage": 0.0
+        },
+        "per_class_recall": {
+          "Highly Disengage": 0.0,
+          "Disengage": 0.0,
+          "Engage": 1.0,
+          "Highly Engage": 0.0
+        },
+        "support": {
+          "Highly Disengage": 35,
+          "Disengage": 216,
+          "Engage": 824,
+          "Highly Engage": 116
+        },
+        "confusion_matrix": [
+          [
+            0,
+            0,
+            35,
+            0
+          ],
+          [
+            0,
+            0,
+            216,
+            0
+          ],
+          [
+            0,
+            0,
+            824,
+            0
+          ],
+          [
+            0,
+            0,
+            116,
+            0
+          ]
+        ],
+        "level_order": [
+          "Highly Disengage",
+          "Disengage",
+          "Engage",
+          "Highly Engage"
+        ]
+      }
+    },
+    "subject_disjoint": {
+      "split_sizes": {
+        "train": 8332,
+        "val": 1784,
+        "test": 1786
+      },
+      "n_subjects": {
+        "train": 54,
+        "val": 25,
+        "test": 24
+      },
+      "subject_overlap_train_test": 0,
+      "test_over_seeds": {
+        "accuracy": {
+          "mean": 0.6005972377752893,
+          "std": 0.0058277323613273885,
+          "values": [
+            0.5940649496080627,
+            0.6024636058230683,
+            0.6052631578947368
+          ]
+        },
+        "average_accuracy": {
+          "mean": 0.4346882507595878,
+          "std": 0.008442897161536398,
+          "values": [
+            0.4269984671643587,
+            0.4333434476071895,
+            0.44372283750721514
+          ]
+        },
+        "macro_f1": {
+          "mean": 0.4111145068570758,
+          "std": 0.005084744175485478,
+          "values": [
+            0.40788283020023264,
+            0.40848513343349424,
+            0.4169755569375004
+          ]
+        },
+        "mae": {
+          "mean": 0.4458753266144084,
+          "std": 0.012334984428412325,
+          "values": [
+            0.4518477043673012,
+            0.4540873460246361,
+            0.4316909294512878
+          ]
+        },
+        "quadratic_weighted_kappa": {
+          "mean": 0.3166949628825609,
+          "std": 0.03193764831939625,
+          "values": [
+            0.29574414998126686,
+            0.300887086447414,
+            0.3534536522190017
+          ]
+        },
+        "spearman": {
+          "mean": 0.3221248805982804,
+          "std": 0.030538321510864642,
+          "values": [
+            0.29521427603563377,
+            0.31584560403292994,
+            0.3553147617262775
+          ]
+        }
+      },
+      "per_seed": {
+        "42": {
+          "val": {
+            "n": 1784,
+            "accuracy": 0.6053811659192825,
+            "average_accuracy": 0.41733523100571773,
+            "macro_f1": 0.40906539253057006,
+            "mae": 0.44730941704035876,
+            "quadratic_weighted_kappa": 0.24300647727628133,
+            "spearman": 0.23700671698914755,
+            "per_class_f1": {
+              "Highly Disengage": 0.20895522388059704,
+              "Disengage": 0.3374485596707819,
+              "Engage": 0.7402433906840118,
+              "Highly Engage": 0.3496143958868894
+            },
+            "per_class_recall": {
+              "Highly Disengage": 0.14583333333333334,
+              "Disengage": 0.35755813953488375,
+              "Engage": 0.7095736122284795,
+              "Highly Engage": 0.4563758389261745
+            },
+            "support": {
+              "Highly Disengage": 48,
+              "Disengage": 344,
+              "Engage": 1243,
+              "Highly Engage": 149
+            },
+            "confusion_matrix": [
+              [
+                7,
+                17,
+                17,
+                7
+              ],
+              [
+                5,
+                123,
+                183,
+                33
+              ],
+              [
+                5,
+                224,
+                882,
+                132
+              ],
+              [
+                2,
+                21,
+                58,
+                68
+              ]
+            ],
+            "level_order": [
+              "Highly Disengage",
+              "Disengage",
+              "Engage",
+              "Highly Engage"
+            ]
+          },
+          "test": {
+            "n": 1786,
+            "accuracy": 0.5940649496080627,
+            "average_accuracy": 0.4269984671643587,
+            "macro_f1": 0.40788283020023264,
+            "mae": 0.4518477043673012,
+            "quadratic_weighted_kappa": 0.29574414998126686,
+            "spearman": 0.29521427603563377,
+            "per_class_f1": {
+              "Highly Disengage": 0.12500000000000003,
+              "Disengage": 0.3392857142857143,
+              "Engage": 0.7192456065152164,
+              "Highly Engage": 0.44799999999999995
+            },
+            "per_class_recall": {
+              "Highly Disengage": 0.10204081632653061,
+              "Disengage": 0.3204819277108434,
+              "Engage": 0.7140425531914893,
+              "Highly Engage": 0.5714285714285714
+            },
+            "support": {
+              "Highly Disengage": 49,
+              "Disengage": 415,
+              "Engage": 1175,
+              "Highly Engage": 147
+            },
+            "confusion_matrix": [
+              [
+                5,
+                17,
+                22,
+                5
+              ],
+              [
+                12,
+                133,
+                247,
+                23
+              ],
+              [
+                13,
+                207,
+                839,
+                116
+              ],
+              [
+                1,
+                12,
+                50,
+                84
+              ]
+            ],
+            "level_order": [
+              "Highly Disengage",
+              "Disengage",
+              "Engage",
+              "Highly Engage"
+            ]
+          },
+          "test_majority_control": {
+            "n": 1786,
+            "accuracy": 0.6578947368421053,
+            "average_accuracy": 0.25,
+            "macro_f1": 0.19841269841269843,
+            "mae": 0.36954087346024633,
+            "quadratic_weighted_kappa": 0.0,
+            "spearman": NaN,
+            "per_class_f1": {
+              "Highly Disengage": 0.0,
+              "Disengage": 0.0,
+              "Engage": 0.7936507936507937,
+              "Highly Engage": 0.0
+            },
+            "per_class_recall": {
+              "Highly Disengage": 0.0,
+              "Disengage": 0.0,
+              "Engage": 1.0,
+              "Highly Engage": 0.0
+            },
+            "support": {
+              "Highly Disengage": 49,
+              "Disengage": 415,
+              "Engage": 1175,
+              "Highly Engage": 147
+            },
+            "confusion_matrix": [
+              [
+                0,
+                0,
+                49,
+                0
+              ],
+              [
+                0,
+                0,
+                415,
+                0
+              ],
+              [
+                0,
+                0,
+                1175,
+                0
+              ],
+              [
+                0,
+                0,
+                147,
+                0
+              ]
+            ],
+            "level_order": [
+              "Highly Disengage",
+              "Disengage",
+              "Engage",
+              "Highly Engage"
+            ]
+          },
+          "selection_metric": "val average_accuracy",
+          "best_val_average_accuracy": 0.41733523100571773
+        },
+        "43": {
+          "val": {
+            "n": 1784,
+            "accuracy": 0.6188340807174888,
+            "average_accuracy": 0.4387634315456709,
+            "macro_f1": 0.4351653666587735,
+            "mae": 0.42937219730941706,
+            "quadratic_weighted_kappa": 0.27403194979049383,
+            "spearman": 0.26386359332455844,
+            "per_class_f1": {
+              "Highly Disengage": 0.2891566265060241,
+              "Disengage": 0.34571428571428575,
+              "Engage": 0.7457905544147844,
+              "Highly Engage": 0.36
+            },
+            "per_class_recall": {
+              "Highly Disengage": 0.25,
+              "Disengage": 0.35174418604651164,
+              "Engage": 0.7304907481898633,
+              "Highly Engage": 0.4228187919463087
+            },
+            "support": {
+              "Highly Disengage": 48,
+              "Disengage": 344,
+              "Engage": 1243,
+              "Highly Engage": 149
+            },
+            "confusion_matrix": [
+              [
+                12,
+                13,
+                20,
+                3
+              ],
+              [
+                4,
+                121,
+                202,
+                17
+              ],
+              [
+                16,
+                201,
+                908,
+                118
+              ],
+              [
+                3,
+                21,
+                62,
+                63
+              ]
+            ],
+            "level_order": [
+              "Highly Disengage",
+              "Disengage",
+              "Engage",
+              "Highly Engage"
+            ]
+          },
+          "test": {
+            "n": 1786,
+            "accuracy": 0.6024636058230683,
+            "average_accuracy": 0.4333434476071895,
+            "macro_f1": 0.40848513343349424,
+            "mae": 0.4540873460246361,
+            "quadratic_weighted_kappa": 0.300887086447414,
+            "spearman": 0.31584560403292994,
+            "per_class_f1": {
+              "Highly Disengage": 0.08849557522123894,
+              "Disengage": 0.33424657534246577,
+              "Engage": 0.7288135593220338,
+              "Highly Engage": 0.4823848238482384
+            },
+            "per_class_recall": {
+              "Highly Disengage": 0.10204081632653061,
+              "Disengage": 0.29397590361445786,
+              "Engage": 0.7319148936170212,
+              "Highly Engage": 0.6054421768707483
+            },
+            "support": {
+              "Highly Disengage": 49,
+              "Disengage": 415,
+              "Engage": 1175,
+              "Highly Engage": 147
+            },
+            "confusion_matrix": [
+              [
+                5,
+                13,
+                29,
+                2
+              ],
+              [
+                23,
+                122,
+                251,
+                19
+              ],
+              [
+                34,
+                169,
+                860,
+                112
+              ],
+              [
+                2,
+                11,
+                45,
+                89
+              ]
+            ],
+            "level_order": [
+              "Highly Disengage",
+              "Disengage",
+              "Engage",
+              "Highly Engage"
+            ]
+          },
+          "test_majority_control": {
+            "n": 1786,
+            "accuracy": 0.6578947368421053,
+            "average_accuracy": 0.25,
+            "macro_f1": 0.19841269841269843,
+            "mae": 0.36954087346024633,
+            "quadratic_weighted_kappa": 0.0,
+            "spearman": NaN,
+            "per_class_f1": {
+              "Highly Disengage": 0.0,
+              "Disengage": 0.0,
+              "Engage": 0.7936507936507937,
+              "Highly Engage": 0.0
+            },
+            "per_class_recall": {
+              "Highly Disengage": 0.0,
+              "Disengage": 0.0,
+              "Engage": 1.0,
+              "Highly Engage": 0.0
+            },
+            "support": {
+              "Highly Disengage": 49,
+              "Disengage": 415,
+              "Engage": 1175,
+              "Highly Engage": 147
+            },
+            "confusion_matrix": [
+              [
+                0,
+                0,
+                49,
+                0
+              ],
+              [
+                0,
+                0,
+                415,
+                0
+              ],
+              [
+                0,
+                0,
+                1175,
+                0
+              ],
+              [
+                0,
+                0,
+                147,
+                0
+              ]
+            ],
+            "level_order": [
+              "Highly Disengage",
+              "Disengage",
+              "Engage",
+              "Highly Engage"
+            ]
+          },
+          "selection_metric": "val average_accuracy",
+          "best_val_average_accuracy": 0.4387634315456709
+        },
+        "44": {
+          "val": {
+            "n": 1784,
+            "accuracy": 0.6221973094170403,
+            "average_accuracy": 0.42231778446789664,
+            "macro_f1": 0.4220094560349537,
+            "mae": 0.4226457399103139,
+            "quadratic_weighted_kappa": 0.27668174754902597,
+            "spearman": 0.26771779441704363,
+            "per_class_f1": {
+              "Highly Disengage": 0.23333333333333336,
+              "Disengage": 0.3522561863173217,
+              "Engage": 0.7510271158586688,
+              "Highly Engage": 0.35142118863049093
+            },
+            "per_class_recall": {
+              "Highly Disengage": 0.14583333333333334,
+              "Disengage": 0.35174418604651164,
+              "Engage": 0.7353177795655672,
+              "Highly Engage": 0.4563758389261745
+            },
+            "support": {
+              "Highly Disengage": 48,
+              "Disengage": 344,
+              "Engage": 1243,
+              "Highly Engage": 149
+            },
+            "confusion_matrix": [
+              [
+                7,
+                16,
+                22,
+                3
+              ],
+              [
+                1,
+                121,
+                186,
+                36
+              ],
+              [
+                4,
+                194,
+                914,
+                131
+              ],
+              [
+                0,
+                12,
+                69,
+                68
+              ]
+            ],
+            "level_order": [
+              "Highly Disengage",
+              "Disengage",
+              "Engage",
+              "Highly Engage"
+            ]
+          },
+          "test": {
+            "n": 1786,
+            "accuracy": 0.6052631578947368,
+            "average_accuracy": 0.44372283750721514,
+            "macro_f1": 0.4169755569375004,
+            "mae": 0.4316909294512878,
+            "quadratic_weighted_kappa": 0.3534536522190017,
+            "spearman": 0.3553147617262775,
+            "per_class_f1": {
+              "Highly Disengage": 0.11428571428571428,
+              "Disengage": 0.3764404609475032,
+              "Engage": 0.723974082073434,
+              "Highly Engage": 0.4532019704433498
+            },
+            "per_class_recall": {
+              "Highly Disengage": 0.08163265306122448,
+              "Disengage": 0.3542168674698795,
+              "Engage": 0.7131914893617022,
+              "Highly Engage": 0.6258503401360545
+            },
+            "support": {
+              "Highly Disengage": 49,
+              "Disengage": 415,
+              "Engage": 1175,
+              "Highly Engage": 147
+            },
+            "confusion_matrix": [
+              [
+                4,
+                21,
+                22,
+                2
+              ],
+              [
+                10,
+                147,
+                233,
+                25
+              ],
+              [
+                6,
+                191,
+                838,
+                140
+              ],
+              [
+                1,
+                7,
+                47,
+                92
+              ]
+            ],
+            "level_order": [
+              "Highly Disengage",
+              "Disengage",
+              "Engage",
+              "Highly Engage"
+            ]
+          },
+          "test_majority_control": {
+            "n": 1786,
+            "accuracy": 0.6578947368421053,
+            "average_accuracy": 0.25,
+            "macro_f1": 0.19841269841269843,
+            "mae": 0.36954087346024633,
+            "quadratic_weighted_kappa": 0.0,
+            "spearman": NaN,
+            "per_class_f1": {
+              "Highly Disengage": 0.0,
+              "Disengage": 0.0,
+              "Engage": 0.7936507936507937,
+              "Highly Engage": 0.0
+            },
+            "per_class_recall": {
+              "Highly Disengage": 0.0,
+              "Disengage": 0.0,
+              "Engage": 1.0,
+              "Highly Engage": 0.0
+            },
+            "support": {
+              "Highly Disengage": 49,
+              "Disengage": 415,
+              "Engage": 1175,
+              "Highly Engage": 147
+            },
+            "confusion_matrix": [
+              [
+                0,
+                0,
+                49,
+                0
+              ],
+              [
+                0,
+                0,
+                415,
+                0
+              ],
+              [
+                0,
+                0,
+                1175,
+                0
+              ],
+              [
+                0,
+                0,
+                147,
+                0
+              ]
+            ],
+            "level_order": [
+              "Highly Disengage",
+              "Disengage",
+              "Engage",
+              "Highly Engage"
+            ]
+          },
+          "selection_metric": "val average_accuracy",
+          "best_val_average_accuracy": 0.42231778446789664
+        }
+      },
+      "majority_control": {
+        "n": 1786,
+        "accuracy": 0.6578947368421053,
+        "average_accuracy": 0.25,
+        "macro_f1": 0.19841269841269843,
+        "mae": 0.36954087346024633,
+        "quadratic_weighted_kappa": 0.0,
+        "spearman": NaN,
+        "per_class_f1": {
+          "Highly Disengage": 0.0,
+          "Disengage": 0.0,
+          "Engage": 0.7936507936507937,
+          "Highly Engage": 0.0
+        },
+        "per_class_recall": {
+          "Highly Disengage": 0.0,
+          "Disengage": 0.0,
+          "Engage": 1.0,
+          "Highly Engage": 0.0
+        },
+        "support": {
+          "Highly Disengage": 49,
+          "Disengage": 415,
+          "Engage": 1175,
+          "Highly Engage": 147
+        },
+        "confusion_matrix": [
+          [
+            0,
+            0,
+            49,
+            0
+          ],
+          [
+            0,
+            0,
+            415,
+            0
+          ],
+          [
+            0,
+            0,
+            1175,
+            0
+          ],
+          [
+            0,
+            0,
+            147,
+            0
+          ]
+        ],
+        "level_order": [
+          "Highly Disengage",
+          "Disengage",
+          "Engage",
+          "Highly Engage"
+        ]
+      }
+    }
+  }
+}

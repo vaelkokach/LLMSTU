@@ -1,0 +1,1 @@
+python -m attention.thesis_eval.run_eval --ckpt work_dirs/thesis/headpose/transformer_555_angles_s44/checkpoints/best.pth --split val --out work_dirs/thesis/headpose/transformer_555_angles_s44/eval_val --batch-size 1 --cluster video

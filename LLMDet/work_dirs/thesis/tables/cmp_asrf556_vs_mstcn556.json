@@ -1,0 +1,356 @@
+{
+  "evaluator_version": "thesis_eval/1.0.0",
+  "note": "Positive difference favours the --a system. Significance is a paired video-level cluster bootstrap at alpha=0.05; a difference is only reported as real when it holds in every seed pair.",
+  "aggregate": {
+    "accuracy": {
+      "mean_difference": -0.028171982576928507,
+      "sd_difference": 0.019409401102798773,
+      "n_pairs": 3,
+      "n_pairs_significant": 1,
+      "per_pair": {
+        "asrf_s42_vs_mstcn_s42": {
+          "difference": -0.015455950540958274,
+          "ci": [
+            -0.03574494981670179,
+            0.004398989530601749
+          ],
+          "p": 0.128,
+          "significant": false
+        },
+        "asrf_s43_vs_mstcn_s43": {
+          "difference": -0.050512856540677276,
+          "ci": [
+            -0.07815098093016883,
+            -0.026436863657190883
+          ],
+          "p": 0.0,
+          "significant": true
+        },
+        "asrf_s44_vs_mstcn_s44": {
+          "difference": -0.018547140649149974,
+          "ci": [
+            -0.04800823214559565,
+            0.008627893482808634
+          ],
+          "p": 0.189,
+          "significant": false
+        }
+      }
+    },
+    "balanced_accuracy": {
+      "mean_difference": 0.010038573462146427,
+      "sd_difference": 0.022654010236996935,
+      "n_pairs": 3,
+      "n_pairs_significant": 1,
+      "per_pair": {
+        "asrf_s42_vs_mstcn_s42": {
+          "difference": -0.005118395613857074,
+          "ci": [
+            -0.03277739386618922,
+            0.03102433357179253
+          ],
+          "p": 0.798,
+          "significant": false
+        },
+        "asrf_s43_vs_mstcn_s43": {
+          "difference": 0.03608064097149388,
+          "ci": [
+            0.013663832560273875,
+            0.05905140022466115
+          ],
+          "p": 0.001,
+          "significant": true
+        },
+        "asrf_s44_vs_mstcn_s44": {
+          "difference": -0.0008465249711975265,
+          "ci": [
+            -0.02709024768793194,
+            0.03279529431285812
+          ],
+          "p": 0.934,
+          "significant": false
+        }
+      }
+    },
+    "macro_f1": {
+      "mean_difference": 0.0036488108221781244,
+      "sd_difference": 0.015315936234474307,
+      "n_pairs": 3,
+      "n_pairs_significant": 0,
+      "per_pair": {
+        "asrf_s42_vs_mstcn_s42": {
+          "difference": -0.01153189291915413,
+          "ci": [
+            -0.03456553786509757,
+            0.01952342592179169
+          ],
+          "p": 0.437,
+          "significant": false
+        },
+        "asrf_s43_vs_mstcn_s43": {
+          "difference": 0.019096489094166058,
+          "ci": [
+            -0.0029866044761141224,
+            0.03925476153415308
+          ],
+          "p": 0.096,
+          "significant": false
+        },
+        "asrf_s44_vs_mstcn_s44": {
+          "difference": 0.0033818362915224442,
+          "ci": [
+            -0.019918117674793394,
+            0.03443623012309089
+          ],
+          "p": 0.662,
+          "significant": false
+        }
+      }
+    },
+    "weighted_f1": {
+      "mean_difference": -0.013328578774513211,
+      "sd_difference": 0.009593484687098449,
+      "n_pairs": 3,
+      "n_pairs_significant": 1,
+      "per_pair": {
+        "asrf_s42_vs_mstcn_s42": {
+          "difference": -0.008993797423816341,
+          "ci": [
+            -0.026168744671565658,
+            0.010281558595717697
+          ],
+          "p": 0.345,
+          "significant": false
+        },
+        "asrf_s43_vs_mstcn_s43": {
+          "difference": -0.02432445750970691,
+          "ci": [
+            -0.04626843992768565,
+            -0.0055410081494423535
+          ],
+          "p": 0.007,
+          "significant": true
+        },
+        "asrf_s44_vs_mstcn_s44": {
+          "difference": -0.006667481390016383,
+          "ci": [
+            -0.027809608764139994,
+            0.01306967868610138
+          ],
+          "p": 0.571,
+          "significant": false
+        }
+      }
+    },
+    "f1::screen_oriented": {
+      "mean_difference": -0.020825898690325584,
+      "sd_difference": 0.01735605543502208,
+      "n_pairs": 3,
+      "n_pairs_significant": 1,
+      "per_pair": {
+        "asrf_s42_vs_mstcn_s42": {
+          "difference": -0.010052845765862628,
+          "ci": [
+            -0.025012240101242124,
+            0.004245245562558615
+          ],
+          "p": 0.167,
+          "significant": false
+        },
+        "asrf_s43_vs_mstcn_s43": {
+          "difference": -0.04084761077757049,
+          "ci": [
+            -0.06525697743321776,
+            -0.02206225060314997
+          ],
+          "p": 0.0,
+          "significant": true
+        },
+        "asrf_s44_vs_mstcn_s44": {
+          "difference": -0.011577239527543637,
+          "ci": [
+            -0.03426352846478617,
+            0.00861184311067342
+          ],
+          "p": 0.265,
+          "significant": false
+        }
+      }
+    },
+    "f1::looking_away": {
+      "mean_difference": 0.04026353305844099,
+      "sd_difference": 0.024140458453894318,
+      "n_pairs": 3,
+      "n_pairs_significant": 2,
+      "per_pair": {
+        "asrf_s42_vs_mstcn_s42": {
+          "difference": 0.05608412012652658,
+          "ci": [
+            0.008578148033863161,
+            0.10996042835151881
+          ],
+          "p": 0.015,
+          "significant": true
+        },
+        "asrf_s43_vs_mstcn_s43": {
+          "difference": 0.0522289408448558,
+          "ci": [
+            0.0049588176860241116,
+            0.10846151521844134
+          ],
+          "p": 0.033,
+          "significant": true
+        },
+        "asrf_s44_vs_mstcn_s44": {
+          "difference": 0.012477538203940597,
+          "ci": [
+            -0.03481060564032869,
+            0.07829916637483315
+          ],
+          "p": 0.606,
+          "significant": false
+        }
+      }
+    },
+    "f1::head_down": {
+      "mean_difference": -0.012307747730768814,
+      "sd_difference": 0.034956600657895305,
+      "n_pairs": 3,
+      "n_pairs_significant": 0,
+      "per_pair": {
+        "asrf_s42_vs_mstcn_s42": {
+          "difference": -0.04716577541017608,
+          "ci": [
+            -0.08334924822637642,
+            0.0557148480394965
+          ],
+          "p": 0.161,
+          "significant": false
+        },
+        "asrf_s43_vs_mstcn_s43": {
+          "difference": -0.01250406677534921,
+          "ci": [
+            -0.03440459258941811,
+            0.06760638060894986
+          ],
+          "p": 0.535,
+          "significant": false
+        },
+        "asrf_s44_vs_mstcn_s44": {
+          "difference": 0.022746598993218847,
+          "ci": [
+            -0.010472443467071338,
+            0.055040110231987995
+          ],
+          "p": 0.162,
+          "significant": false
+        }
+      }
+    },
+    "f1::turned_to_peer": {
+      "mean_difference": 0.026379701268833277,
+      "sd_difference": 0.01211396010992903,
+      "n_pairs": 3,
+      "n_pairs_significant": 1,
+      "per_pair": {
+        "asrf_s42_vs_mstcn_s42": {
+          "difference": 0.013794508858255172,
+          "ci": [
+            -0.022258535349170248,
+            0.05136662124882045
+          ],
+          "p": 0.459,
+          "significant": false
+        },
+        "asrf_s43_vs_mstcn_s43": {
+          "difference": 0.037959804309720485,
+          "ci": [
+            0.005793384188461066,
+            0.07741442441438516
+          ],
+          "p": 0.015,
+          "significant": true
+        },
+        "asrf_s44_vs_mstcn_s44": {
+          "difference": 0.02738479063852417,
+          "ci": [
+            -0.019417495046273884,
+            0.07878663197695031
+          ],
+          "p": 0.307,
+          "significant": false
+        }
+      }
+    },
+    "f1::phone_use": {
+      "mean_difference": -0.03799173650954918,
+      "sd_difference": 0.06291224875121353,
+      "n_pairs": 3,
+      "n_pairs_significant": 0,
+      "per_pair": {
+        "asrf_s42_vs_mstcn_s42": {
+          "difference": -0.10204501012210554,
+          "ci": [
+            -0.13813188972003332,
+            0.001759681238594487
+          ],
+          "p": 0.055,
+          "significant": false
+        },
+        "asrf_s43_vs_mstcn_s43": {
+          "difference": 0.02371375889288818,
+          "ci": [
+            -0.05878344285285921,
+            0.07419739725781595
+          ],
+          "p": 0.602,
+          "significant": false
+        },
+        "asrf_s44_vs_mstcn_s44": {
+          "difference": -0.03564395829943018,
+          "ci": [
+            -0.13872051013781794,
+            0.10563889959816081
+          ],
+          "p": 0.917,
+          "significant": false
+        }
+      }
+    },
+    "f1::uncertain": {
+      "mean_difference": 0.026375013536437897,
+      "sd_difference": 0.02513899327182136,
+      "n_pairs": 3,
+      "n_pairs_significant": 0,
+      "per_pair": {
+        "asrf_s42_vs_mstcn_s42": {
+          "difference": 0.020193644798438104,
+          "ci": [
+            -0.03326954644082935,
+            0.04680079661071612
+          ],
+          "p": 0.441,
+          "significant": false
+        },
+        "asrf_s43_vs_mstcn_s43": {
+          "difference": 0.054028108070450886,
+          "ci": [
+            -0.026959917272477728,
+            0.09070361114147159
+          ],
+          "p": 0.19,
+          "significant": false
+        },
+        "asrf_s44_vs_mstcn_s44": {
+          "difference": 0.0049032877404247,
+          "ci": [
+            -0.033819063092391424,
+            0.03477415229833268
+          ],
+          "p": 0.745,
+          "significant": false
+        }
+      }
+    }
+  }
+}
