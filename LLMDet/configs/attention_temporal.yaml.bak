@@ -1,26 +1,10 @@
 seed: 42
 
-# Detector updated 2026-07-31 (P0.2). Three separate corrections:
-#  1. CHECKPOINT: was pointing at grounding_dino_swin_t_student_e1/iter_9000,
-#     i.e. the E1 fine-tune the post-mortem showed was a REGRESSION (-9.6 R@5
-#     vs its own baseline). Now the main run: R@1 0.6343 on the leak-free split.
-#  2. PROMPT: "student" appears in 0 of 36,339 fine-tuning captions, so it is
-#     out of distribution for the fine-tuned head and scores low. Swept over
-#     generic anchors on the final checkpoint; "a student sitting" won.
-#  3. THRESHOLD: 0.45 was inherited from the pre-fine-tuning model. Measured on
-#     iter_25000: "student"@0.45 -> P 0.937 R 0.256 F1 0.402 (drops ~3/4 of
-#     students). "a student sitting"@0.10 -> P 0.774 R 0.868 F1 0.818.
-#     Branch B only sees students the detector returns, so the old setting
-#     silently starved the entire cue pipeline.
-# Evidence: work_dirs/probe/threshold_sweep_iter25000.json
-# NOTE: the prompt must stay GENERIC. Content prompts ("using laptop") score
-# higher aggregate F1 by naming the majority activity while missing the
-# off-task minorities the system exists to detect.
 detector:
-  config_path: "configs/student_llmstu_exact.py"
-  checkpoint_path: "work_dirs/thesis_bundle/checkpoints/main_llmstu_exact_iter25000_final.pth"
-  text_prompt: "a student sitting"
-  score_thr: 0.10
+  config_path: "configs/grounding_dino_swin_t_student_e1.py"
+  checkpoint_path: "work_dirs/grounding_dino_swin_t_student_e1/iter_9000.pth"
+  text_prompt: "student"
+  score_thr: 0.45
   max_det: 80
   min_rel_area: 0.01
   max_rel_area: 0.55
@@ -39,12 +23,12 @@ hybrid:
   verify_every_n_frames: 3
   verify_iou_thr: 0.25
   primary_detector:
-    config_path: "configs/student_llmstu_exact.py"
-    checkpoint_path: "work_dirs/thesis_bundle/checkpoints/main_llmstu_exact_iter25000_final.pth"
-    score_thr: 0.10
+    config_path: "configs/grounding_dino_swin_t_student_e1.py"
+    checkpoint_path: "work_dirs/grounding_dino_swin_t_student_e1/iter_9000.pth"
+    score_thr: 0.45
     max_det: 120
     device: "cuda:0"
-    text_prompt: "a student sitting"
+    text_prompt: "student"
     class_whitelist: []
 
 tracking:

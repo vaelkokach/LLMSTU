@@ -1,3 +1,21 @@
+# 556-dim variant: adds the MediaPipe head-pose block.
+#
+# Kept SEPARATE from attention_temporal.yaml so the 552-dim baseline remains
+# runnable — the with/without comparison is the ablation that shows whether
+# head pose earns its place, and overwriting the baseline would destroy it.
+#
+# Sequences: ../grounding_data/llmstu_sequences_hp (built with
+#   --head-pose-backend mediapipe)
+# Baseline : ../grounding_data/llmstu_sequences      (552-dim)
+#
+# Motivation: turned_to_peer F1 0.18 and looking_away F1 0.29 are orientation
+# judgements CLIP+geometry cannot represent, and the event layer misses 18 of
+# 24 human episodes (FINDINGS 6.0). Event-config tuning was shown to be a dead
+# end (6.1), so better cues are the only remaining lever.
+#
+# The 4th dim, face_found, is the strongest single signal measured:
+#   screen_oriented 92%  looking_away 90%  phone_use 62%
+#   turned_to_peer  52%  uncertain    40%  head_down  8%
 seed: 42
 
 # Detector updated 2026-07-31 (P0.2). Three separate corrections:
@@ -60,7 +78,7 @@ features:
 
 model:
   # 512 CLIP + 8 bbox geom + 24 color stats + 8 posture geom
-  input_dim: 552
+  input_dim: 556   # 552 + 4 head-pose dims (yaw, pitch, roll, face_found)
   hidden_dim: 512
   num_layers: 4
   num_heads: 8
@@ -71,7 +89,7 @@ model:
   per_frame: true
 
 data:
-  sequence_dir: "../grounding_data/llmstu_sequences"
+  sequence_dir: "../grounding_data/llmstu_sequences_hp"
 
 training:
   mode: "supervised" # supervised | semi_supervised
@@ -86,7 +104,7 @@ training:
   weight_decay: 0.01
   grad_clip: 1.0
   amp: true
-  output_dir: "work_dirs/attention_temporal_v2"
+  output_dir: "work_dirs/attention_temporal_hp"
 
 rule_baseline:
   window_s: 10.0

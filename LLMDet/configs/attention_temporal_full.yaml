@@ -1,3 +1,37 @@
+# 570-dim FULL model — every indicator family named in Thesis_Topic.md.
+#
+#   552  base   CLIP + bbox geometry + colour + posture proxies
+#   +4   head pose      yaw, pitch, roll, face_found        (MediaPipe)
+#   +7   facial expression  7 basic-expression probabilities (ViT FER over the
+#                           MediaPipe face box)
+#   +7   dynamic        fidget/lean motion statistics + personalised gaze
+#                       deviation                            (per track)
+#
+# Ablation ladder — each config is kept runnable so the contribution of every
+# block is measurable rather than asserted:
+#   attention_temporal.yaml       552  base            macro-F1 0.4096
+#   attention_temporal_hp.yaml    556  +head pose      macro-F1 0.4364
+#   attention_temporal_full.yaml  570  +expression +dynamic   <- this file
+#
+# Sequences: ../grounding_data/llmstu_sequences_full
+#   (built with --affect-cache and --dynamic-features)
+#
+# Kept SEPARATE from attention_temporal.yaml so the 552-dim baseline remains
+# runnable — the with/without comparison is the ablation that shows whether
+# head pose earns its place, and overwriting the baseline would destroy it.
+#
+# Sequences: ../grounding_data/llmstu_sequences_hp (built with
+#   --head-pose-backend mediapipe)
+# Baseline : ../grounding_data/llmstu_sequences      (552-dim)
+#
+# Motivation: turned_to_peer F1 0.18 and looking_away F1 0.29 are orientation
+# judgements CLIP+geometry cannot represent, and the event layer misses 18 of
+# 24 human episodes (FINDINGS 6.0). Event-config tuning was shown to be a dead
+# end (6.1), so better cues are the only remaining lever.
+#
+# The 4th dim, face_found, is the strongest single signal measured:
+#   screen_oriented 92%  looking_away 90%  phone_use 62%
+#   turned_to_peer  52%  uncertain    40%  head_down  8%
 seed: 42
 
 # Detector updated 2026-07-31 (P0.2). Three separate corrections:
@@ -60,7 +94,7 @@ features:
 
 model:
   # 512 CLIP + 8 bbox geom + 24 color stats + 8 posture geom
-  input_dim: 552
+  input_dim: 570   # 552 base + 4 head pose + 7 facial expression + 7 dynamic
   hidden_dim: 512
   num_layers: 4
   num_heads: 8
@@ -71,7 +105,7 @@ model:
   per_frame: true
 
 data:
-  sequence_dir: "../grounding_data/llmstu_sequences"
+  sequence_dir: "../grounding_data/llmstu_sequences_full"
 
 training:
   mode: "supervised" # supervised | semi_supervised
@@ -86,7 +120,7 @@ training:
   weight_decay: 0.01
   grad_clip: 1.0
   amp: true
-  output_dir: "work_dirs/attention_temporal_v2"
+  output_dir: "work_dirs/attention_temporal_full"
 
 rule_baseline:
   window_s: 10.0

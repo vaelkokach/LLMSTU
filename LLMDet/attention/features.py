@@ -19,9 +19,12 @@ except ImportError:
 #
 # backend=None  -> unavailable, feature block omitted, 552-dim (unchanged;
 #                  existing checkpoints stay loadable)
-# backend="opencv"    -> +3 dims = 555-dim; requires rebuilding sequences and
-#                  retraining the temporal model
-# backend="mediapipe" -> same 555 dims, metric angles, needs mediapipe installed
+# backend="opencv"    -> +4 dims = 556-dim; coarse, 25% face-detection rate
+# backend="mediapipe" -> +4 dims = 556-dim, metric angles, 60% detection rate
+#                  (PREFERRED). The 4th dim is face_found, which is itself the
+#                  strongest single cue signal: head_down detects at 8% vs
+#                  screen_oriented at 92%. Enabling either requires rebuilding
+#                  sequences and retraining the temporal model.
 from .head_pose import HeadPoseEstimator  # noqa: F401  (re-export)
 
 
@@ -69,7 +72,8 @@ class StudentFeatureExtractor:
                 print(f"[warn] CLIP disabled by explicit fallback; using zeros: {e}")
 
     def output_dim(self) -> int:
-        # 512 clip + 8 bbox geom + 24 color stats + 8 posture geom (+3 head pose if configured)
+        # 512 clip + 8 bbox geom + 24 color stats + 8 posture geom
+        # (+4 head pose: yaw, pitch, roll, face_found — if a backend is configured)
         d = self.clip_dim + 8 + 24 + 8
         if self.head_pose is not None and self.head_pose.available():
             d += HeadPoseEstimator.OUTPUT_DIM
@@ -116,8 +120,11 @@ class StudentFeatureExtractor:
                 self._posture_geom(crop, x1, y1, x2, y2, w, h),
             ]
             if self.head_pose is not None and self.head_pose.available():
-                head_h = max(1, int(0.35 * (y2 - y1)))
-                parts.append(self.head_pose.estimate(crop[:head_h]).astype(np.float32))
+                # FULL crop, not a top-fraction slice. MediaPipe FaceLandmarker
+                # runs its own face detector; pre-cropping to a guessed head
+                # region only removes context. Measured detection rate on LLMSTU
+                # crops: top 35% -> 38%, top 50% -> 55%, full crop -> 60%.
+                parts.append(self.head_pose.estimate(crop).astype(np.float32))
             out[i] = np.concatenate(parts, axis=0).astype(np.float32)
         return out
 

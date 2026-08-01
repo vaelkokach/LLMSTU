@@ -232,6 +232,10 @@ def build_sequences_llmstu(
     allow_filename_fallback: bool = False,
     allow_clip_fallback: bool = False,
     max_gap_s: float = 15.0,
+    head_pose_backend: str = None,
+    head_pose_cache: str = None,
+    affect_cache: str = None,
+    dynamic_features: bool = False,
 ) -> None:
     """Build per-(video, seat) sequences with per-frame cue labels.
 
@@ -265,7 +269,40 @@ def build_sequences_llmstu(
         raise RuntimeError("No observations parsed — check label paths and video mapping.")
 
     train_vids, val_vids = split_videos(list(by_video.keys()), val_fraction, seed)
-    extractor = StudentFeatureExtractor(allow_clip_fallback=allow_clip_fallback)
+    # Head pose adds 4 dims (yaw, pitch, roll, face_found) -> 556 total.
+    # face_found is the strongest single cue signal measured so far:
+    # head_down detects at 8% vs screen_oriented 92% (FINDINGS 7.x).
+    hp = None
+    if head_pose_backend:
+        from attention.head_pose import HeadPoseEstimator
+        hp = HeadPoseEstimator(backend=head_pose_backend,
+                               cache_path=head_pose_cache)
+        if not hp.available():
+            raise RuntimeError(f"head-pose backend {head_pose_backend!r} unavailable")
+    # backend="cached" is looked up per crop by file_name AFTER the CLIP block,
+    # so the extractor itself stays head-pose-free and CLIP batching is
+    # unaffected. Inline backends would pay ~140 ms/crop here.
+    cached_hp = hp if (hp is not None and head_pose_backend == "cached") else None
+
+    # --- Thesis_Topic.md channels: facial expression + body language + gaze ---
+    # affect_cache supplies 4 head-pose + 7 facial-expression dims per crop;
+    # dynamic_features adds 7 temporal dims (fidget/lean motion statistics and
+    # personalised gaze deviation) computed from the track itself. Both are
+    # derived from data already present, so neither needs new annotation.
+    affect = None
+    if affect_cache:
+        d = np.load(affect_cache, allow_pickle=False)
+        affect = ({str(n): i for i, n in enumerate(d["names"])},
+                  d["vecs"].astype(np.float32))
+        print(f"affect cache: {len(affect[0])} crops, {affect[1].shape[1]} dims")
+    from attention.dynamic_features import compute_dynamic, DYNAMIC_DIM
+    extra = (affect[1].shape[1] if affect is not None else 0) + \
+            (DYNAMIC_DIM if dynamic_features else 0)
+    extractor = StudentFeatureExtractor(
+        allow_clip_fallback=allow_clip_fallback,
+        head_pose=None if cached_hp is not None else hp)
+    print(f"feature dim: {extractor.output_dim() + (4 if cached_hp is not None else 0) + extra} "
+          f"(head_pose={head_pose_backend or 'off'})")
 
     for split in ("train", "val"):
         (output_dir / split).mkdir(parents=True, exist_ok=True)
@@ -291,7 +328,7 @@ def build_sequences_llmstu(
             for chunk in chunks:
                 if len(chunk) < min_track_len:
                     continue
-                feats, labels, times = [], [], []
+                feats, labels, times, track_boxes = [], [], [], []
                 for obs in chunk:
                     img_path = image_root / obs.src_frame
                     if frame_cache[0] == str(img_path):
@@ -304,12 +341,39 @@ def build_sequences_llmstu(
                     # TODO: regroup this per-track loop by frame so all students
                     # of a frame share one extract_batch() CLIP call (5-10x
                     # faster builds); requires restructuring the track loop.
-                    feats.append(extractor.extract(frame, obs.bbox_xyxy))
+                    fv = extractor.extract(frame, obs.bbox_xyxy)
+                    if cached_hp is not None:
+                        fv = np.concatenate(
+                            [fv, cached_hp.estimate_by_name(
+                                obs.meta.get("file_name", ""))]).astype(np.float32)
+                    if affect is not None:
+                        amap, avecs = affect
+                        j = amap.get(obs.meta.get("file_name", ""))
+                        av = avecs[j] if j is not None else np.zeros(
+                            avecs.shape[1], dtype=np.float32)
+                        fv = np.concatenate([fv, av]).astype(np.float32)
+                    feats.append(fv)
+                    track_boxes.append(list(obs.bbox_xyxy))
                     labels.append(obs.label_id)
                     times.append(obs.time_s)
                 if len(feats) < min_track_len:
                     continue
                 x = np.stack(feats, axis=0).astype(np.float32)
+                if dynamic_features:
+                    # Body language + gaze deviation need the WHOLE track:
+                    # fidgeting is motion variance over time, and the gaze
+                    # baseline is this student's own median pose. Neither can
+                    # be computed per frame, which is why the per-frame block
+                    # could never represent the two indicators the topic names.
+                    pose_cols = None
+                    if affect is not None:
+                        # pose occupies the first 4 of the affect block
+                        a0 = x.shape[1] - affect[1].shape[1]
+                        pose_cols = x[:, a0:a0 + 4]
+                    elif cached_hp is not None:
+                        pose_cols = x[:, -4:]
+                    dyn = compute_dynamic(track_boxes, pose_cols)
+                    x = np.concatenate([x, dyn], axis=1).astype(np.float32)
                 y_frames = np.array(labels, dtype=np.int64)
                 y_major = int(np.bincount(y_frames).argmax())
                 out_name = f"sample_{sample_idx:06d}.npz"
@@ -426,6 +490,19 @@ def parse_args():
     p.add_argument("--val-fraction", type=float, default=0.2)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--allow-filename-video-fallback", action="store_true")
+    p.add_argument("--head-pose-backend", type=str, default=None,
+                   choices=["mediapipe", "opencv", "cached"],
+                   help="enable the 4-dim head-pose block (556-dim features); "
+                        "requires retraining the temporal model")
+    p.add_argument("--head-pose-cache", type=str, default=None,
+                   help="npz from precompute_head_pose.py (for backend=cached)")
+    p.add_argument("--affect-cache", type=str, default=None,
+                   help="npz from precompute_affect.py: 4 head-pose + 7 facial-"
+                        "expression dims per crop (Thesis_Topic facial expressions)")
+    p.add_argument("--dynamic-features", action="store_true",
+                   help="add 7 temporal dims: fidget/lean motion statistics and "
+                        "personalised gaze deviation (Thesis_Topic body language "
+                        "+ gaze direction)")
     p.add_argument("--allow-clip-fallback", action="store_true",
                    help="Continue with zeroed CLIP features if CLIP fails to load.")
     return p.parse_args()
@@ -446,4 +523,8 @@ if __name__ == "__main__":
         seed=args.seed,
         allow_filename_fallback=args.allow_filename_video_fallback,
         allow_clip_fallback=args.allow_clip_fallback,
+        head_pose_backend=args.head_pose_backend,
+        head_pose_cache=args.head_pose_cache,
+        affect_cache=args.affect_cache,
+        dynamic_features=args.dynamic_features,
     )

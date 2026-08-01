@@ -15,21 +15,35 @@ Backends, in order of preference:
               turned-to-peer. Pitch is proxied from the face's vertical
               position inside the head crop, roll is not observable this way
               and is returned as 0.
-``mediapipe`` Preferred when installed: FaceMesh landmarks + solvePnP give
-              metric yaw/pitch/roll. NOT installed in this environment; a
-              dry-run install was abandoned rather than risk perturbing a
-              live training environment. Install deliberately, then pass
-              backend="mediapipe".
+``mediapipe`` PREFERRED and installed (mediapipe 1.0.0, Tasks API). Metric
+              yaw/pitch/roll from the facial transformation matrix, plus the
+              face_found dimension. Detection rate on LLMSTU crops: 60%
+              overall, but see the face_found note below -- the misses are
+              informative, not lost data.
 ``6drepnet``  Direct yaw/pitch/roll regression. Needs external weights.
 
-All backends return ``np.ndarray([yaw, pitch, roll], float32)`` with angles
-normalised to roughly [-1, 1] (i.e. degrees/90) so the block is on the same
-scale as the other feature groups and needs no separate normalisation.
+All backends return ``np.ndarray([yaw, pitch, roll, face_found], float32)``.
+Angles are normalised to roughly [-1, 1] (degrees/90) so the block matches the
+scale of the other feature groups.
+
+WHY face_found IS A DIMENSION, NOT A FAILURE FLAG (measured 2026-07-31, 40
+crops per class): detection rate is itself the strongest single cue signal we
+have --
+
+    screen_oriented 92%   looking_away 90%   phone_use 62%
+    turned_to_peer  52%   uncertain    40%   head_down     8%
+
+head_down vs screen_oriented is 8% vs 92%. Treating a missed face as "zeros"
+would throw that away and make it indistinguishable from "facing forward" --
+the exact ambiguity that made the OpenCV backend useless. Exposing it as an
+explicit dimension turns the failure mode into the most discriminative feature
+in the block.
 
 Contract: ``available()`` must be False unless the backend can actually run,
 because StudentFeatureExtractor.output_dim() branches on it — a backend that
 claims availability then fails would change the feature width mid-run.
 """
+import os
 from typing import Optional
 
 import numpy as np
@@ -39,7 +53,7 @@ try:
 except ImportError:  # pragma: no cover
     cv2 = None
 
-OUTPUT_DIM = 3
+OUTPUT_DIM = 4  # yaw, pitch, roll, face_found
 
 
 class OpenCVHeadPose:
@@ -53,11 +67,10 @@ class OpenCVHeadPose:
       * right-profile only        -> strong positive yaw (mirrored detection)
       * nothing found             -> yaw 0, confidence 0 (see note below)
 
-    NOTE ON FAILURE: when no face is found the vector is zeros. That is
-    deliberately indistinguishable from "facing straight ahead", which is a
-    real limitation — a fully turned-away student and an undetected face both
-    yield 0. The temporal model can partially disambiguate this from context,
-    but a metric backend (mediapipe/6DRepNet) is the proper fix.
+    SUPERSEDED by the mediapipe backend (25% vs 60% detection, and coarse
+    rather than metric angles). Kept as a zero-dependency fallback only.
+    The 4th dimension (face_found) resolves the old ambiguity where a missed
+    face and a forward-facing face both returned zeros.
     """
 
     def __init__(self):
@@ -106,46 +119,98 @@ class OpenCVHeadPose:
             yaw = 0.75 + float(np.clip((cx - 0.5) * 0.5, -0.25, 0.25))
         # Face high in the crop => head up; low => head tilted down.
         pitch = float(np.clip((cy - 0.45) * 2.0, -1.0, 1.0))
-        return np.array([yaw, pitch, 0.0], dtype=np.float32)
+        return np.array([yaw, pitch, 0.0, 1.0], dtype=np.float32)
 
 
-class MediaPipeHeadPose:  # pragma: no cover - dependency not installed here
-    """FaceMesh landmarks + solvePnP. Metric angles; preferred when available."""
+class MediaPipeHeadPose:
+    """MediaPipe FaceLandmarker (Tasks API) -> facial transformation matrix.
 
-    # Canonical 3D points (mm) for nose, chin, eye corners, mouth corners.
-    _MODEL = np.array([
-        (0.0, 0.0, 0.0), (0.0, -63.6, -12.5), (-43.3, 32.7, -26.0),
-        (43.3, 32.7, -26.0), (-28.9, -28.9, -24.1), (28.9, -28.9, -24.1),
-    ], dtype=np.float64)
-    _IDX = [1, 199, 33, 263, 61, 291]  # FaceMesh indices for the above
+    mediapipe >= 1.0 removed the legacy ``mp.solutions`` API, so this uses
+    ``mediapipe.tasks.python.vision.FaceLandmarker`` with
+    ``output_facial_transformation_matrixes=True``. That yields head pose
+    directly from the 4x4 transform, which is both simpler and better
+    conditioned than landmark + solvePnP.
 
-    def __init__(self):
-        import mediapipe as mp  # raises ImportError if absent
-        self._mesh = mp.solutions.face_mesh.FaceMesh(
-            static_image_mode=True, max_num_faces=1, refine_landmarks=False,
-            min_detection_confidence=0.3)
+    Needs the model bundle (3.7 MB):
+        curl -o face_landmarker.task https://storage.googleapis.com/\
+mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task
 
-    def estimate(self, head_crop_bgr: np.ndarray) -> np.ndarray:
-        if head_crop_bgr is None or head_crop_bgr.size == 0:
+    Input: pass the FULL student crop, not a top-fraction slice. Measured
+    detection rate on LLMSTU crops -- top 35%: 38%, top 50%: 55%,
+    full crop: 60%. FaceLandmarker runs its own face detector, so pre-cropping
+    to a guessed head region only removes context it uses.
+    """
+
+    DEFAULT_MODEL = "../huggingface/mediapipe/face_landmarker.task"
+
+    def __init__(self, model_path: Optional[str] = None):
+        import mediapipe as mp
+        from mediapipe.tasks.python import vision, BaseOptions
+        self._mp = mp
+        path = model_path or self.DEFAULT_MODEL
+        if not os.path.exists(path):
+            raise RuntimeError(
+                f"FaceLandmarker bundle not found at {path}; download it (see "
+                f"class docstring)")
+        self._lm = vision.FaceLandmarker.create_from_options(
+            vision.FaceLandmarkerOptions(
+                base_options=BaseOptions(model_asset_path=path),
+                running_mode=vision.RunningMode.IMAGE,
+                num_faces=1,
+                output_facial_transformation_matrixes=True))
+
+    def estimate(self, crop_bgr: np.ndarray) -> np.ndarray:
+        if crop_bgr is None or crop_bgr.size == 0:
             return np.zeros(OUTPUT_DIM, dtype=np.float32)
-        h, w = head_crop_bgr.shape[:2]
-        res = self._mesh.process(cv2.cvtColor(head_crop_bgr, cv2.COLOR_BGR2RGB))
-        if not res.multi_face_landmarks:
+        h, w = crop_bgr.shape[:2]
+        if h < 16 or w < 16:
             return np.zeros(OUTPUT_DIM, dtype=np.float32)
-        lm = res.multi_face_landmarks[0].landmark
-        pts = np.array([(lm[i].x * w, lm[i].y * h) for i in self._IDX], dtype=np.float64)
-        f = float(w)
-        cam = np.array([[f, 0, w / 2.0], [0, f, h / 2.0], [0, 0, 1]], dtype=np.float64)
-        ok, rvec, _ = cv2.solvePnP(self._MODEL, pts, cam, np.zeros((4, 1)),
-                                   flags=cv2.SOLVEPNP_ITERATIVE)
-        if not ok:
+        img = self._mp.Image(image_format=self._mp.ImageFormat.SRGB,
+                             data=cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2RGB))
+        res = self._lm.detect(img)
+        if not res.facial_transformation_matrixes:
+            # face_found = 0. NOT the same as "facing forward" -- see module docstring.
             return np.zeros(OUTPUT_DIM, dtype=np.float32)
-        rmat, _ = cv2.Rodrigues(rvec)
-        sy = float(np.sqrt(rmat[0, 0] ** 2 + rmat[1, 0] ** 2))
-        pitch = np.degrees(np.arctan2(-rmat[2, 0], sy))
-        yaw = np.degrees(np.arctan2(rmat[1, 0], rmat[0, 0]))
-        roll = np.degrees(np.arctan2(rmat[2, 1], rmat[2, 2]))
-        return (np.array([yaw, pitch, roll], dtype=np.float32) / 90.0).clip(-1, 1)
+        M = np.asarray(res.facial_transformation_matrixes[0])[:3, :3]
+        sy = float(np.sqrt(M[0, 0] ** 2 + M[1, 0] ** 2))
+        pitch = np.degrees(np.arctan2(-M[2, 0], sy))
+        yaw = np.degrees(np.arctan2(M[1, 0], M[0, 0]))
+        roll = np.degrees(np.arctan2(M[2, 1], M[2, 2]))
+        v = np.array([yaw, pitch, roll], dtype=np.float32) / 90.0
+        return np.concatenate([np.clip(v, -1, 1), [1.0]]).astype(np.float32)
+
+
+class CachedHeadPose:
+    """Look up precomputed pose by crop file_name. No model, no per-crop cost.
+
+    Running FaceLandmarker inline costs ~140 ms/crop; over 283,913 dense crops
+    that is ~11 h and dominates a sequence rebuild. `precompute_head_pose.py`
+    computes the same vectors across all cores in ~3 min and caches them, so
+    the build reverts to being CLIP-bound.
+
+    Values are IDENTICAL to the mediapipe backend — same model, same matrix
+    decomposition — so a cached build and an inline build are interchangeable.
+    """
+
+    def __init__(self, cache_path: str):
+        if not os.path.exists(cache_path):
+            raise RuntimeError(f"head-pose cache not found: {cache_path}")
+        d = np.load(cache_path, allow_pickle=False)
+        self._map = {str(n): i for i, n in enumerate(d["names"])}
+        self._vecs = d["vecs"].astype(np.float32)
+        self.n_missing = 0
+
+    def estimate_by_name(self, file_name: str) -> np.ndarray:
+        i = self._map.get(file_name)
+        if i is None:
+            self.n_missing += 1
+            return np.zeros(OUTPUT_DIM, dtype=np.float32)
+        return self._vecs[i]
+
+    def estimate(self, crop_bgr: np.ndarray) -> np.ndarray:
+        raise RuntimeError(
+            "CachedHeadPose is keyed by file_name; call estimate_by_name(). "
+            "Callers with only pixels must use the mediapipe backend.")
 
 
 _BACKENDS = {"opencv": OpenCVHeadPose, "mediapipe": MediaPipeHeadPose}
@@ -162,10 +227,16 @@ class HeadPoseEstimator:
 
     OUTPUT_DIM = OUTPUT_DIM
 
-    def __init__(self, backend: Optional[str] = None, device: str = "cuda:0"):
+    def __init__(self, backend: Optional[str] = None, device: str = "cuda:0",
+                 cache_path: Optional[str] = None):
         self.backend = backend
         self.device = device
         self._model = None
+        if backend == "cached":
+            if not cache_path:
+                raise ValueError("backend='cached' requires cache_path")
+            self._model = CachedHeadPose(cache_path)
+            return
         if backend is None:
             return
         if backend not in _BACKENDS:
@@ -187,3 +258,11 @@ class HeadPoseEstimator:
         if not self.available():
             raise RuntimeError("No head-pose backend configured.")
         return self._model.estimate(head_crop_bgr)
+
+    def estimate_by_name(self, file_name: str) -> np.ndarray:
+        """Cache-backed lookup. Only valid for backend='cached'."""
+        if not self.available():
+            raise RuntimeError("No head-pose backend configured.")
+        if not hasattr(self._model, "estimate_by_name"):
+            raise RuntimeError(f"backend {self.backend!r} has no cache lookup")
+        return self._model.estimate_by_name(file_name)
