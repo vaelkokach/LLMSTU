@@ -1761,11 +1761,78 @@ The **raw** prediction is recorded either way — abstention withholds an alert,
 never evidence. Dwell accumulates on the *displayed* cue, so an abstention
 interrupts an episode rather than silently extending it.
 
+### 11.14 Why the wide frame, not the stored crops — and a train/deploy mismatch it exposed
+
+**Question raised 2026-08-01:** the pipeline reads 35 GB of wide frames
+(`stu_img/frames`, 2812x1050) when an 11 GB pre-cropped set exists
+(`LLMSTU/crops`, 512x512). Why not use the crops?
+
+**They already are used, where they belong.** `precompute_head_pose.py` and
+`precompute_affect.py` both run on `--crops-root ../grounding_data/LLMSTU/crops`.
+The wide frame is read only for the 552-dim base block, which needs frame
+context. That division is deliberate.
+
+**Why the base block needs the frame.** 16 of its 552 dims are frame-relative
+bbox geometry and posture. Computed from a crop, the box *is* the image, so
+cx=0.5, area=1.0 and those dims go constant. This is not hypothetical — it was
+done by accident in the first event evaluator and measured (§6.0 bug 2):
+frame accuracy **0.342 -> 0.755**, events **0/24 -> 6/24** when fixed. "Use the
+crops" has effectively been tried, and it cost 41 accuracy points.
+
+**And the crops are a different region.** Verified over 6,000 records:
+
+| | |
+|---|---|
+| stored crop reconstructs as | `letterbox(frame[bbox_crop], 512, pad=0)`, mean abs error 0.8-3.1 (JPEG noise) |
+| `bbox_crop` vs `bbox_person` IoU | median **0.706** (p10 0.544) |
+| crop contained in person box | median 0.999 — the crop is a *sub-region* |
+| person contained in crop | median 0.745; **never** fully contained (0.0%) |
+
+So the crops describe a tighter, horizontally-trimmed region than
+`bbox_person`, which is what every model in the pipeline is trained and
+evaluated on. Substituting them would change the input distribution, not merely
+the I/O path. They are also letterboxed with **black** padding — often ~half the
+image — which would corrupt the 24 colour-statistic dims unless masked.
+
+**The mismatch this exposed.** The head-pose cache was built from the stored
+crops (`bbox_crop`), but the runtime computes head pose from the detector's box
+(`bbox_person`, `features.py:127`). Measured on 400 records:
+
+| head-pose input | face_found | agreement with training |
+|---|---|---|
+| training: stored 512x512 letterboxed `bbox_crop` | 56.5% | — |
+| runtime today: raw `bbox_person` region | 60.0% | **89.0%** |
+| runtime + letterboxing to 512 | 60.0% | 89.5% |
+| letterboxed `bbox_crop` cut from the frame | 57.8% | 94.8% |
+
+**11% of frames disagree on `face_found`** — the single dimension carrying ~80%
+of the head-pose contribution (§11.10). Letterboxing does not fix it (89.0 ->
+89.5%): the cause is the *region*, not the scaling. And `bbox_crop` cannot be
+reconstructed from `bbox_person` at runtime — the vertical relation is nearly
+fixed (bottom offset -0.001 +/- 0.035, height ratio 0.925 +/- 0.056) but the
+horizontal trim is not (width ratio 0.825 +/- **0.221**), so the rule is not
+recoverable from the recorded fields.
+
+**Status.** The offline val/test numbers are unaffected: training and evaluation
+both use the same cache, so they are internally consistent. The mismatch is a
+**deployment** issue only. The clean fix is the opposite of the original
+suggestion — rebuild the head-pose cache from the *full frame with
+`bbox_person`* so training matches deployment. That can patch columns 552:556 of
+the existing NPZs in place, with no CLIP re-extraction, but it would require
+retraining, and the Branch-B test protocol is closed. Logged as a decision, not
+silently actioned.
+
 ---
 
 ## 10. Changelog
 
 **2026-08-01 (second session)**
+- **Head-pose train/deploy mismatch found.** The cache was built from the stored
+  crops (`bbox_crop`) but the runtime uses the detector box (`bbox_person`);
+  median IoU between them is 0.706, and 11% of frames disagree on `face_found`,
+  the dimension carrying ~80% of the head-pose value. Offline numbers are
+  unaffected (train and eval share the cache); deployment is off-distribution.
+  §11.14.
 - **P0: the dashboard was running a RANDOMLY INITIALISED model.** `strict=False`
   still raises on a size mismatch; a bare `except` swallowed it. This
   invalidates the "verified end to end" claim in 6d.3. Fixed by building from
