@@ -21,17 +21,34 @@ from typing import Dict, List, Sequence
 
 from attention.taxonomy import CUE_TO_ID
 
-EVENT_CHANNELS = ["off_screen", "head_down", "phone_use", "peer_interaction", "inactivity"]
+# ``inactivity`` was REMOVED on 2026-08-01. It was defined as
+# ``{CUE_TO_ID["head_down"]}`` — byte-identical to the ``head_down`` channel — so
+# it emitted a duplicate of every head-down episode. The consequences were not
+# cosmetic:
+#
+#   * the human gold's "24 episodes" were 7 head_down + 7 identical inactivity
+#     + 5 phone_use + 3 return_to_task (2 distinct) + 2 peer_interaction, i.e.
+#     **16 distinct episodes**, and head_down carried double weight in every
+#     aggregate recall and in false-alerts/hour;
+#   * an instructor would have been shown the same episode twice.
+#
+# A genuine inactivity channel needs motion, not a cue alias. The `dynamic`
+# feature block (motion_now/mean/std, scale_change) now supplies exactly that,
+# so this is a concrete piece of future work rather than a missing capability —
+# see FINDINGS 11.2 and outputs/thesis_audit_report.md A0-3.
+#
+# ``attention/thesis_eval/segmentation.dedup_episodes`` still drops the channel
+# from *stored* gold files written before this change.
+EVENT_CHANNELS = ["off_screen", "head_down", "phone_use", "peer_interaction"]
+
+#: Retired channels, kept only so old artefacts can be recognised and dropped.
+LEGACY_ALIAS_CHANNELS = ("inactivity",)
 
 _CHANNEL_CUES: Dict[str, set] = {
     "off_screen": {CUE_TO_ID["looking_away"]},
     "head_down": {CUE_TO_ID["head_down"]},
     "phone_use": {CUE_TO_ID["phone_use"]},
     "peer_interaction": {CUE_TO_ID["turned_to_peer"]},
-    # inactivity: sustained head_down without the sleeping posture is the
-    # closest observable proxy now that idle_other folded into uncertain;
-    # a dedicated inactivity signal needs motion features (future work).
-    "inactivity": {CUE_TO_ID["head_down"]},
 }
 _ONTASK = CUE_TO_ID["screen_oriented"]
 

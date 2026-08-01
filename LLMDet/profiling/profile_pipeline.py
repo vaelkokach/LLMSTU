@@ -110,6 +110,7 @@ def run_pass(cfg, args, student_count=None):
 
     from attention.detector_adapter import FrozenLLMDetAdapter
     from attention.features import StudentFeatureExtractor
+    from attention.head_pose import HeadPoseEstimator
     from attention.temporal_model import AttentionTransformer, logits_to_pred
     from attention.tracking import IoUTracker
     from attention.realtime_infer import CLASS_NAMES, _det_appearance_feature
@@ -141,28 +142,54 @@ def run_pass(cfg, args, student_count=None):
         appearance_weight=float(cfg["tracking"].get("appearance_weight", 0.35)),
         min_match_score=float(cfg["tracking"].get("min_match_score", 0.25)),
     )
+    # Head pose must be timed if the deployed model uses it. Profiling a
+    # 552-dim extractor and then deploying a 556-dim model would understate the
+    # frame budget by the entire MediaPipe cost.
+    backend = cfg.get("features", {}).get("head_pose_backend")
+    hp = HeadPoseEstimator(backend=backend) if backend else None
+    if hp is not None and not hp.available():
+        raise SystemExit(f"head-pose backend {backend!r} unavailable")
     feat = StudentFeatureExtractor(
         clip_model_name=cfg["features"].get("clip_model_name", "openai/clip-vit-base-patch32"),
-        device=str(device),
+        device=str(device), head_pose=hp,
     )
-    model = AttentionTransformer(
-        input_dim=int(cfg["model"]["input_dim"]),
-        hidden_dim=int(cfg["model"]["hidden_dim"]),
-        num_layers=int(cfg["model"]["num_layers"]),
-        num_heads=int(cfg["model"]["num_heads"]),
-        dropout=float(cfg["model"]["dropout"]),
-        num_classes=int(cfg["model"]["num_classes"]),
-        max_seq_len=int(cfg["model"]["max_seq_len"]),
-    ).to(device)
-    # Timing does not require trained weights; a checkpoint from an older
-    # model shape (e.g. pre-taxonomy 544-dim/4-class) must not abort the run.
+    # Build from the checkpoint's own spec where one exists, so the profiled
+    # model is the deployed model. The legacy branch keeps old configs runnable.
+    bundle = None
+    ckpt_path = cfg.get("temporal_checkpoint")
     try:
-        ckpt = torch.load(cfg["temporal_checkpoint"], map_location="cpu")
-        model.load_state_dict(ckpt["model"], strict=False)
-    except (FileNotFoundError, RuntimeError, KeyError) as e:
-        print(f"[profiling] WARNING: temporal checkpoint not loaded ({e}); "
-              "profiling with randomly initialized weights (timing unaffected)")
+        from attention.thesis_eval.runtime import load_runtime_model
+        bundle = load_runtime_model(ckpt_path, device=str(device))
+        model = bundle.model
+        want_dim = bundle.input_dim
+        print(f"[profiling] temporal model: {bundle.describe()}")
+    except SystemExit:
+        bundle = None
+    if bundle is None:
+        model = AttentionTransformer(
+            input_dim=int(cfg["model"]["input_dim"]),
+            hidden_dim=int(cfg["model"]["hidden_dim"]),
+            num_layers=int(cfg["model"]["num_layers"]),
+            num_heads=int(cfg["model"]["num_heads"]),
+            dropout=float(cfg["model"]["dropout"]),
+            num_classes=int(cfg["model"]["num_classes"]),
+            max_seq_len=int(cfg["model"]["max_seq_len"]),
+        ).to(device)
+        want_dim = int(cfg["model"]["input_dim"])
+        # Timing does not require trained weights, but a mismatch must be LOUD:
+        # loading nothing and profiling a random network is how the dashboard
+        # came to "verify" itself against untrained weights.
+        try:
+            ckpt = torch.load(ckpt_path, map_location="cpu")
+            model.load_state_dict(ckpt["model"], strict=True)
+        except (FileNotFoundError, RuntimeError, KeyError) as e:
+            print(f"[profiling] WARNING: temporal checkpoint NOT loaded ({e}); "
+                  "timing is still valid but these are RANDOM weights")
     model.eval()
+    if feat.output_dim() != want_dim:
+        raise SystemExit(
+            f"extractor yields {feat.output_dim()} dims, model wants {want_dim}; "
+            "set features.head_pose_backend or use a matching checkpoint")
 
     source = int(args.video) if str(args.video).isdigit() else args.video
     cap = cv2.VideoCapture(source)
@@ -204,7 +231,8 @@ def run_pass(cfg, args, student_count=None):
                 x = np.stack(list(feats[t.track_id]), axis=0).astype(np.float32)
                 x = torch.from_numpy(x).unsqueeze(0).to(device)
                 with torch.inference_mode():
-                    logits = model(x)
+                    out = model(x)
+                    logits = out["logits"] if isinstance(out, dict) else out
                     logits_to_pred(logits)
 
         with timer("overlay"):

@@ -199,6 +199,16 @@ def main():
                                   "max_gap_s": args.max_gap_s},
                  "n_tracks": len(cache), "systems": specs, "results": {}}
 
+    # After the 2026-08-01 removal of the `inactivity` alias from
+    # attention/events.py, predictions no longer emit that channel while gold
+    # files written earlier still contain it. `gold_raw` is then ASYMMETRIC —
+    # gold has 7 episodes no system can possibly match — and its recall is
+    # meaningless. Detect that rather than let it read as a regression.
+    from attention.events import EVENT_CHANNELS, LEGACY_ALIAS_CHANNELS
+    gold_channels = {e.channel for eps in gold.values() for e in eps}
+    stale_alias = sorted(gold_channels & set(LEGACY_ALIAS_CHANNELS)
+                         - set(EVENT_CHANNELS))
+
     for dedup in (False, True):
         tag = "gold_dedup" if dedup else "gold_raw"
         res = {name: evaluate_system(name, cues, cache, gold, ecfg, tious,
@@ -213,10 +223,22 @@ def main():
         for r in res.values():
             r.pop("_episodes", None)
             r.pop("_gold", None)
-        out["results"][tag] = {"n_gold_events": sum(
+        block = {"n_gold_events": sum(
             len(v) for v in ({k: S.dedup_episodes(v) for k, v in gold.items()}
                              if dedup else gold).values()),
             "per_system": res, "common_matched_subset": common}
+        if not dedup and stale_alias:
+            block["VALID"] = False
+            block["invalid_reason"] = (
+                f"ASYMMETRIC — the gold file still contains the retired alias "
+                f"channel(s) {stale_alias}, which attention/events.py no longer "
+                f"emits, so those gold episodes are unmatchable by construction "
+                f"and recall here is meaningless. Use gold_dedup. This block is "
+                f"retained only to explain the difference from pre-2026-08-01 "
+                f"numbers.")
+        else:
+            block["VALID"] = True
+        out["results"][tag] = block
 
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(json.dumps(out, indent=2))
@@ -225,6 +247,8 @@ def main():
         block = out["results"][tag]
         print(f"\n=== {tag}: {block['n_gold_events']} gold episodes, "
               f"{len(cache)} tracks ===")
+        if not block.get("VALID", True):
+            print(f"    !! NOT VALID: {block['invalid_reason']}")
         print(f"{'system':22s} {'frameAcc':>8} {'macroF1':>8} {'F1@10':>7} {'F1@25':>7} "
               f"{'F1@50':>7} {'edit':>6} {'ev_rec':>7} {'ev_prec':>8} {'ev_F1':>6} {'FA/h':>6}")
         for name, r in block["per_system"].items():

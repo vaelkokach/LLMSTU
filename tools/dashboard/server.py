@@ -117,6 +117,14 @@ def push_frame(t, jpeg_bytes, students, cue_names):
 
         for seat, s in students.items():
             thr = ALERT_AFTER_S.get(s["cue"])
+            # Selective prediction: an alert also needs the model to be confident
+            # enough. The threshold is fitted on the validation split and frozen
+            # (attention/thesis_eval/runtime.py); at it, retained frames are
+            # correct 85.4% of the time versus 75.6% at full coverage. Replay
+            # logs recorded before abstention existed carry no `alert_allowed`
+            # key, so the default admits them and old sessions still replay.
+            if not s.get("alert_allowed", True):
+                continue
             if thr and s.get("dwell", 0) >= thr and not s.get("alerted"):
                 STATE["alerts"].append({
                     "t": round(float(t), 1),

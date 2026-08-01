@@ -27,7 +27,7 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
     from attention.detector_adapter import FrozenLLMDetAdapter
     from attention.features import StudentFeatureExtractor
     from attention.head_pose import HeadPoseEstimator
-    from attention.temporal_model import AttentionTransformer
+    from attention.thesis_eval.runtime import load_runtime_model, predict_window
     from attention.tracking import IoUTracker
     from attention.taxonomy import CUE_CLASSES
     from attention.realtime_infer import _det_appearance_feature
@@ -45,7 +45,6 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
     video = str(Path(video).resolve()) if not str(video).isdigit() else video
     os.chdir(LLMDET_ROOT)
     dev = "cuda:0" if torch.cuda.is_available() else "cpu"
-    want = int(cfg["model"]["input_dim"])
 
     det = FrozenLLMDetAdapter(
         config_path=cfg["detector"]["config_path"],
@@ -66,32 +65,33 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
         appearance_weight=float(cfg["tracking"].get("appearance_weight", 0.35)),
         min_match_score=float(cfg["tracking"].get("min_match_score", 0.25)))
 
-    hp = None
-    try:
-        hp = HeadPoseEstimator(backend="mediapipe")
-    except Exception as e:
-        print(f"[dashboard] head pose unavailable ({e}); running without it")
+    # Head pose is REQUIRED, not best-effort: the deployed model is 556-dim and
+    # 4 of those dims are head pose. Swallowing a failure here used to leave the
+    # extractor at 552 dims, which the old zero-padding path then hid.
+    backend = cfg.get("features", {}).get("head_pose_backend", "mediapipe")
+    hp = HeadPoseEstimator(backend=backend) if backend else None
+    if hp is not None and not hp.available():
+        raise SystemExit(
+            f"head-pose backend {backend!r} is unavailable, but the deployed "
+            "model needs its 4 dims. Install it or point --config at a "
+            "checkpoint trained without head pose.")
     feat = StudentFeatureExtractor(
         clip_model_name=cfg["features"].get("clip_model_name",
                                             "openai/clip-vit-base-patch32"),
         device=dev, head_pose=hp)
 
-    model = AttentionTransformer(
-        input_dim=want, hidden_dim=int(cfg["model"]["hidden_dim"]),
-        num_layers=int(cfg["model"]["num_layers"]),
-        num_heads=int(cfg["model"]["num_heads"]),
-        dropout=float(cfg["model"]["dropout"]),
-        num_classes=int(cfg["model"]["num_classes"]),
-        max_seq_len=int(cfg["model"]["max_seq_len"]),
-        per_frame=True).to(dev)
-    ck = cfg.get("temporal_checkpoint",
-                 "work_dirs/attention_temporal_hp/checkpoints/best.pth")
-    try:
-        sd = torch.load(ck, map_location="cpu")
-        model.load_state_dict(sd["model"] if "model" in sd else sd, strict=False)
-    except Exception as e:
-        print(f"[dashboard] temporal checkpoint not loaded ({e})")
-    model.eval()
+    # Build from the CHECKPOINT's own spec. A YAML/checkpoint disagreement used
+    # to raise inside a bare except and run the dashboard on random weights.
+    bundle = load_runtime_model(cfg["temporal_checkpoint"], device=dev,
+                               calibration=cfg.get("calibration"))
+    want = bundle.input_dim
+    if feat.output_dim() != want:
+        raise SystemExit(
+            f"live features are {feat.output_dim()}-dim but "
+            f"{bundle.experiment_id} expects {want} ({bundle.feature_config}). "
+            "Refusing to pad — a zero block is indistinguishable from a real "
+            "measurement.")
+    print(f"[dashboard] temporal model: {bundle.describe()}")
 
     win = int(cfg["inference"]["window_size"])
     minf = int(cfg["inference"].get("min_frames_for_pred", 4))
@@ -117,20 +117,19 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
         if tracks:
             fv = feat.extract_batch(frame, [tr.bbox_xyxy for tr in tracks])
             for tr, f in zip(tracks, fv):
-                if f.shape[0] < want:      # pad if the config expects extra dims
-                    f = np.concatenate([f, np.zeros(want - f.shape[0], np.float32)])
-                hist[tr.track_id].append(f[:want])
+                hist[tr.track_id].append(f)
 
             for tr in tracks:
                 h = hist[tr.track_id]
                 if len(h) < minf:
                     continue
-                x = torch.from_numpy(np.stack(list(h))[None]).float().to(dev)
-                with torch.inference_mode():
-                    logits = model(x)
-                p = logits[0, -1] if logits.dim() == 3 else logits[0]
-                cue = CUE_CLASSES[int(p.argmax())]
-                conf = float(torch.softmax(p, -1).max())
+                # predict_window applies the validation-fitted temperature and
+                # both abstention thresholds, and asserts the feature width.
+                r = predict_window(bundle, np.stack(list(h)))
+                cue = r["displayed_cue"]
+                conf = r["confidence"]
+                # Dwell accumulates on the DISPLAYED cue, so an abstention
+                # interrupts an episode rather than silently extending it.
                 prev = dwell.get(tr.track_id)
                 if prev and prev["cue"] == cue:
                     prev["dwell"] = t - prev["since"]
@@ -138,9 +137,13 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
                     dwell[tr.track_id] = {"cue": cue, "since": t, "dwell": 0.0,
                                           "alerted": False}
                 st = dwell[tr.track_id]
-                students[str(tr.track_id)] = {"cue": cue, "conf": round(conf, 2),
-                                              "dwell": st["dwell"],
-                                              "alerted": st["alerted"]}
+                students[str(tr.track_id)] = {
+                    "cue": cue, "conf": round(conf, 2),
+                    "dwell": st["dwell"], "alerted": st["alerted"],
+                    # raw prediction preserved even when abstaining: the point
+                    # of abstention is to withhold an alert, not evidence
+                    "raw_cue": r["cue"], "abstained": r["abstained"],
+                    "alert_allowed": r["alert_allowed"]}
 
         vis = frame.copy()
         for tr in tracks:

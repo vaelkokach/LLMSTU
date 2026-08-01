@@ -1,3 +1,20 @@
+# =====================================================================
+# SUPERSEDED — historical ablation config. DO NOT USE FOR DEPLOYMENT.
+#
+# Deployment now uses configs/attention_runtime.yaml (MS-TCN, 556-dim,
+# test macro-F1 0.500 vs this family's 0.377-0.407).
+#
+# This file is kept only so the historic 552/556/570 ladder stays
+# re-runnable. Its checkpoint was trained on the sequence builder's OWN
+# 102/25 video split, which overlaps the detector's test split on 23 of
+# 27 videos, so nothing it produces is a test number.
+#
+# `temporal_checkpoint` below was corrected on 2026-08-01: all three
+# configs in this family pointed at the 552-dim attention_temporal_v2
+# checkpoint regardless of their own `input_dim`. In the live path that
+# raised a size mismatch inside a bare `except`, which printed one line
+# and then ran the dashboard on a RANDOMLY INITIALISED network.
+# =====================================================================
 # 556-dim variant: adds the MediaPipe head-pose block.
 #
 # Kept SEPARATE from attention_temporal.yaml so the 552-dim baseline remains
@@ -132,4 +149,4 @@ inference:
 privacy:
   anonymize_faces: false
 
-temporal_checkpoint: "work_dirs/attention_temporal_v2/checkpoints/best.pth"
+temporal_checkpoint: "work_dirs/attention_temporal_hp/checkpoints/best.pth"

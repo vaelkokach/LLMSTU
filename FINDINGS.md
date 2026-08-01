@@ -1662,11 +1662,123 @@ engagement benchmark, and here it is quantified rather than asserted.
 coaching clip". It must never appear beside the six-class visible-cue macro-F1,
 the grounding R@1, or SCB's mAP.
 
+### 11.12 ★ P0 — the deployed path was running a RANDOM model, and is slower than reported
+
+Four defects in the live path, found by pointing it at the model the thesis
+actually cites.
+
+**1. The dashboard was running randomly initialised weights.** `pipeline_bridge.py`
+built the temporal model from YAML and then did:
+
+```python
+try:
+    model.load_state_dict(sd, strict=False)
+except Exception as e:
+    print(f"[dashboard] temporal checkpoint not loaded ({e})")
+```
+
+`strict=False` tolerates missing and unexpected keys but **still raises on a size
+mismatch**. `attention_temporal_full.yaml` declared `input_dim: 570` while
+`temporal_checkpoint` pointed at the 552-dim `attention_temporal_v2` checkpoint,
+so every launch took the `except` branch, printed one line, and served cues from
+an **untrained network**. Verified directly: loading that checkpoint into a
+570-dim model raises `size mismatch for input_proj.weight`.
+
+⚠️ **This invalidates the "verified end to end on REAL video" claim in §6d.3.**
+The cue transitions it reported (`uncertain` → `screen_oriented` as the window
+fills) are exactly what an untrained network plus label smoothing produces. The
+dashboard was verified as *plumbing*, not as a model.
+
+**2. Feature vectors were zero-padded to the config's width.** `if f.shape[0] <
+want: pad with zeros` — so any block the live extractor could not produce became
+a run of zeros, indistinguishable from a real measurement. The same trap as the
+OpenCV head-pose backend (§9a.3).
+
+**3. All three ablation configs pointed at the same 552-dim checkpoint**
+regardless of their own `input_dim`. Now corrected and asserted.
+
+**4. Head pose was never in the profile.** The archived 7.1 FPS was measured with
+a 552-dim extractor — i.e. *without* the one feature block that works — so it was
+never the deployed configuration's speed.
+
+**Fixes.** `attention/thesis_eval/runtime.py` builds the model from the
+**checkpoint's own spec**, so a YAML disagreement is impossible; `strict=True`;
+the feature width is asserted, never padded; head pose is required rather than
+best-effort; and the profiler now loads the same way. `configs/attention_runtime.yaml`
+is the single deployment config (MS-TCN, 556-dim). `attention/events.py` no
+longer defines the `inactivity` alias (§11.2).
+
+**Re-verified end to end on `0325.mp4`** with the real model: 6 students tracked,
+confidences 0.73–0.95, one track reading `phone_use` — differentiated output
+rather than everything collapsing to one class.
+
+**Runtime, corrected.** Measured in one session so the comparison is like-for-like:
+
+| configuration | FPS (real scene) | detector | features | temporal |
+|---|---|---|---|---|
+| archived 2026-07-31 (552, no head pose) | 7.09 | 122.5 ms | 15.3 ms | 1.3 ms |
+| legacy 552, no head pose, same session | 5.32 | 135.4 ms | 41.3 ms | 7.8 ms |
+| **deployed 556 + head pose + MS-TCN** | **2.84–3.05** | ~124–159 ms | **141.6 ms** | 47.6 ms |
+
+Two things follow, and both must be stated:
+
+* **The head-pose block costs ~100 ms per frame at ~6 students** (41.3 → 141.6 ms),
+  more than the detector. The honest deployed figure is **~3 FPS**, not 7.1.
+* **The archived 7.09 FPS is not reproducible even for its own config** on this
+  shared machine (5.32 in-session). Absolute FPS here is load-dependent; only
+  same-session comparisons are meaningful.
+
+Scaling for the deployed configuration:
+
+| visible students | FPS | p50 | p95 | p99 |
+|---|---|---|---|---|
+| 1 | 5.63 | 167 ms | 252 ms | 262 ms |
+| 5 | 3.44 | 290 ms | 326 ms | 334 ms |
+| 10 | 2.09 | 477 ms | 548 ms | 565 ms |
+| 20 | 1.27 | 783 ms | 916 ms | 961 ms |
+| 30 | 0.88 | 1139 ms | 1332 ms | 1557 ms |
+
+**A concrete optimisation this points at.** §11.10 showed ~80% of the head-pose
+contribution is the binary `face_found` flag, not the angles. The pipeline is
+paying ~100 ms/frame for a full FaceLandmarker mesh to obtain, in effect, one
+bit per student. A plain face *detector* should recover most of that time at
+little accuracy cost — and unlike a DirectMHP/6DRepNet upgrade, it targets the
+part that actually carries the signal.
+
+### 11.13 Calibrated abstention wired into the dashboard
+
+Thresholds fitted on **validation** and frozen (`attention/thesis_eval/runtime.py`,
+MS-TCN-556 seed 42, T = 0.9236):
+
+| threshold | rule | value | coverage | selective accuracy |
+|---|---|---|---|---|
+| display | highest threshold retaining ≥ 90% coverage | 0.48 | 90.4% | 79.4% |
+| alert | lowest threshold with selective accuracy ≥ 85% | 0.64 | 72.1% | 85.4% |
+
+(75.6% accuracy at full coverage.) Below the display threshold the UI reads
+`uncertain`; below the alert threshold no sustained-episode alert may fire.
+The **raw** prediction is recorded either way — abstention withholds an alert,
+never evidence. Dwell accumulates on the *displayed* cue, so an abstention
+interrupts an episode rather than silently extending it.
+
 ---
 
 ## 10. Changelog
 
 **2026-08-01 (second session)**
+- **P0: the dashboard was running a RANDOMLY INITIALISED model.** `strict=False`
+  still raises on a size mismatch; a bare `except` swallowed it. This
+  invalidates the "verified end to end" claim in 6d.3. Fixed by building from
+  the checkpoint's own spec with strict=True; feature width asserted, never
+  zero-padded. Re-verified with MS-TCN-556. §11.12.
+- **Deployed runtime corrected: ~3 FPS, not 7.1.** The archived figure was
+  measured WITHOUT the head-pose block, i.e. not the deployed configuration.
+  Head pose costs ~100 ms/frame at 6 students - more than the detector - to
+  supply what is effectively one bit per student. §11.12.
+- `inactivity` channel REMOVED from attention/events.py (it was an exact alias
+  of `head_down`). §11.2.
+- Calibrated abstention wired into the dashboard: display>=0.48, alert>=0.64,
+  both fitted on validation and frozen. §11.13.
 - **ARCHITECTURE IS THE LEVER: MS-TCN +0.1007 and ASRF +0.1043 macro-F1 over the
   temporal transformer, 3/3 seeds significant** (paired video-level bootstrap,
   identical features/split/seeds). Gains land on the classes every previous
