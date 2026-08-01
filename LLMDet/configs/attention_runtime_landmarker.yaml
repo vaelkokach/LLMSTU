@@ -1,29 +1,13 @@
 # DEPLOYMENT config — the model the thesis actually cites.
 #
-# 2026-08-01: switched from the FaceLandmarker mesh to a plain BlazeFace
-# DETECTOR for the `face_found` bit, and from 556 to the 553_facefound feature
-# config. Rationale and evidence in FINDINGS 11.16:
-#   * ~80% of the head-pose block's value is the flag, not the angles (11.10),
-#     and the angles add +0.0058 macro-F1, 0/3 seeds significant;
-#   * the mesh cost 74.9 ms/frame against the detector's 47.2 (1,200 frames);
-#   * downstream accuracy is a statistical tie: detector-553 vs the previous
-#     landmarker-556 is -0.0120 macro-F1, significant in only 1/3 seed pairs;
-#   * end-to-end this buys +30% FPS at a real scene (2.84 -> 3.69) and cuts p95
-#     latency 434 -> 296 ms.
-# The previous configuration is kept runnable as attention_runtime_landmarker.yaml.
-#
 # Supersedes attention_temporal{,_hp,_full}.yaml for anything that runs live.
 # Those three remain only so the historic ablation is re-runnable; each now
 # carries a warning banner and a checkpoint that matches its own input_dim.
 #
-# Temporal model: MS-TCN, 553_facefound features (base + face_found), seed 42.
-#   validation macro-F1 0.4913 +/- 0.0208   (attention/thesis_eval, 3 seeds)
-# For reference, on the same evaluator:
-#   MS-TCN 556 landmarker (previous deployment)  val 0.5027, test 0.5000
-#   temporal transformer 556 (original)          val 0.4020, test 0.4065
-# The architecture change (+0.0933 test macro-F1, 3/3 seed pairs) is the large
-# effect; this config's change from 556-landmarker to 553-detector is a
-# statistical tie bought for +30% FPS.
+# Temporal model: MS-TCN, 556-dim features (base + head pose), seed 42.
+#   validation macro-F1 0.503 +/- 0.005   test macro-F1 0.500 +/- 0.011
+#   vs the previous transformer's         test macro-F1 0.407 +/- 0.004
+#   (+0.0933 macro-F1, significant in 3/3 seed pairs; work_dirs/thesis/tables/)
 #
 # Why 556 and not 570 for deployment, beyond the ablation showing the extra 14
 # dims earn nothing (FINDINGS 11.4):
@@ -69,31 +53,28 @@ tracking:
 features:
   clip_model_name: "openai/clip-vit-base-patch32"
   device: "cuda:0"
-  # BlazeFace full-range detector: emits [0, 0, 0, face_found]. The extractor
-  # still produces 556 columns; the 553_facefound checkpoint SELECTS base +
-  # column 555 inside predict_window, so the three zeroed angle columns are
-  # never fed to the model. The bridge asserts the extractor width and refuses
-  # to pad.
-  head_pose_backend: "mediapipe_detector"
+  # Required: the 556-dim model expects the 4 head-pose dims. The bridge asserts
+  # the resulting width against the checkpoint and refuses to pad.
+  head_pose_backend: "mediapipe"
 
 # Descriptive only — see the note above.
 model:
-  described_input_dim: 553
+  described_input_dim: 556
   num_classes: 6
   max_seq_len: 128
   per_frame: true
 
-temporal_checkpoint: "work_dirs/thesis/ff_det/mstcn_553_ff_s42/checkpoints/best.pth"
+temporal_checkpoint: "work_dirs/thesis/arch/mstcn_556_hp_s42/checkpoints/best.pth"
 
 # Temperature and both abstention thresholds, fitted on the VALIDATION split and
 # frozen (attention/thesis_eval/runtime.py):
 #   T = 0.9236
-#   display >= 0.46  -> 91.1% coverage, 76.4% selective accuracy
-#   alert   >= 0.66  -> 64.6% coverage, 85.3% selective accuracy
+#   display >= 0.48  -> 90.4% coverage, 79.4% selective accuracy (vs 75.6% at full)
+#   alert   >= 0.64  -> 72.1% coverage, 85.4% selective accuracy
 # Below the display threshold the UI shows `uncertain`; below the alert
 # threshold no sustained-episode alert may fire. Raw predictions are recorded
 # either way, so abstention never destroys evidence.
-calibration: "work_dirs/thesis/runtime/mstcn_553_ff_thresholds.json"
+calibration: "work_dirs/thesis/runtime/mstcn_556_thresholds.json"
 
 events:
   min_duration_s: 3.0

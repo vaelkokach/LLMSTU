@@ -186,6 +186,10 @@ def run_pass(cfg, args, student_count=None):
             print(f"[profiling] WARNING: temporal checkpoint NOT loaded ({e}); "
                   "timing is still valid but these are RANDOM weights")
     model.eval()
+    live_cols = None
+    if bundle is not None and bundle.live_columns is not None:
+        live_cols = bundle.live_columns          # model selects a subset
+        want_dim = bundle.live_input_width
     if feat.output_dim() != want_dim:
         raise SystemExit(
             f"extractor yields {feat.output_dim()} dims, model wants {want_dim}; "
@@ -229,6 +233,8 @@ def run_pass(cfg, args, student_count=None):
                 if len(feats[t.track_id]) < min_frames:
                     continue
                 x = np.stack(list(feats[t.track_id]), axis=0).astype(np.float32)
+                if live_cols is not None:
+                    x = np.ascontiguousarray(x[:, live_cols])
                 x = torch.from_numpy(x).unsqueeze(0).to(device)
                 with torch.inference_mode():
                     out = model(x)

@@ -46,6 +46,8 @@ claims availability then fails would change the feature width mid-run.
 import os
 from typing import Optional
 
+from pathlib import Path
+
 import numpy as np
 
 try:
@@ -213,7 +215,53 @@ class CachedHeadPose:
             "Callers with only pixels must use the mediapipe backend.")
 
 
-_BACKENDS = {"opencv": OpenCVHeadPose, "mediapipe": MediaPipeHeadPose}
+class MediaPipeFaceDetected:
+    """``face_found`` only, from BlazeFace — no pose.
+
+    Rationale (FINDINGS 11.10, 11.16): ~80% of the head-pose block's downstream
+    value is the binary flag, and the metric angles add nothing measurable on
+    top of it. A full FaceLandmarker mesh is an expensive way to obtain one bit:
+    measured over 1,200 frames, 74.9 ms/frame against this backend's 47.2 ms.
+
+    Returns ``[0, 0, 0, found]``, so a model built on the ``553_facefound``
+    feature config — base + column 555 only — sees exactly the same semantics
+    as it would from the landmarker. Do NOT pair this with a 556-dim
+    checkpoint: the three zeroed angle columns would be silently wrong, which is
+    the failure mode `attention/thesis_eval/runtime.py` exists to make
+    impossible.
+    """
+
+    DEFAULT_MODEL = "../huggingface/mediapipe/face_detection_full_range.tflite"
+
+    def __init__(self, model_path: str = None, min_confidence: float = 0.5):
+        model_path = model_path or self.DEFAULT_MODEL
+        if not Path(model_path).exists():
+            raise RuntimeError(
+                f"face detector model not found at {model_path}; fetch it with\n"
+                "  curl -o face_detection_full_range.tflite https://storage."
+                "googleapis.com/mediapipe-assets/face_detection_full_range.tflite")
+        from mediapipe.tasks.python import vision, BaseOptions
+        self._det = vision.FaceDetector.create_from_options(
+            vision.FaceDetectorOptions(
+                base_options=BaseOptions(model_asset_path=str(model_path)),
+                running_mode=vision.RunningMode.IMAGE,
+                min_detection_confidence=min_confidence))
+
+    def estimate(self, crop_bgr: np.ndarray) -> np.ndarray:
+        import cv2
+        import mediapipe as mp
+        if crop_bgr is None or crop_bgr.size == 0 or min(crop_bgr.shape[:2]) < 16:
+            return np.zeros(OUTPUT_DIM, dtype=np.float32)
+        res = self._det.detect(mp.Image(
+            image_format=mp.ImageFormat.SRGB,
+            data=cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2RGB)))
+        out = np.zeros(OUTPUT_DIM, dtype=np.float32)
+        out[3] = 1.0 if res.detections else 0.0
+        return out
+
+
+_BACKENDS = {"opencv": OpenCVHeadPose, "mediapipe": MediaPipeHeadPose,
+             "mediapipe_detector": MediaPipeFaceDetected}
 
 
 class HeadPoseEstimator:

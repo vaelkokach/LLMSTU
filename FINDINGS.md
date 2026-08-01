@@ -1886,11 +1886,91 @@ The corrected cache, patched sequences and 9 retrained models are retained
 comparison is reproducible, and are **not** used by anything the thesis cites.
 
 
+### 11.16 ★ Face DETECTOR replaces the FaceMesh: +30% FPS at no measurable cost
+
+§11.10 showed ~80% of the head-pose block's value is the binary `face_found`
+flag and the metric angles add nothing; §11.12 showed the pipeline pays ~100 ms
+per frame for a full FaceLandmarker mesh. So the pipeline was buying one bit per
+student very expensively. Tested properly.
+
+**Backend benchmark** (1,200 frames / 3,544 students, `attention/bench_face_backends.py`):
+
+| backend | ms/frame | overall found | agreement | MI (bits) | screen − head_down |
+|---|---|---|---|---|---|
+| FaceLandmarker per crop (current) | 74.9 | 61.0% | — | 0.1021 | **48.6%** |
+| BlazeFace short-range per crop | 32.6 | 94.4% | 66.7% | 0.0950 | 11.3% |
+| **BlazeFace full-range per crop** | **47.2** | 89.8% | 69.6% | **0.1164** | 22.0% |
+| BlazeFace full-range on the whole frame | 31.8 | 30.1% | 51.6% | 0.0293 | 15.4% |
+
+Two things the summary statistics could not settle. Max−min *spread* is
+useless here — the detector matches the landmarker's 71.0% while separating
+`head_down` from `screen_oriented` by 22 points instead of 49. And mutual
+information says the *detector* carries more total information (0.1164 vs
+0.1021). Given §11.15's lesson — a variant that looked fine on a summary trained
+to a worse model — the only trustworthy test is to train on it.
+
+Running the face detector **once on the whole frame** and assigning faces to
+students by centre containment is rejected outright: faces in a 2812×1050
+classroom shot are too small, giving 30.1% detection and 51.6% agreement. The
+per-crop cost therefore stays linear in student count.
+
+**Downstream (`553_facefound`: base + the flag only, 3 seeds, both caches built
+from frame + `bbox_person` so the only difference is the backend):**
+
+| model | flag source | macro-F1 | balanced acc |
+|---|---|---|---|
+| transformer | landmarker mesh | 0.4045 ± 0.0117 | 0.4200 |
+| transformer | **detector** | **0.4149 ± 0.0106** | 0.4370 |
+| MS-TCN | landmarker mesh | 0.4819 ± 0.0138 | 0.5081 |
+| MS-TCN | **detector** | **0.4913 ± 0.0208** | 0.5101 |
+
+Paired video-level bootstrap, MS-TCN:
+
+| contrast | Δ macro-F1 | seeds significant |
+|---|---|---|
+| detector flag − landmarker flag | +0.0094 | 1/3 |
+| detector-553 − previously deployed landmarker-556 | −0.0120 | 1/3 |
+
+Both are ties. The detector is nominally better than the landmarker *flag* and
+nominally worse than the landmarker *flag + angles*, neither significantly.
+
+**End-to-end runtime** (same session, `0325.mp4`, 120 frames):
+
+| visible students | landmarker-556 FPS | **detector-553 FPS** | gain | feature stage |
+|---|---|---|---|---|
+| real (~6) | 2.84 | **3.69** | **+30%** | 141.6 → 96.2 ms |
+| 1 | 5.43 | 6.12 | +13% | 28.1 → 26.6 ms |
+| 5 | 3.01 | 3.90 | +30% | 134.2 → 87.9 ms |
+| 10 | 2.14 | 2.60 | +21% | 246.0 → 182.0 ms |
+| 20 | 1.20 | 1.43 | +19% | 532.1 → 422.1 ms |
+| 30 | 0.87 | 1.16 | +33% | 791.4 → 509.9 ms |
+
+p95 latency at a real scene falls 433.7 → 295.9 ms.
+
+**Decision: adopted.** `configs/attention_runtime.yaml` now uses the BlazeFace
+detector and the `553_facefound` MS-TCN; the previous configuration is kept
+runnable as `attention_runtime_landmarker.yaml`. The trade is stated plainly:
+**−0.0120 macro-F1 (not significant) for +30% FPS and −32% p95 latency**, on a
+system where 100% of frames miss a 10 fps budget.
+
+The live extractor still emits 556 columns; the 553 checkpoint **selects** base
++ column 555 inside `predict_window`, so the three zeroed angle columns never
+reach the model. That selection is derived from the checkpoint's own feature
+config, and `load_runtime_model` refuses any config needing columns ≥ 556 (the
+expression and dynamic blocks, which a streaming path cannot produce).
+
+Verified end to end on `0325.mp4`: 6 students, confidences 0.46–0.95, abstention
+rate 4.2%.
+
 ---
 
 ## 10. Changelog
 
 **2026-08-01 (second session)**
+- **Face DETECTOR replaces the FaceMesh in deployment: +30% FPS (2.84 -> 3.69),
+  p95 434 -> 296 ms, accuracy a statistical tie (-0.0120 macro-F1, 1/3 seeds).**
+  Running the detector once per FRAME instead of per crop was rejected: faces in
+  a 2812x1050 shot are too small (30.1% detection). §11.16.
 - **Head-pose train/deploy mismatch found.** The cache was built from the stored
   crops (`bbox_crop`) but the runtime uses the detector box (`bbox_person`);
   median IoU between them is 0.706, and 11% of frames disagree on `face_found`,

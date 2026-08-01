@@ -60,6 +60,15 @@ from attention.thesis_eval.models import build_model
 UNCERTAIN = CUE_CLASSES.index("uncertain")
 
 
+#: Feature configs the live extractor can serve. The live vector is laid out
+#: [base(552) | yaw, pitch, roll, face_found], i.e. the first 556 columns of the
+#: offline layout, so any config drawing only on those blocks is deployable.
+#: 563_* and 570_full are NOT: the expression block needs a second GPU model per
+#: crop and the dynamic block is a whole-track statistic that a streaming path
+#: cannot produce faithfully.
+LIVE_MAX_COL = 556
+
+
 @dataclass
 class RuntimeBundle:
     """Everything the live path needs, derived from the checkpoint itself."""
@@ -75,9 +84,15 @@ class RuntimeBundle:
     display_threshold: float = 0.0
     alert_threshold: float = 0.0
     calibration_evidence: str = ""
+    #: columns to take from the live 556-wide vector, or None when the config
+    #: already equals the full live vector
+    live_columns: Optional[np.ndarray] = None
+    live_input_width: int = LIVE_MAX_COL
 
     def describe(self) -> str:
-        return (f"{self.experiment_id} ({self.model_name}, {self.input_dim}-dim, "
+        sel = "" if self.live_columns is None else \
+            f", selecting {self.input_dim} of {self.live_input_width} live columns"
+        return (f"{self.experiment_id} ({self.model_name}, {self.input_dim}-dim{sel}, "
                 f"T={self.temperature:.3f}, display>={self.display_threshold:.2f}, "
                 f"alert>={self.alert_threshold:.2f})")
 
@@ -95,6 +110,14 @@ def load_runtime_model(ckpt_path: str, device: str = "cuda:0",
             "attention.thesis_eval.train, or load it with the legacy runtime and "
             "label every number it produces as legacy.")
     dim = D.config_dim(spec["feature_config"])
+    cols = D.column_index(spec["feature_config"])
+    if cols.max() >= LIVE_MAX_COL:
+        raise SystemExit(
+            f"{ckpt_path} uses feature config {spec['feature_config']!r}, which "
+            f"needs column {int(cols.max())}. The live extractor produces only "
+            f"{LIVE_MAX_COL} columns: the expression block needs a per-crop FER "
+            f"model and the dynamic block is a whole-track statistic. This "
+            f"checkpoint is not deployable in a streaming path.")
     kw = dict(spec.get("model_kwargs") or {})
     if spec["model"] == "transformer":
         kw.setdefault("dropout", spec.get("dropout", 0.1))
@@ -107,7 +130,9 @@ def load_runtime_model(ckpt_path: str, device: str = "cuda:0",
     b = RuntimeBundle(
         model=model, experiment_id=spec.get("experiment_id", "unknown"),
         model_name=spec["model"], feature_config=spec["feature_config"],
-        input_dim=dim, seed=spec.get("seed"), checkpoint=str(ckpt_path), device=dev)
+        input_dim=dim, seed=spec.get("seed"), checkpoint=str(ckpt_path), device=dev,
+        live_columns=None if dim == LIVE_MAX_COL else cols,
+        live_input_width=LIVE_MAX_COL)
 
     if calibration:
         c = json.loads(Path(calibration).read_text())
@@ -127,14 +152,18 @@ def predict_window(bundle: RuntimeBundle, window: np.ndarray) -> Dict:
     producing a block the model was trained on, which is a configuration error,
     not something to paper over with zeros.
     """
-    if window.ndim != 2 or window.shape[1] != bundle.input_dim:
+    if window.ndim != 2 or window.shape[1] != bundle.live_input_width:
         raise RuntimeError(
-            f"live features are {window.shape[-1]}-dim but "
-            f"{bundle.experiment_id} was trained on {bundle.input_dim} "
-            f"({bundle.feature_config}). Fix the feature extractor or the "
-            f"checkpoint — do NOT pad, a zero block is indistinguishable from a "
-            f"real measurement.")
-    x = torch.from_numpy(window[None]).float().to(bundle.device)
+            f"live features are {window.shape[-1]}-dim but the extractor must "
+            f"produce {bundle.live_input_width} (base + head-pose block) for "
+            f"{bundle.experiment_id}. Fix the feature extractor — do NOT pad, a "
+            f"zero block is indistinguishable from a real measurement.")
+    if bundle.live_columns is not None:
+        # SELECT the columns the checkpoint was trained on. A detector-only
+        # backend still emits 4 head-pose columns, three of them zero; a
+        # 553_facefound model must see the flag alone, not the zeros.
+        window = window[:, bundle.live_columns]
+    x = torch.from_numpy(np.ascontiguousarray(window)[None]).float().to(bundle.device)
     out = bundle.model(x)
     logits = out["logits"][0, -1].float()
     if bundle.temperature != 1.0:

@@ -1,0 +1,75 @@
+{
+  "n_frames": 1200,
+  "n_students": 3544,
+  "min_detection_confidence": 0.5,
+  "backends": {
+    "landmarker_crop": {
+      "overall": 0.6103273137697517,
+      "agreement_with_landmarker": 1.0,
+      "spread": 0.7104781183728551,
+      "mutual_information_bits": 0.10210827785666014,
+      "screen_minus_headdown": 0.4860962083184305,
+      "per_cue": {
+        "screen_oriented": 0.6674148896371118,
+        "looking_away": 0.7324561403508771,
+        "head_down": 0.1813186813186813,
+        "turned_to_peer": 0.5252525252525253,
+        "phone_use": 0.6833333333333333,
+        "uncertain": 0.02197802197802198
+      },
+      "ms_per_frame": 72.24066160075986,
+      "ms_per_student": 24.460720632311467
+    },
+    "detector_crop_short": {
+      "overall": 0.9435665914221218,
+      "agreement_with_landmarker": 0.6667607223476298,
+      "spread": 0.5472284916729361,
+      "mutual_information_bits": 0.0950054506045161,
+      "screen_minus_headdown": 0.113162557607002,
+      "per_cue": {
+        "screen_oriented": 0.9812944257388702,
+        "looking_away": 0.9692982456140351,
+        "head_down": 0.8681318681318682,
+        "turned_to_peer": 0.9191919191919192,
+        "phone_use": 0.9555555555555556,
+        "uncertain": 0.4340659340659341
+      },
+      "ms_per_frame": 32.278006151706606,
+      "ms_per_student": 10.92934745543113
+    },
+    "detector_crop_full": {
+      "overall": 0.8975733634311512,
+      "agreement_with_landmarker": 0.6963882618510158,
+      "spread": 0.7099961442066705,
+      "mutual_information_bits": 0.11643824385516316,
+      "screen_minus_headdown": 0.2201049978827757,
+      "per_cue": {
+        "screen_oriented": 0.945379723157501,
+        "looking_away": 0.9517543859649122,
+        "head_down": 0.7252747252747253,
+        "turned_to_peer": 0.9292929292929293,
+        "phone_use": 0.9388888888888889,
+        "uncertain": 0.24175824175824176
+      },
+      "ms_per_frame": 45.590571308275685,
+      "ms_per_student": 15.43698802763285
+    },
+    "detector_frame_full": {
+      "overall": 0.3013544018058691,
+      "agreement_with_landmarker": 0.5155191873589164,
+      "spread": 0.4670940170940171,
+      "mutual_information_bits": 0.029288736646183103,
+      "screen_minus_headdown": 0.15367348700682032,
+      "per_cue": {
+        "screen_oriented": 0.3075196408529742,
+        "looking_away": 0.36403508771929827,
+        "head_down": 0.15384615384615385,
+        "turned_to_peer": 0.37373737373737376,
+        "phone_use": 0.5055555555555555,
+        "uncertain": 0.038461538461538464
+      },
+      "ms_per_frame": 31.359827469180644,
+      "ms_per_student": 10.61845173900022
+    }
+  }
+}

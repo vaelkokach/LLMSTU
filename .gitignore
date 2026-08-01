@@ -58,3 +58,5 @@ tools/gold_annotator/gold_events_*.jsonl
 # External datasets (re-downloadable; CMOSE is 13.6 GB)
 grounding_data/external/
 grounding_data/llmstu_sequences_full_bp/
+grounding_data/llmstu_sequences_full_det/
+huggingface/mediapipe/*.tflite

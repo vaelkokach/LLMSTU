@@ -84,13 +84,16 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
     # to raise inside a bare except and run the dashboard on random weights.
     bundle = load_runtime_model(cfg["temporal_checkpoint"], device=dev,
                                calibration=cfg.get("calibration"))
-    want = bundle.input_dim
+    # The extractor always emits base + the 4 head-pose columns; a checkpoint
+    # trained on a subset (e.g. 553_facefound) selects its columns inside
+    # predict_window. Assert the EXTRACTOR width, not the model width.
+    want = bundle.live_input_width
     if feat.output_dim() != want:
         raise SystemExit(
             f"live features are {feat.output_dim()}-dim but "
-            f"{bundle.experiment_id} expects {want} ({bundle.feature_config}). "
-            "Refusing to pad — a zero block is indistinguishable from a real "
-            "measurement.")
+            f"{bundle.experiment_id} needs an extractor producing {want} "
+            f"({bundle.feature_config}). Refusing to pad — a zero block is "
+            "indistinguishable from a real measurement.")
     print(f"[dashboard] temporal model: {bundle.describe()}")
 
     win = int(cfg["inference"]["window_size"])

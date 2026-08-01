@@ -45,6 +45,13 @@ def sweep_jobs(name: str) -> List[Dict]:
         for model, seed in itertools.product(("transformer", "mstcn", "asrf"), SEEDS):
             jobs.append({"experiment_id": f"{model}_556_hp_bp_s{seed}",
                          "model": model, "feature_config": "556_hp", "seed": seed})
+    elif name == "facefound":
+        # Can a plain face DETECTOR replace the FaceLandmarker mesh?
+        # 553_facefound selects base + the flag only, so this isolates the
+        # question from the metric angles the detector cannot provide.
+        for model, seed in itertools.product(("transformer", "mstcn"), SEEDS):
+            jobs.append({"experiment_id": f"{model}_553_ff_s{seed}",
+                         "model": model, "feature_config": "553_facefound", "seed": seed})
     elif name == "headpose":
         # Decomposes the one feature block that demonstrably works, to decide
         # whether a stronger head-pose estimator could add anything.
@@ -59,7 +66,7 @@ def sweep_jobs(name: str) -> List[Dict]:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sweep", required=True,
-                    choices=["ladder", "arch", "headpose", "posefix"])
+                    choices=["ladder", "arch", "headpose", "posefix", "facefound"])
     ap.add_argument("--out-root", required=True)
     # Hard project constraint: at most 4 GPUs may be occupied at once, even
     # though the host exposes 8. Do not widen this default.

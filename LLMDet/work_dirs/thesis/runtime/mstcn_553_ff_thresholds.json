@@ -1,0 +1,15 @@
+{
+  "evaluator_version": "thesis_eval/1.0.0",
+  "fitted_on": "work_dirs/thesis/ff_det/mstcn_553_ff_s42/eval_val/predictions.npz",
+  "temperature": 0.9235680683621063,
+  "display_threshold": 0.46,
+  "display_rule": "highest threshold retaining >= 90% coverage",
+  "display_coverage": 0.9111985387101307,
+  "display_selective_accuracy": 0.763993831919815,
+  "alert_threshold": 0.66,
+  "alert_rule": "lowest threshold with selective accuracy >= 85%",
+  "alert_coverage": 0.6459884782914149,
+  "alert_selective_accuracy": 0.8527460576400218,
+  "uncalibrated_accuracy_at_full_coverage": 0.7318860943281346,
+  "note": "Chosen on the validation split only and frozen. Temperature scaling cannot change any argmax, so accuracy at full coverage is unaffected; only confidence and the abstention behaviour move."
+}

@@ -48,20 +48,33 @@ from pathlib import Path
 
 import numpy as np
 
-_LM = None  # one FaceLandmarker per worker process
+_LM = None       # one detector/landmarker per worker process
+_BACKEND = "landmarker"
 
 
-def _init(model_path):
-    global _LM
+def _init(model_path, backend="landmarker"):
+    """``landmarker`` gives yaw/pitch/roll + the flag; ``detector`` gives only
+    the flag, at roughly 60% of the cost (74.9 -> 47.2 ms/frame measured over
+    1,200 frames, attention/bench_face_backends.py). Since ~80% of the block's
+    value is the flag (FINDINGS 11.10), the detector variant exists to be tested
+    downstream rather than argued about."""
+    global _LM, _BACKEND
     import cv2  # noqa: F401  (ensure the per-worker import happens once)
-    import mediapipe as mp
     from mediapipe.tasks.python import vision, BaseOptions
-    _LM = vision.FaceLandmarker.create_from_options(
-        vision.FaceLandmarkerOptions(
-            base_options=BaseOptions(model_asset_path=model_path),
-            running_mode=vision.RunningMode.IMAGE,
-            num_faces=1,
-            output_facial_transformation_matrixes=True))
+    _BACKEND = backend
+    if backend == "detector":
+        _LM = vision.FaceDetector.create_from_options(
+            vision.FaceDetectorOptions(
+                base_options=BaseOptions(model_asset_path=model_path),
+                running_mode=vision.RunningMode.IMAGE,
+                min_detection_confidence=0.5))
+    else:
+        _LM = vision.FaceLandmarker.create_from_options(
+            vision.FaceLandmarkerOptions(
+                base_options=BaseOptions(model_asset_path=model_path),
+                running_mode=vision.RunningMode.IMAGE,
+                num_faces=1,
+                output_facial_transformation_matrixes=True))
 
 
 def _pose(im) -> tuple:
@@ -77,6 +90,11 @@ def _pose(im) -> tuple:
         return 0.0, 0.0, 0.0, 0.0
     res = _LM.detect(mp.Image(image_format=mp.ImageFormat.SRGB,
                               data=cv2.cvtColor(im, cv2.COLOR_BGR2RGB)))
+    if _BACKEND == "detector":
+        # No pose available. Angles are ZERO and the flag says whether a face
+        # was seen, so a consumer selecting only column 3 (`553_facefound`) gets
+        # exactly the same semantics as with the landmarker.
+        return 0.0, 0.0, 0.0, (1.0 if res.detections else 0.0)
     if not res.facial_transformation_matrixes:
         return 0.0, 0.0, 0.0, 0.0
     M = np.asarray(res.facial_transformation_matrixes[0])[:3, :3]
@@ -116,6 +134,7 @@ def main():
     ap.add_argument("--workers", type=int, default=64,
                     help="shared machine — do not take every core")
     ap.add_argument("--model", default="../huggingface/mediapipe/face_landmarker.task")
+    ap.add_argument("--backend", default="landmarker", choices=["landmarker", "detector"])
     args = ap.parse_args()
 
     by_frame = defaultdict(list)
@@ -130,7 +149,8 @@ def main():
 
     t0 = time.time()
     names, vecs = [], []
-    with Pool(args.workers, initializer=_init, initargs=(args.model,)) as pool:
+    with Pool(args.workers, initializer=_init,
+              initargs=(args.model, args.backend)) as pool:
         for i, rows in enumerate(pool.imap_unordered(_one_frame, jobs, chunksize=16)):
             for fn, y, p, r, f in rows:
                 names.append(fn)
