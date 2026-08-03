@@ -135,10 +135,13 @@ def run_pass(cfg, args, student_count=None):
         max_aspect_ratio=float(cfg["detector"].get("max_aspect_ratio", 1.25)),
         nms_iou_thr=float(cfg["detector"].get("nms_iou_thr", 0.5)),
     )
+    from attention.thesis_eval.runtime import StrideController as _SC
+    _stride_cfg = _SC(int(cfg.get("inference", {}).get("detector_stride", 1)),
+                      int(cfg.get("inference", {}).get("temporal_stride", 1)))
     tracker = IoUTracker(
         iou_match_thr=float(cfg["tracking"].get("iou_match_thr", 0.35)),
         max_age=int(cfg["tracking"].get("max_age", 30)),
-        min_hits=int(cfg["tracking"].get("min_hits", 3)),
+        min_hits=_stride_cfg.adjusted_min_hits(int(cfg["tracking"].get("min_hits", 3))),
         appearance_weight=float(cfg["tracking"].get("appearance_weight", 0.35)),
         min_match_score=float(cfg["tracking"].get("min_match_score", 0.25)),
     )
@@ -203,6 +206,13 @@ def run_pass(cfg, args, student_count=None):
     win = int(cfg["inference"]["window_size"])
     feats: Dict[int, Deque[np.ndarray]] = defaultdict(lambda: deque(maxlen=win))
     min_frames = int(cfg["inference"].get("min_frames_for_pred", 4))
+    from attention.thesis_eval.runtime import StrideController
+    stride = StrideController(
+        detector_stride=int(cfg["inference"].get("detector_stride", 1)),
+        temporal_stride=int(cfg["inference"].get("temporal_stride", 1)))
+    if stride.detector_stride > 1 or stride.temporal_stride > 1:
+        print(f"[profiling] detector_stride={stride.detector_stride} "
+              f"temporal_stride={stride.temporal_stride}")
 
     frame_times = []
     track_counts = []
@@ -213,14 +223,19 @@ def run_pass(cfg, args, student_count=None):
             break
         f0 = time.perf_counter()
 
+        run_detector = stride.should_detect(n_done)
         with timer("detector"):
-            dets = det.detect(frame)
-        if student_count is not None:
+            dets = det.detect(frame) if run_detector else []
+        if student_count is not None and run_detector:
             dets = _synthesize_dets(dets, student_count, frame.shape)
 
         with timer("tracker"):
-            det_feats = [_det_appearance_feature(frame, d.bbox_xyxy) for d in dets]
-            tracks = tracker.update(dets, det_feats)
+            if run_detector:
+                det_feats = [_det_appearance_feature(frame, d.bbox_xyxy) for d in dets]
+                tracks = tracker.update(dets, det_feats)
+            else:
+                tracks = tracker.coast()
+            stride.drop_missing(t.track_id for t in tracks)
 
         with timer("features"):
             if tracks:
@@ -232,6 +247,8 @@ def run_pass(cfg, args, student_count=None):
             for t in tracks:
                 if len(feats[t.track_id]) < min_frames:
                     continue
+                if not stride.should_predict(t.track_id, n_done):
+                    continue          # hold the cached cue
                 x = np.stack(list(feats[t.track_id]), axis=0).astype(np.float32)
                 if live_cols is not None:
                     x = np.ascontiguousarray(x[:, live_cols])
@@ -239,7 +256,8 @@ def run_pass(cfg, args, student_count=None):
                 with torch.inference_mode():
                     out = model(x)
                     logits = out["logits"] if isinstance(out, dict) else out
-                    logits_to_pred(logits)
+                    pred, conf = logits_to_pred(logits)
+                stride.store(t.track_id, n_done, {"pred": int(pred.flatten()[-1])})
 
         with timer("overlay"):
             vis = frame.copy()

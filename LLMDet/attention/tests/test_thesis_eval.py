@@ -559,3 +559,87 @@ def test_ordinal_metrics_preserve_level_order():
     assert m["level_order"] == CM.LEVELS
     assert list(m["per_class_f1"].keys()) == CM.LEVELS
     assert m["macro_f1"] == pytest.approx(1.0)
+
+
+# ---------------------------------------------------------------- striding
+
+from attention.thesis_eval.runtime import StrideController
+from attention.tracking import IoUTracker
+from attention.detector_adapter import DetectionResult
+
+
+def test_stride_controller_detect_schedule():
+    s = StrideController(detector_stride=5, temporal_stride=3)
+    assert [n for n in range(12) if s.should_detect(n)] == [0, 5, 10]
+    assert all(StrideController(1, 1).should_detect(n) for n in range(10))
+
+
+def test_stride_controller_predicts_immediately_for_a_new_track():
+    """A newly confirmed track must not wait for the next global tick."""
+    s = StrideController(1, 10)
+    assert s.should_predict(track_id=7, frame_idx=3)
+    s.store(7, 3, {"cue": "head_down"})
+    assert not s.should_predict(7, 4)
+    assert s.should_predict(7, 13)
+    assert s.should_predict(track_id=99, frame_idx=4), "a different track is new"
+
+
+def test_stride_controller_caches_and_returns_the_held_value():
+    s = StrideController(1, 5)
+    s.store(1, 0, {"cue": "phone_use"})
+    assert s.cached(1) == {"cue": "phone_use"}
+    assert s.cached(2) is None
+
+
+def test_stride_controller_drops_dead_tracks_so_ids_cannot_go_stale():
+    s = StrideController(1, 5)
+    s.store(1, 0, {"cue": "a"}); s.store(2, 0, {"cue": "b"})
+    s.drop_missing([2])
+    assert s.cached(1) is None and s.cached(2) == {"cue": "b"}
+    # a recycled id must look new, not inherit the old cue
+    assert s.should_predict(1, 1)
+
+
+def test_min_hits_scales_so_confirmation_time_is_constant():
+    for stride in (1, 3, 5, 10):
+        adj = StrideController(stride, 1).adjusted_min_hits(8)
+        assert adj >= 1
+        assert abs(stride * adj - 8) <= 4, \
+            f"stride {stride}: {stride * adj} real frames to confirm, want ~8"
+
+
+def test_stride_controller_rejects_zero_and_negative():
+    for bad in (0, -1):
+        with pytest.raises(ValueError):
+            StrideController(bad, 1)
+        with pytest.raises(ValueError):
+            StrideController(1, bad)
+
+
+def _det(x1, y1, x2, y2):
+    return DetectionResult(bbox_xyxy=[x1, y1, x2, y2], score=0.9, label="student")
+
+
+def test_coast_returns_confirmed_tracks_without_ageing_them():
+    """max_age must count frames we looked at, not frames we skipped."""
+    tr = IoUTracker(iou_match_thr=0.3, max_age=2, min_hits=1)
+    tr.update([_det(0, 0, 10, 10)])
+    tid = next(iter(tr.tracks))
+    age_before = tr.ages[tid]      # note: update() ages a track on creation too
+    for _ in range(10):
+        out = tr.coast()
+        assert [t.track_id for t in out] == [tid]
+    assert tr.ages[tid] == age_before, "coasting must not age a track"
+    # whereas update([]) — looking and finding nothing — does age it away
+    for _ in range(4):
+        tr.update([])
+    assert tid not in tr.tracks
+
+
+def test_coast_holds_the_last_box_and_hides_unconfirmed_tracks():
+    tr = IoUTracker(iou_match_thr=0.3, max_age=5, min_hits=3)
+    tr.update([_det(0, 0, 10, 10)])
+    assert tr.coast() == [], "a track below min_hits is not published"
+    tr.update([_det(0, 0, 10, 10)]); tr.update([_det(1, 1, 11, 11)])
+    out = tr.coast()
+    assert len(out) == 1 and out[0].bbox_xyxy == [1, 1, 11, 11], "holds the LAST box"

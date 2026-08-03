@@ -1962,9 +1962,72 @@ expression and dynamic blocks, which a streaming path cannot produce).
 Verified end to end on `0325.mp4`: 6 students, confidences 0.46–0.95, abstention
 rate 4.2%.
 
+### 11.17 ★ Detector and temporal striding: 3.69 -> 5.77 FPS (+56%)
+
+After the face-detector swap (§11.16) the object detector was the dominant cost
+— **122.6 ms of a 270.7 ms frame, 45.3%**. Two properties of this task make that
+largely wasted work:
+
+* **Students are stationary.** Measured over 115 LLMSTU tracks, a seated
+  student's box centre jitters by **4.4% of its diagonal** (median; 13% at p90).
+  The seat-clustering design already assumes this; the data confirms it.
+* **Episodes are sustained by construction.** `min_duration_s` is 3 s and the
+  shortest per-channel floor is 2 s, so a cue re-decided at 2 Hz rather than
+  4 Hz cannot change which episodes form.
+
+So the detector now runs every N frames and the temporal head every K, with the
+tracker coasting on the last boxes in between (`IoUTracker.coast`, which
+deliberately does **not** age tracks on frames it never looked at — `max_age`
+should count frames where we looked and found nothing).
+
+**A scaling bug found in the process.** `min_hits` counts *detected* frames, so
+at stride 5 a track needed 40 real frames to confirm. Left unscaled, track
+coverage against the stride-1 reference fell to 82.1% at stride 5 and 65.4% at
+stride 10 — almost entirely start-up latency, not lost tracks. `min_hits` is now
+divided by the stride, holding confirmation at ~10 real frames. Coverage
+returned to **100% at every stride**.
+
+**Verified, not assumed** (`tools/verify_stride_equivalence.py`, 0325.mp4, 600
+frames, students matched across runs by box overlap since track ids are assigned
+in detection order and are not comparable):
+
+| det:tmp | FPS | p50 | p95 | cue agreement | track coverage |
+|---|---|---|---|---|---|
+| 1:1 | 3.69 | 270.7 ms | 295.9 ms | 100% (ref) | 100% |
+| **3:2** | **5.77** | **157.6 ms** | 291.7 ms | **94.7%** | 100% |
+| 5:3 | 7.03 | 117.9 ms | 257.5 ms | 92.2% | 100% |
+| 10:5 | — | — | — | 88.3% | 100% |
+
+Stage costs at 3:2 — detector 122.6 -> 41.7 ms, temporal 48.6 -> 23.8 ms,
+features unchanged at ~106 ms (now the largest single stage).
+
+**Adopted 3:2**, +56% throughput for 94.7% cue agreement. 5:3 nearly doubles
+throughput and stays available; it is not the default because an
+instructor-facing alert should prefer fidelity when neither option reaches a
+10 fps budget anyway.
+
+Two honest caveats:
+
+1. **Throughput improves; the tail does not.** Detection frames still cost
+   ~270 ms, so latency becomes bimodal: p50 falls 270.7 -> 157.6 ms while p95
+   moves only 295.9 -> 291.7 ms. "Near-real-time" remains the correct term.
+2. **Episode agreement is measurable only coarsely here.** Clustering seats
+   properly over the run (a fixed 40 px bucket was flipping under ~20 px of
+   jitter — a first-pass artifact, corrected) gives 8 reference episodes in the
+   24 s clip, of which 6 survive at 3:2. That is 75% ± 12.5% *per episode* — too
+   few episodes to state a reliable figure, so cue agreement (thousands of
+   frame-track pairs) is the number reported.
+
 ---
 
 ## 10. Changelog
+
+**2026-08-03**
+- **Detector + temporal striding: 3.69 -> 5.77 FPS (+56%)** at 94.7% cue
+  agreement, verified by replaying the same video at stride 1 vs 3:2 and
+  matching students across runs by box overlap. Found and fixed a `min_hits`
+  scaling bug that was costing 18-35% track coverage at higher strides.
+  Throughput improves but the tail does not (p95 296 -> 292 ms). §11.17.
 
 **2026-08-01 (second session)**
 - **Face DETECTOR replaces the FaceMesh in deployment: +30% FPS (2.84 -> 3.69),

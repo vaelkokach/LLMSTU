@@ -126,3 +126,22 @@ class IoUTracker:
             output.append(Track(track_id=tid, bbox_xyxy=bbox, score=1.0))
         return output
 
+    def coast(self) -> List[Track]:
+        """Confirmed tracks at their last known boxes, **without ageing them**.
+
+        Used on frames where the detector was skipped. Calling ``update([])``
+        would also work but would age every track, and ``max_age`` is meant to
+        count frames where we looked and found nothing — not frames where we
+        never looked. At a detector stride of 5 that distinction is the
+        difference between a track surviving a 45-frame gap and surviving a
+        9-frame one.
+
+        Boxes are held fixed rather than extrapolated: measured over 115 LLMSTU
+        tracks, a seated student's centre jitters by 4.4% of their box diagonal
+        (median; 13% at p90), so constant-position is a better model than
+        constant-velocity here.
+        """
+        return [Track(track_id=tid, bbox_xyxy=bbox, score=1.0)
+                for tid, bbox in self.tracks.items()
+                if self.hits.get(tid, 0) >= self.min_hits]
+

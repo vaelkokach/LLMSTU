@@ -1,0 +1,51 @@
+{
+  "video": "LLMDet/0325.mp4",
+  "frames": 600,
+  "reference": "1:1",
+  "runs": {
+    "1:1": {
+      "detector_stride": 1,
+      "temporal_stride": 1,
+      "frames_compared": 600,
+      "track_coverage": 1.0,
+      "cue_agreement": 1.0,
+      "n_episodes_reference": 15,
+      "n_episodes_here": 15,
+      "episode_agreement": 1.0,
+      "is_reference": true
+    },
+    "3:2": {
+      "detector_stride": 3,
+      "temporal_stride": 2,
+      "frames_compared": 600,
+      "track_coverage": 1.0,
+      "cue_agreement": 0.9469602977667494,
+      "n_episodes_reference": 15,
+      "n_episodes_here": 13,
+      "episode_agreement": 0.8,
+      "is_reference": false
+    },
+    "5:3": {
+      "detector_stride": 5,
+      "temporal_stride": 3,
+      "frames_compared": 600,
+      "track_coverage": 1.0,
+      "cue_agreement": 0.9215260545905707,
+      "n_episodes_reference": 15,
+      "n_episodes_here": 11,
+      "episode_agreement": 0.6,
+      "is_reference": false
+    },
+    "10:5": {
+      "detector_stride": 10,
+      "temporal_stride": 5,
+      "frames_compared": 600,
+      "track_coverage": 1.0,
+      "cue_agreement": 0.8833746898263027,
+      "n_episodes_reference": 15,
+      "n_episodes_here": 11,
+      "episode_agreement": 0.7333333333333333,
+      "is_reference": false
+    }
+  }
+}

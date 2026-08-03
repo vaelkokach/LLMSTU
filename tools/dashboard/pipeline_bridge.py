@@ -58,10 +58,13 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
         min_aspect_ratio=float(cfg["detector"].get("min_aspect_ratio", 0.22)),
         max_aspect_ratio=float(cfg["detector"].get("max_aspect_ratio", 1.25)),
         nms_iou_thr=float(cfg["detector"].get("nms_iou_thr", 0.5)))
+    from attention.thesis_eval.runtime import StrideController as _SC
+    _stride_cfg = _SC(int(cfg.get("inference", {}).get("detector_stride", 1)),
+                      int(cfg.get("inference", {}).get("temporal_stride", 1)))
     tracker = IoUTracker(
         iou_match_thr=float(cfg["tracking"].get("iou_match_thr", 0.35)),
         max_age=int(cfg["tracking"].get("max_age", 30)),
-        min_hits=int(cfg["tracking"].get("min_hits", 3)),
+        min_hits=_stride_cfg.adjusted_min_hits(int(cfg["tracking"].get("min_hits", 3))),
         appearance_weight=float(cfg["tracking"].get("appearance_weight", 0.35)),
         min_match_score=float(cfg["tracking"].get("min_match_score", 0.25)))
 
@@ -96,6 +99,10 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
             "indistinguishable from a real measurement.")
     print(f"[dashboard] temporal model: {bundle.describe()}")
 
+    from attention.thesis_eval.runtime import StrideController
+    stride = StrideController(
+        detector_stride=int(cfg["inference"].get("detector_stride", 1)),
+        temporal_stride=int(cfg["inference"].get("temporal_stride", 1)))
     win = int(cfg["inference"]["window_size"])
     minf = int(cfg["inference"].get("min_frames_for_pred", 4))
     hist = defaultdict(lambda: deque(maxlen=win))
@@ -113,9 +120,13 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
         if not ok:
             break
         t = n / fps
-        dets = det.detect(frame)
-        tracks = tracker.update(dets, [_det_appearance_feature(frame, d.bbox_xyxy)
-                                       for d in dets])
+        if stride.should_detect(n):
+            dets = det.detect(frame)
+            tracks = tracker.update(dets, [_det_appearance_feature(frame, d.bbox_xyxy)
+                                           for d in dets])
+        else:
+            tracks = tracker.coast()
+        stride.drop_missing(tr.track_id for tr in tracks)
         students = {}
         if tracks:
             fv = feat.extract_batch(frame, [tr.bbox_xyxy for tr in tracks])
@@ -128,7 +139,11 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
                     continue
                 # predict_window applies the validation-fitted temperature and
                 # both abstention thresholds, and asserts the feature width.
-                r = predict_window(bundle, np.stack(list(h)))
+                if stride.should_predict(tr.track_id, n):
+                    r = stride.store(tr.track_id, n,
+                                     predict_window(bundle, np.stack(list(h))))
+                else:
+                    r = stride.cached(tr.track_id)
                 cue = r["displayed_cue"]
                 conf = r["confidence"]
                 # Dwell accumulates on the DISPLAYED cue, so an abstention
@@ -142,6 +157,11 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
                 st = dwell[tr.track_id]
                 students[str(tr.track_id)] = {
                     "cue": cue, "conf": round(conf, 2),
+                    # Track ids are assigned in detection order and are NOT
+                    # comparable between runs; the box is, and it is what lets
+                    # tools/verify_stride_equivalence.py match students across
+                    # configurations the way a human comparing two overlays would.
+                    "bbox": [round(float(v), 1) for v in tr.bbox_xyxy],
                     "dwell": st["dwell"], "alerted": st["alerted"],
                     # raw prediction preserved even when abstaining: the point
                     # of abstention is to withhold an alert, not evidence

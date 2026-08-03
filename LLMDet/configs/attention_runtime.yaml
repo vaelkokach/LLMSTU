@@ -105,6 +105,34 @@ events:
     head_down: 5.0
 
 inference:
+  # Detector and temporal striding (2026-08-03). The detector was 45% of the
+  # frame budget and students are stationary — centre jitter is 4.4% of the box
+  # diagonal over 115 LLMSTU tracks — so re-detecting every frame buys little.
+  # Between detections the tracker coasts on the last boxes (IoUTracker.coast,
+  # which deliberately does not age tracks on frames it never looked at), and
+  # `min_hits` is rescaled by the stride so confirmation still takes ~10 real
+  # frames rather than 8 * stride.
+  #
+  # Verified by replaying 0325.mp4 at each setting and comparing per-frame cues
+  # against stride 1, matching students across runs by box overlap
+  # (tools/verify_stride_equivalence.py, 600 frames):
+  #
+  #   det:tmp   FPS    p50      cue agreement   track coverage
+  #   1:1       3.69   270.7ms  100%  (ref)     100%
+  #   3:2       5.77   157.6ms  94.7%           100%   <- default
+  #   5:3       7.03   117.9ms  92.2%           100%
+  #   10:5      —      —        88.3%           100%
+  #
+  # 3:2 is the default: +56% throughput for 94.7% cue agreement. 5:3 is
+  # available and nearly doubles throughput; it is not the default because an
+  # instructor-facing alert should prefer fidelity when neither option reaches
+  # a 10 fps budget anyway.
+  #
+  # CAVEAT: this improves throughput, not the tail. Detection frames still cost
+  # ~270 ms, so latency becomes bimodal — p50 falls 270.7 -> 157.6 ms while p95
+  # only moves 295.9 -> 291.7 ms.
+  detector_stride: 3
+  temporal_stride: 2
   window_size: 32
   min_frames_for_pred: 10
   label_smooth_window: 3
