@@ -2147,6 +2147,44 @@ GPU figure at stride 3:2; the CPU number is the first thing to measure when the
 machine frees up, and determines whether live capture is demonstrable without a
 GPU or only with one.
 
+### 11.20 Uploaded/recorded video as a first-class dashboard mode
+
+A recording can now be dropped on the page, analysed into a session cache, and
+played — no command line. The panel exposes the *cost* distinction rather than
+hiding it behind one button: **Analyse** runs the detector-bound pass once into
+a cache, after which playback needs no detector and the model dropdown switches
+instantly; **Play** on an un-analysed file streams it through the whole pipeline
+and restarts on every model switch. Sessions and uploads are plain directories,
+so the state of the system is what is on disk, and a half-built session (no
+`meta.json`) reads as absent rather than as broken.
+
+Three decisions worth recording, because each is a place the convenient
+behaviour would have been wrong.
+
+**A cancelled analysis deletes its partial cache.** Keeping it would produce a
+session covering the first 40 s of a lecture that replays, and reports frame
+counts and off-task fractions, exactly as though that were the whole lecture.
+The frames directory is removed too — a half-written one is what makes a later
+run believe a cache already exists.
+
+**An upload never overwrites.** `lecture.mp4` arriving twice becomes
+`lecture-2.mp4`, because overwriting would silently invalidate the session
+already built from the first file while leaving it in the picker.
+
+**Browser filenames are treated as hostile.** Basename only, character
+allowlist, extension allowlist, containment check under `uploads/`, 8 GB cap,
+streamed to disk rather than buffered. Verified against traversal
+(`../../../etc/passwd.mp4` → `passwd.mp4`), Windows paths, null bytes, shell
+metacharacters and non-video extensions. This matters more than it would in a
+normal app: the server binds `0.0.0.0`, the box is shared with other users, and
+there is no authentication. Startup now warns when uploads are enabled on
+`0.0.0.0`, and `--host 127.0.0.1` / `--no-upload` are available. **This is a
+thesis demo, not a deployable service, and should not be exposed beyond the
+machine it runs on.**
+
+Still unrun — the analyse path is precisely the detector-bound pass that is
+queued behind the compute pause.
+
 ---
 
 ## 10. Changelog
@@ -2167,6 +2205,11 @@ GPU or only with one.
   alert by about six minutes. Frames are now dropped to stay current, the drop
   rate is displayed, and live sources use the wall clock. `max_age` is still not
   rescaled by capture rate — flagged, not fixed.
+- **Upload/recorded-video mode** (§11.20): drop a recording on the page, analyse
+  it into a session cache with progress and cancel, then play it with instant
+  model switching. Cancelling deletes the partial cache; uploads never
+  overwrite; browser filenames are sanitised and contained. Uploads are
+  unauthenticated — `--host 127.0.0.1` or `--no-upload` on a shared machine.
 
 **2026-08-03**
 - **Detector + temporal striding: 3.69 -> 5.77 FPS (+56%)** at 94.7% cue

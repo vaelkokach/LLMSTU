@@ -65,6 +65,25 @@
   .banner.err{background:rgba(255,95,86,.12);border-color:rgba(255,95,86,.35);
               color:var(--alert)}
   .switching{opacity:.5;pointer-events:none}
+  button{font:inherit;font-size:13px;padding:7px 12px;border-radius:8px;
+         border:1px solid var(--line);background:var(--bg);color:var(--txt);
+         cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.primary:hover:not(:disabled){opacity:.9;color:#fff}
+  .row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .row > *{flex:1 1 auto}
+  .drop{margin-top:10px;padding:16px;border:1.5px dashed var(--line);
+        border-radius:10px;text-align:center;color:var(--muted);font-size:12px;
+        cursor:pointer;transition:border-color .15s,color .15s}
+  .drop:hover,.drop.over{border-color:var(--accent);color:var(--accent)}
+  .bar{height:6px;border-radius:4px;background:var(--bg);overflow:hidden;
+       border:1px solid var(--line);margin-top:8px}
+  .bar > i{display:block;height:100%;background:var(--accent);width:0;
+           transition:width .4s}
+  .badge{font-size:10px;padding:1px 6px;border-radius:10px;margin-left:6px;
+         border:1px solid var(--line);color:var(--muted)}
 </style>
 </head>
 <body>
@@ -108,6 +127,28 @@
   </div>
 
   <div style="display:grid;gap:16px;min-width:0">
+    <div class="card" id="sourcecard">
+      <h2>Recording</h2>
+      <select id="sourcesel"><option>loading…</option></select>
+      <div class="row">
+        <button id="btn-play">Play</button>
+        <button id="btn-analyse" class="primary">Analyse</button>
+      </div>
+      <div id="dropzone" class="drop">
+        Drop a recording here, or click to choose a file
+        <input type="file" id="fileinput" accept="video/*" hidden>
+      </div>
+      <div id="jobwrap" style="display:none">
+        <div class="bar"><i id="jobbar"></i></div>
+        <div class="row" style="align-items:center">
+          <span id="jobmsg" class="note" style="margin:0;flex:1 1 100%"></span>
+          <button id="btn-cancel">Cancel</button>
+        </div>
+      </div>
+      <div id="sourcebanner"></div>
+      <p class="note" id="sourcenote"></p>
+    </div>
+
     <div class="card" id="modelcard">
       <h2>Model</h2>
       <select id="modelsel" disabled><option>loading…</option></select>
@@ -151,6 +192,156 @@ function drawSpark(hist){
   x.strokeStyle=css.getPropertyValue("--accent"); x.lineWidth=2; x.stroke();
   x.lineTo(W,H); x.lineTo(0,H); x.closePath();
   x.fillStyle="rgba(106,169,255,.12)"; x.fill();
+}
+
+/* ---------------- recording picker ---------------- */
+
+let SOURCES=null, LAST_JOB="";
+
+const $ = (id)=>document.getElementById(id);
+
+function sourceBanner(text, isError){
+  $("sourcebanner").innerHTML = text
+    ? `<div class="banner${isError?" err":""}">${text}</div>` : "";
+}
+
+function selectedSource(){
+  return (SOURCES?.sources||[]).find(s=>s.id===$("sourcesel").value);
+}
+
+async function loadSources(){
+  const r = await fetch("/api/sources",{cache:"no-store"});
+  SOURCES = await r.json();
+  const sel=$("sourcesel"), keep=sel.value;
+  sel.innerHTML="";
+
+  const ready = SOURCES.sources.filter(s=>s.kind==="session");
+  const raw   = SOURCES.sources.filter(s=>s.kind==="video");
+
+  if(ready.length){
+    const g=document.createElement("optgroup");
+    g.label="Analysed — instant playback, models switch freely";
+    ready.forEach(s=>{
+      const o=document.createElement("option");
+      o.value=s.id;
+      o.textContent=`${s.name} — ${s.n_frames} frames, ${s.n_tracks} students`;
+      g.appendChild(o);
+    });
+    sel.appendChild(g);
+  }
+  if(raw.length){
+    const g=document.createElement("optgroup");
+    g.label="Not analysed — needs a full pipeline pass";
+    raw.forEach(s=>{
+      const o=document.createElement("option");
+      o.value=s.id;
+      o.textContent=`${s.name} — ${s.size_mb} MB`
+                  + (s.ready?" (analysed)":"");
+      g.appendChild(o);
+    });
+    sel.appendChild(g);
+  }
+  if(!SOURCES.sources.length){
+    sel.innerHTML = "<option>no recordings yet</option>";
+  }
+  sel.value = SOURCES.active || keep || sel.value;
+
+  $("dropzone").style.display = SOURCES.upload_enabled ? "" : "none";
+  $("sourcenote").innerHTML = SOURCES.can_analyse
+    ? "<strong>Analyse</strong> runs the detector, tracker and features once and "
+    + "caches them. After that, playback needs no detector and switching models "
+    + "is instant. <strong>Play</strong> on an un-analysed recording streams it "
+    + "through the whole pipeline instead — slower, and a model switch restarts it."
+    : "Started without a detector config, so recordings cannot be analysed or "
+    + "streamed. Only already-built sessions and cue logs will play.";
+  refreshSourceButtons();
+}
+
+function refreshSourceButtons(){
+  const s = selectedSource(), job = LAST_JOB==="running";
+  $("btn-play").disabled    = !s || job;
+  $("btn-analyse").disabled = !s || job || s.kind!=="video"
+                              || s.ready || !SOURCES?.can_analyse;
+  $("btn-analyse").textContent =
+      (s && s.kind==="video" && s.ready) ? "Already analysed" : "Analyse";
+}
+
+$("sourcesel").addEventListener("change", refreshSourceButtons);
+
+$("btn-play").addEventListener("click", async ()=>{
+  const s = selectedSource();
+  if(!s) return;
+  sourceBanner("");
+  try{
+    const r = await fetch("/api/source",{method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({source_id:s.id})});
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.error||r.statusText);
+  }catch(e){ sourceBanner("Could not play: "+e.message, true); }
+});
+
+$("btn-analyse").addEventListener("click", async ()=>{
+  const s = selectedSource();
+  if(!s) return;
+  sourceBanner("");
+  try{
+    const r = await fetch("/api/analyse",{method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({source_id:s.id})});
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.error||r.statusText);
+  }catch(e){ sourceBanner("Could not analyse: "+e.message, true); }
+});
+
+$("btn-cancel").addEventListener("click", ()=>fetch("/api/cancel",{method:"POST"}));
+
+/* upload: the raw file as the request body, no multipart. A lecture recording
+   is streamed to disk on the server rather than buffered. */
+const dz=$("dropzone"), fi=$("fileinput");
+dz.addEventListener("click", ()=>fi.click());
+dz.addEventListener("dragover", e=>{e.preventDefault(); dz.classList.add("over");});
+dz.addEventListener("dragleave", ()=>dz.classList.remove("over"));
+dz.addEventListener("drop", e=>{
+  e.preventDefault(); dz.classList.remove("over");
+  if(e.dataTransfer.files.length) upload(e.dataTransfer.files[0]);
+});
+fi.addEventListener("change", ()=>{ if(fi.files.length) upload(fi.files[0]); });
+
+function upload(file){
+  sourceBanner(`Uploading ${file.name} (${(file.size/1e6).toFixed(1)} MB)…`, false);
+  const xhr = new XMLHttpRequest();
+  xhr.open("POST", "/api/upload?name="+encodeURIComponent(file.name));
+  xhr.upload.onprogress = e=>{
+    if(e.lengthComputable)
+      sourceBanner(`Uploading ${file.name} — ${Math.round(100*e.loaded/e.total)}%`, false);
+  };
+  xhr.onload = async ()=>{
+    let j={}; try{ j=JSON.parse(xhr.responseText); }catch(_){}
+    if(xhr.status>=400){ sourceBanner("Upload failed: "+(j.error||xhr.status), true); return; }
+    sourceBanner(`${j.name} uploaded — press Analyse to build a session.`, false);
+    await loadSources();
+    $("sourcesel").value = j.id;
+    refreshSourceButtons();
+  };
+  xhr.onerror = ()=>sourceBanner("Upload failed: network error", true);
+  xhr.send(file);
+}
+
+function renderJob(job){
+  const wrap=$("jobwrap"), status=job?.status||"";
+  if(!status || status==="idle"){ wrap.style.display="none"; }
+  else{
+    wrap.style.display="";
+    $("jobbar").style.width = (job.pct||0)+"%";
+    $("jobmsg").textContent = `${status}: ${job.name||""} — ${job.message||""}`;
+    $("btn-cancel").disabled = status!=="running";
+  }
+  if(status!==LAST_JOB){
+    LAST_JOB = status;
+    refreshSourceButtons();
+    if(status==="done" || status==="cancelled" || status==="failed") loadSources();
+  }
 }
 
 /* ---------------- model selector ---------------- */
@@ -321,6 +512,15 @@ async function tick(){
                      : cap.drop_pct >= 50 ? "var(--warn)" : "";
     } else { cp.textContent=""; cp.style.color=""; }
 
+    renderJob(s.job);
+    if(SOURCES && s.source_id && SOURCES.active!==s.source_id){
+      SOURCES.active = s.source_id;
+      if(selectedSource()===undefined || $("sourcesel").value!==s.source_id){
+        $("sourcesel").value = s.source_id;
+        refreshSourceButtons();
+      }
+    }
+
     renderModelSpec(s.model, s.notice);
     if(MODELS && s.model && s.model.variant_id && MODELS.active!==s.model.variant_id){
       MODELS.active = s.model.variant_id;
@@ -332,6 +532,7 @@ async function tick(){
   }
 }
 
+loadSources();
 loadModels();
 tick(); setInterval(tick, 1000);
 </script>

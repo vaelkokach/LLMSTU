@@ -91,15 +91,50 @@ Both are one dropdown entry apart.
 
 ## 2. Running it
 
-### With no GPU (and, once cached, essentially no compute)
+### From the page: upload a recording
+
+```bash
+python tools/dashboard/server.py --host 127.0.0.1
+#  -> http://localhost:8080, then drop a video on the Recording panel
+```
+
+Drop a file (or click to browse), press **Analyse**, watch the progress bar,
+and it starts playing when the pass finishes. After that it is a *session*: it
+replays instantly and the model dropdown switches freely.
+
+The two buttons are a real choice, not a preference:
+
+| | what runs | switching models | when |
+|---|---|---|---|
+| **Analyse** | detector + tracker + features, once, into a cache | instant afterwards | any recording you will look at more than once — i.e. almost always |
+| **Play** on an un-analysed file | the whole pipeline, live | restarts the recording | a quick look, or when you want the current config end to end |
+
+Uploads land in `uploads/`, sessions in `sessions/`; both are just directories,
+so anything dropped in by hand appears in the picker too. A session is paired to
+its video by name (`lecture.mp4` → `sessions/lecture`), and a half-built session
+— a directory with no `meta.json` — reads as absent rather than as broken.
+
+Cancelling an analysis deletes the partial cache rather than keeping it. A cache
+covering the first 40 seconds of a lecture would otherwise replay as though that
+were the whole lecture.
+
+**Exposure.** The page can write files, and there is no authentication — this is
+a thesis demo, not a service. The server binds `0.0.0.0` by default and warns at
+startup when uploads are enabled on that address. Use `--host 127.0.0.1` when
+the browser is on the same machine (as above), or `--no-upload` to serve
+read-only. Filenames from the browser are treated as hostile: basename only,
+character allowlist, extension allowlist, and a containment check under
+`uploads/`. Uploads are capped at 8 GB and streamed to disk, never buffered.
+
+### The same thing from the command line
 
 ```bash
 # 0. one-off: thresholds for every model, fitted on ITS OWN validation
 #    predictions. Seconds. Without this the dashboard refuses to load a model.
 python tools/dashboard/calibrate_registry.py
 
-# 1. one-off per video: the expensive pass. Detector, tracker, CLIP and BOTH
-#    head-pose backends. CPU-bound; the detector dominates.
+# 1. one-off per video: the expensive pass — what the Analyse button runs.
+#    Detector, tracker, CLIP and BOTH head-pose backends. CPU-bound.
 python tools/dashboard/precompute_session.py \
     --config LLMDet/configs/attention_runtime.yaml \
     --video LLMDet/0325.mp4 --frames 900 --device cpu \
@@ -201,6 +236,9 @@ Each of these was a real failure mode in this project before it became a check.
 | a session cache predates `source_width` | replay refuses rather than drawing every box at the wrong scale |
 | a live source outruns the pipeline | frames are dropped to stay current and the drop rate is shown, instead of the overlay silently falling behind the room |
 | an IP camera URL is passed | opened as a URL. It used to be run through `Path(...).resolve()`, which turned `rtsp://cam/s` into `<cwd>/rtsp:/cam/s` and failed naming a path the user never typed |
+| an analysis is cancelled | the partial cache is deleted. Keeping it would let the first 40 s of a lecture replay as though it were the whole lecture |
+| an upload names `../../etc/passwd.mp4` | reduced to `passwd.mp4` inside `uploads/`, with a containment check behind that |
+| an upload would overwrite an existing name | written as `lecture-2.mp4`. Overwriting would silently invalidate any session already built from the old file |
 | a model switch arrives mid-run | the previous producer thread is stopped and joined first; if it will not stop, the switch returns 409 rather than running two pipelines into one state |
 
 ---
@@ -209,6 +247,7 @@ Each of these was a real failure mode in this project before it became a check.
 
 | file | role |
 |---|---|
+| `sources.py` | uploads and session caches on disk; filename sanitising, upload streaming |
 | `model_registry.py` | sweeps → one entry per variant, best validation seed, deployability |
 | `calibrate_registry.py` | per-model temperature and abstention thresholds, validation only |
 | `precompute_session.py` | the model-independent front end, cached once per video |

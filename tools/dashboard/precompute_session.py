@@ -77,7 +77,16 @@ def _git_commit() -> str:
 
 def precompute(config_path: str, video: str, out_dir: str, device: str = "cpu",
                max_frames: int = 900, jpeg_width: int = 960,
-               progress_every: int = 25) -> Path:
+               progress_every: int = 25, progress_fn=None,
+               should_stop=None) -> Path:
+    """Build a session cache for one video.
+
+    ``progress_fn(dict)`` is called every ``progress_every`` frames so a caller
+    with a UI can show how far along a multi-minute pass is. ``should_stop()``
+    aborts it; a partial cache is **not** written, because a cache that silently
+    covers the first 40 seconds of a lecture would replay as if that were the
+    whole lecture.
+    """
     import cv2
     import numpy as np
     import yaml
@@ -154,13 +163,20 @@ def precompute(config_path: str, video: str, out_dir: str, device: str = "cpu",
         fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
         cap_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         cap_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        # Only meaningful for a file; a stream reports 0 or garbage.
+        n_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+        n_target = min(max_frames, n_total) if n_total > 0 else max_frames
 
         rows_frame, rows_track, rows_bbox = [], [], []
         rows_base, rows_lm, rows_det = [], [], []
         frame_index = []          # frames actually written, in order
         n = 0
         t0 = time.time()
+        aborted = False
         while n < max_frames:
+            if should_stop is not None and should_stop():
+                aborted = True
+                break
             ok, frame = cap.read()
             if not ok:
                 break
@@ -201,12 +217,32 @@ def precompute(config_path: str, video: str, out_dir: str, device: str = "cpu",
             n += 1
             if progress_every and n % progress_every == 0:
                 el = time.time() - t0
-                print(f"[precompute] {n} frames, {len(rows_frame)} student-frames, "
-                      f"{el:.0f}s elapsed, {n / max(el, 1e-9):.2f} fps", flush=True)
+                rate = n / max(el, 1e-9)
+                left = max(n_target - n, 0) / max(rate, 1e-9)
+                print(f"[precompute] {n}/{n_target} frames, "
+                      f"{len(rows_frame)} student-frames, {el:.0f}s elapsed, "
+                      f"{rate:.2f} fps", flush=True)
+                if progress_fn is not None:
+                    progress_fn({
+                        "frames_done": n, "frames_target": n_target,
+                        "pct": round(100 * n / max(n_target, 1)),
+                        "student_frames": len(rows_frame),
+                        "elapsed_s": round(el),
+                        "fps": round(rate, 2),
+                        "eta_s": round(left),
+                    })
         cap.release()
     finally:
         os.chdir(cwd0)
 
+    if aborted:
+        # No partial cache, and no orphaned frames either. A cache that
+        # silently covered the first 40 s of a lecture would replay as though
+        # that were the whole lecture, and half-written frame directories are
+        # what makes a later run look like it already has one.
+        import shutil
+        shutil.rmtree(out, ignore_errors=True)
+        raise KeyboardInterrupt("precompute cancelled; no cache written")
     if not rows_frame:
         raise SystemExit("no tracked students in this clip — nothing to cache")
 
