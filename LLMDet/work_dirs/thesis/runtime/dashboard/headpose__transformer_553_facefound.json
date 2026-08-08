@@ -1,0 +1,17 @@
+{
+  "evaluator_version": "thesis_eval/1.0.0",
+  "fitted_on": "LLMDet/work_dirs/thesis/headpose/transformer_553_facefound_s44/eval_val/predictions.npz",
+  "temperature": 1.1231882211144515,
+  "display_threshold": 0.42,
+  "display_rule": "highest threshold retaining >= 90% coverage",
+  "display_coverage": 0.9157416514448972,
+  "display_selective_accuracy": 0.730948240589198,
+  "alert_threshold": 0.66,
+  "alert_rule": "lowest threshold with selective accuracy >= 85%",
+  "alert_coverage": 0.5208655332302936,
+  "alert_selective_accuracy": 0.855273806312382,
+  "alerts_enabled": true,
+  "alerts_disabled_reason": "",
+  "uncalibrated_accuracy_at_full_coverage": 0.7028944780103976,
+  "note": "Validation split only, then frozen. Temperature scaling moves no argmax, so accuracy at full coverage is unchanged; only confidence and abstention move."
+}

@@ -439,6 +439,14 @@ def model_card(entry, cal):
         "display_threshold": cal.get("display_threshold"),
         "alert_threshold": cal.get("alert_threshold"),
         "alerts_enabled": cal.get("alerts_enabled", True),
+        # Alert coverage is the instructor-facing consequence of model quality
+        # and is NOT ordered like macro-F1. Every model is held to the same 85%
+        # alert precision, so what a weaker one gives up is the *share of the
+        # class it can say anything about*: 78.7% at the top of the registry,
+        # 30.5% at the bottom. Two students in three, or two in seven.
+        "alert_coverage": cal.get("alert_coverage"),
+        "alert_selective_accuracy": cal.get("alert_selective_accuracy"),
+        "display_coverage": cal.get("display_coverage"),
         "checkpoint": entry.checkpoint,
     }
 

@@ -451,6 +451,11 @@ function renderModelSpec(m, notice){
     ["alerts", m.alerts_enabled===false ? "<strong>disabled for this model</strong>"
         : (m.alert_threshold==null ? "—"
            : `confidence ≥ ${Number(m.alert_threshold).toFixed(2)}`)],
+    // Every model is held to the same 85% alert precision, so the thing that
+    // actually varies is how much of the class it can say anything about.
+    ["alert coverage", m.alert_coverage==null ? "—"
+        : `<strong>${(100*m.alert_coverage).toFixed(1)}%</strong> of frames, at `
+        + `${(100*(m.alert_selective_accuracy??0)).toFixed(1)}% precision`],
   ];
   tb.innerHTML = rows.map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join("");
   if(notice && !SWITCHING) banner(notice, false);

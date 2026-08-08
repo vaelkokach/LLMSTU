@@ -1,0 +1,17 @@
+{
+  "evaluator_version": "thesis_eval/1.0.0",
+  "fitted_on": "LLMDet/work_dirs/thesis/posefix/transformer_556_hp_bp_s42/eval_val/predictions.npz",
+  "temperature": 1.2179249904997864,
+  "display_threshold": 0.4,
+  "display_rule": "highest threshold retaining >= 90% coverage",
+  "display_coverage": 0.9173575008196337,
+  "display_selective_accuracy": 0.7079110611901054,
+  "alert_threshold": 0.68,
+  "alert_rule": "lowest threshold with selective accuracy >= 85%",
+  "alert_coverage": 0.4648025853589996,
+  "alert_selective_accuracy": 0.8537384119306731,
+  "alerts_enabled": true,
+  "alerts_disabled_reason": "",
+  "uncalibrated_accuracy_at_full_coverage": 0.6853777340639783,
+  "note": "Validation split only, then frozen. Temperature scaling moves no argmax, so accuracy at full coverage is unchanged; only confidence and abstention move."
+}

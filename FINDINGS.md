@@ -2185,6 +2185,61 @@ machine it runs on.**
 Still unrun — the analyse path is precisely the detector-bound pass that is
 queued behind the compute pause.
 
+### 11.21 ★ Alert coverage separates the models 2.6×, and does not rank like macro-F1
+
+Fitting per-model thresholds (§11.18) over all 13 deployable variants produced a
+result worth more than the thresholds themselves. **Every model is held to the
+same 85% alert precision**, so what a weaker model gives up is not accuracy — it
+is the *share of the class it can say anything about*.
+
+| variant | alert ≥ | alert coverage | sel. acc | full-coverage acc | val macro-F1 |
+|---|---|---|---|---|---|
+| `posefix/mstcn_556_hp` | 0.60 | **78.7%** | 0.851 | 0.774 | 0.4829 |
+| `arch/mstcn_556_hp` | 0.66 | 69.5% | 0.857 | 0.758 | 0.5067 |
+| `ff_det/mstcn_553_facefound` | 0.64 | 69.0% | 0.856 | 0.756 | 0.5121 |
+| `posefix/asrf_556_hp` | 0.64 | 60.2% | 0.854 | 0.704 | 0.5041 |
+| `ff_bp/mstcn_553_facefound` | 0.68 | 56.2% | 0.853 | 0.703 | 0.4937 |
+| `arch/asrf_556_hp` *(dashboard default)* | 0.68 | 55.6% | 0.858 | 0.706 | **0.5258** |
+| `headpose/transformer_553_facefound` | 0.66 | 52.1% | 0.855 | 0.703 | 0.4034 |
+| `ff_det/transformer_553_facefound` | 0.68 | 52.0% | 0.851 | 0.706 | 0.4251 |
+| `ladder/transformer_556_hp` | 0.70 | 51.0% | 0.858 | 0.719 | 0.4092 |
+| `posefix/transformer_556_hp` | 0.68 | 46.5% | 0.854 | 0.685 | 0.4073 |
+| `ff_bp/transformer_553_facefound` | 0.70 | 44.2% | 0.853 | 0.697 | 0.4168 |
+| `headpose/transformer_555_angles` | 0.74 | 33.8% | 0.856 | 0.678 | 0.3914 |
+| `ladder/transformer_552_base` | 0.78 | 30.5% | 0.852 | 0.682 | 0.3777 |
+
+**All 13 clear the 85% bar**, so none has alerts disabled — the abstention
+machinery built for that case (§11.18) is present and, on this registry,
+unexercised.
+
+**Coverage spans 2.6× (78.7% → 30.5%).** That is the same comparison as
+"macro-F1 0.53 vs 0.38" expressed in something an instructor can act on: at the
+top of the registry the system can raise trustworthy alerts about roughly two
+students in three; at the bottom, about two in seven. For a deliverable whose
+stated purpose is "alerts so enabling quick interventions", this is arguably the
+more relevant axis, and it is now shown in the model card.
+
+**It does not rank like macro-F1, and that is not noise.** `posefix/mstcn_556_hp`
+is 6th of 13 on validation macro-F1 (0.4829) and **1st** on alert coverage
+(78.7%). The ordering tracks **plain accuracy** (0.774, the highest in the
+table), not macro-F1 — which follows directly from the definitions: selective
+accuracy is accuracy-based, while macro-F1 weights `turned_to_peer` and
+`looking_away` (F1 ≈ 0.19–0.27, §11.3) as heavily as `screen_oriented`
+(F1 ≈ 0.86). A model can be better at the frequent classes, and therefore better
+at *alerting*, while scoring lower on the metric the thesis registered.
+
+**The default is not being changed.** Ranking stays on validation macro-F1: it
+is the pre-registered metric, and `posefix` is the variant §11.15 measured and
+**rejected**, retained only for reproducibility. Swapping the default to a
+rejected variant on the strength of a metric noticed after the fact is the
+selection-after-the-fact failure this project exists to avoid. Both numbers are
+displayed and the user can switch in one click.
+
+**Temperature is informative on its own.** MS-TCN and ASRF come out
+*over*-confident (T 0.87–0.98) and every transformer *under*-confident
+(T 1.12–1.30). The transformers need more smoothing, not less, to be honest
+about what they know.
+
 ---
 
 ## 10. Changelog

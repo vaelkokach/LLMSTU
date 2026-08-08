@@ -1,0 +1,17 @@
+{
+  "evaluator_version": "thesis_eval/1.0.0",
+  "fitted_on": "LLMDet/work_dirs/thesis/ladder/transformer_552_base_s43/eval_val/predictions.npz",
+  "temperature": 1.3025463384771165,
+  "display_threshold": 0.4,
+  "display_rule": "highest threshold retaining >= 90% coverage",
+  "display_coverage": 0.9062573181584,
+  "display_selective_accuracy": 0.7110778056280525,
+  "alert_threshold": 0.78,
+  "alert_rule": "lowest threshold with selective accuracy >= 85%",
+  "alert_coverage": 0.3054892042527282,
+  "alert_selective_accuracy": 0.8515906477577616,
+  "alerts_enabled": true,
+  "alerts_disabled_reason": "",
+  "uncalibrated_accuracy_at_full_coverage": 0.6820757809938645,
+  "note": "Validation split only, then frozen. Temperature scaling moves no argmax, so accuracy at full coverage is unchanged; only confidence and abstention move."
+}

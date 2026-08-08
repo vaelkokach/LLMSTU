@@ -1,0 +1,17 @@
+{
+  "evaluator_version": "thesis_eval/1.0.0",
+  "fitted_on": "LLMDet/work_dirs/thesis/headpose/transformer_555_angles_s44/eval_val/predictions.npz",
+  "temperature": 1.254510913688703,
+  "display_threshold": 0.38,
+  "display_rule": "highest threshold retaining >= 90% coverage",
+  "display_coverage": 0.9233993723947356,
+  "display_selective_accuracy": 0.7018082219573432,
+  "alert_threshold": 0.74,
+  "alert_rule": "lowest threshold with selective accuracy >= 85%",
+  "alert_coverage": 0.33829797199194417,
+  "alert_selective_accuracy": 0.8562923992800775,
+  "alerts_enabled": true,
+  "alerts_disabled_reason": "",
+  "uncalibrated_accuracy_at_full_coverage": 0.6778371036485411,
+  "note": "Validation split only, then frozen. Temperature scaling moves no argmax, so accuracy at full coverage is unchanged; only confidence and abstention move."
+}

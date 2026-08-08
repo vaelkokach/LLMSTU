@@ -1,0 +1,17 @@
+{
+  "evaluator_version": "thesis_eval/1.0.0",
+  "fitted_on": "LLMDet/work_dirs/thesis/ff_bp/mstcn_553_ff_s42/eval_val/predictions.npz",
+  "temperature": 0.9586732135711166,
+  "display_threshold": 0.44,
+  "display_rule": "highest threshold retaining >= 90% coverage",
+  "display_coverage": 0.9153903798416936,
+  "display_selective_accuracy": 0.7355777840313131,
+  "alert_threshold": 0.68,
+  "alert_rule": "lowest threshold with selective accuracy >= 85%",
+  "alert_coverage": 0.5621048194463959,
+  "alert_selective_accuracy": 0.8532266799983336,
+  "alerts_enabled": true,
+  "alerts_disabled_reason": "",
+  "uncalibrated_accuracy_at_full_coverage": 0.7032691677204814,
+  "note": "Validation split only, then frozen. Temperature scaling moves no argmax, so accuracy at full coverage is unchanged; only confidence and abstention move."
+}
