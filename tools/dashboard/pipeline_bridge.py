@@ -18,7 +18,17 @@ sys.path.insert(0, str(LLMDET_ROOT))
 
 
 def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
-             record=None):
+             record=None, device=None, entry=None, should_stop=None):
+    """Detector -> tracker -> features -> temporal model over a live video.
+
+    ``entry`` is an optional ``model_registry.ModelEntry``. When given, its
+    checkpoint, calibration and head-pose backend override the config's, which
+    is what lets the dashboard's model selector drive a live run as well as a
+    cached one. The head-pose backend has to come from the entry rather than the
+    config because it decides what the extractor *produces*: a model trained on
+    the BlazeFace flag and fed the FaceLandmarker block still runs and still
+    prints cues.
+    """
     import cv2
     import numpy as np
     import torch
@@ -44,7 +54,12 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
         record = str(Path(record).resolve())
     video = str(Path(video).resolve()) if not str(video).isdigit() else video
     os.chdir(LLMDET_ROOT)
-    dev = "cuda:0" if torch.cuda.is_available() else "cpu"
+    # The caller decides, then the config, then CPU. Grabbing cuda:0 whenever a
+    # GPU exists is wrong on a shared box: the GPUs may belong to someone else's
+    # job, and the dashboard is expected to be demonstrable without one.
+    dev = device or cfg.get("detector", {}).get("device") or "cpu"
+    if str(dev).startswith("cuda") and not torch.cuda.is_available():
+        dev = "cpu"
 
     det = FrozenLLMDetAdapter(
         config_path=cfg["detector"]["config_path"],
@@ -71,7 +86,8 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
     # Head pose is REQUIRED, not best-effort: the deployed model is 556-dim and
     # 4 of those dims are head pose. Swallowing a failure here used to leave the
     # extractor at 552 dims, which the old zero-padding path then hid.
-    backend = cfg.get("features", {}).get("head_pose_backend", "mediapipe")
+    backend = (entry.head_pose_backend if entry is not None
+               else cfg.get("features", {}).get("head_pose_backend", "mediapipe"))
     hp = HeadPoseEstimator(backend=backend) if backend else None
     if hp is not None and not hp.available():
         raise SystemExit(
@@ -85,8 +101,13 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
 
     # Build from the CHECKPOINT's own spec. A YAML/checkpoint disagreement used
     # to raise inside a bare except and run the dashboard on random weights.
-    bundle = load_runtime_model(cfg["temporal_checkpoint"], device=dev,
-                               calibration=cfg.get("calibration"))
+    if entry is not None:
+        from session_replay import calibration_path
+        ckpt = str(Path(__file__).resolve().parents[2] / entry.checkpoint)
+        cal = str(calibration_path(entry.variant_id))
+    else:
+        ckpt, cal = cfg["temporal_checkpoint"], cfg.get("calibration")
+    bundle = load_runtime_model(ckpt, device=dev, calibration=cal)
     # The extractor always emits base + the 4 head-pose columns; a checkpoint
     # trained on a subset (e.g. 553_facefound) selects its columns inside
     # predict_window. Assert the EXTRACTOR width, not the model width.
@@ -116,6 +137,10 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
     n = 0
     t_prev = time.time()
     while n < max_frames:
+        # Lets the dashboard abandon a run mid-video when the user picks a
+        # different model, instead of leaving two pipelines pushing frames.
+        if should_stop is not None and should_stop():
+            break
         ok, frame = cap.read()
         if not ok:
             break

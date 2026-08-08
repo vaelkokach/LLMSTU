@@ -2020,7 +2020,106 @@ Two honest caveats:
 
 ---
 
+### 11.18 Dashboard model selector — one entry per variant, GPU-free
+
+*Status: built, not yet run. The GPUs are in use by another job and the user has
+also asked that no CPU compute be spent for now, so the three commands that need
+compute are queued rather than executed. Everything below is a description of
+the implementation and of numbers already in `work_dirs/thesis`, not of a run.*
+
+**Ask.** Put the best model's inference behind the dashboard by default, and let
+the user switch to any other trained model's best checkpoint, with no GPU.
+
+**The structural point.** Every deployable checkpoint consumes some subset of the
+*same* 556-column live vector, and the components producing it — LLMDet
+detector, tracker, CLIP, head pose — are identical for all of them. Only the
+temporal head varies. So the front end is cached once per video
+(`precompute_session.py`) and a model switch re-runs the temporal head alone.
+Without that split, every switch would repeat a detector pass that cannot
+change its output, which on CPU is the entire cost of the system.
+
+The cache stores **both** head-pose blocks (FaceLandmarker and BlazeFace) side
+by side, because the sweeps disagree about which produced their training
+features: `ff_det` models were trained on the detector flag, the rest on the
+landmarker mesh (§11.16). Each model is then handed the block from its own
+`run_record.json`. One block would have meant either a silent train/deploy
+mismatch for part of the registry, or a second full pass per switch.
+
+**What the selector offers.** `model_registry.py` reduces 54 checkpoints to 18
+variants (sweep × architecture × feature config), each represented by its best
+**validation** seed. Ranking and the default are validation-only: the test split
+was spent once under `TEST_SPLIT_PROTOCOL.md`, and a dropdown sorted by test
+macro-F1 would spend it again on every page load. Test numbers are displayed and
+rank nothing.
+
+| | variant | best seed | val macro-F1 | val mean ± sd | test |
+|---|---|---|---|---|---|
+| default | `arch/asrf_556_hp` | s43 | 0.5258 | 0.5063 ± 0.0202 | 0.4940 |
+| | `ff_det/mstcn_553_facefound` | s43 | 0.5121 | 0.4913 ± 0.0208 | — |
+| | `arch/mstcn_556_hp` | s43 | 0.5067 | 0.5027 ± 0.0050 | 0.5011 |
+| | … 10 more deployable … | | | | |
+| | `ladder/transformer_552_base` | s43 | 0.3777 | 0.3726 ± 0.0049 | 0.3844 |
+| not live | `arch/mstcn_570_full` | s43 | 0.5178 | 0.5038 ± 0.0121 | 0.4924 |
+| not live | `arch/asrf_570_full` | s44 | 0.5172 | 0.5071 ± 0.0096 | 0.5011 |
+| not live | 3 more 563/570 variants | | | | |
+
+Two numbers per model, deliberately. The dashboard must run **one** checkpoint,
+so it runs the best of three seeds; the thesis tables report the seed mean, and
+best-of-3 reads higher by construction. 0.5258 is a selection, 0.5063 ± 0.0202
+is the measurement. Showing only the first would overstate the deployed model by
+about two points of macro-F1.
+
+The five non-deployable variants are listed and disabled, with the reason
+attached, rather than hidden: the expression block needs a second per-crop GPU
+model and the dynamics block is a whole-track statistic, so a streaming path
+cannot produce either honestly. The previous bridge's answer to this was to
+**zero-pad** to their width (§11.12) — a running system whose extra 14 dims were
+all zeros.
+
+**The default is not the deployed config.** `attention_runtime.yaml` deploys
+`ff_det/mstcn_553_facefound` s42, chosen for throughput (§11.16: BlazeFace over
+FaceMesh, +30% FPS at a tie; MS-TCN cheaper than ASRF). No throughput constraint
+applies to a cached session, so the dashboard defaults to the best validation
+score and leaves the deployment config untouched. They are one dropdown entry
+apart.
+
+**Calibration was the gap that mattered.** Only two checkpoints had fitted
+thresholds, so every other model would have run at `display = alert = 0` — never
+abstaining, every prediction shown as fact, every sustained episode allowed to
+page an instructor. Switching models would then have changed whether the system
+was allowed to be unsure, which is not a comparison of models.
+`calibrate_registry.py` fits a temperature and both thresholds per model from
+its own `eval_val/predictions.npz`, under the same rule as the deployed model.
+Loading a model with no calibration file **fails** rather than defaulting to
+zero. Models that cannot reach 85% selective accuracy at any threshold get no
+relaxed target: they may display cues and may raise no alerts, and the UI says
+which. Whether any registry model falls into that case is a measurement, not yet
+taken.
+
+**Not a bug, checked before fixing.** The `device if torch.cuda.is_available()
+else "cpu"` idiom appears in 13 places and looks like it ignores an explicit CPU
+request on a GPU box. It does not — the ternary passes the argument through. The
+only real gap was `pipeline_bridge.run_live` hardcoding `cuda:0`, now a
+parameter defaulting to the config and then to CPU.
+
+**Queued, needing compute:** `calibrate_registry.py` (seconds), one
+`precompute_session.py` pass over a clip (CPU-bound, detector-dominated), then
+the end-to-end check that switching models changes the cue stream and that the
+figures shown match `work_dirs/thesis/tables/`.
+
+---
+
 ## 10. Changelog
+
+**2026-08-08**
+- **Dashboard model selector built** (§11.18): 54 checkpoints → 18 variants, one
+  per sweep × architecture × feature config, best validation seed each. Default
+  `arch/asrf_556_hp` s43 (val 0.5258; variant mean 0.5063 ± 0.0202). Front end
+  cached once per video so switching runs the temporal head alone and needs no
+  GPU. Both head-pose blocks cached so each model gets the one it was trained
+  on. Per-model calibration added — previously 16 of 18 variants would have run
+  with no abstention at all. Not yet executed: GPUs busy, CPU compute paused at
+  the user's request.
 
 **2026-08-03**
 - **Detector + temporal striding: 3.69 -> 5.77 FPS (+56%)** at 94.7% cue

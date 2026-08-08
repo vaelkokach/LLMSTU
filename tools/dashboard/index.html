@@ -22,7 +22,7 @@
   .pill{font-size:12px;padding:3px 10px;border-radius:20px;
         background:var(--panel);border:1px solid var(--line);color:var(--muted)}
   .live{color:var(--ok)} .live::before{content:"● "}
-  .wrap{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);
+  .wrap{display:grid;grid-template-columns:minmax(0,2fr) minmax(300px,1fr);
         gap:16px;padding:16px;align-items:start}
   @media(max-width:900px){.wrap{grid-template-columns:1fr}}
   .card{background:var(--panel);border:1px solid var(--line);
@@ -52,6 +52,19 @@
   footer{padding:10px 20px;color:var(--muted);font-size:11px;
          border-top:1px solid var(--line)}
   .scroll{overflow-x:auto}
+  select{width:100%;padding:8px 10px;border-radius:8px;background:var(--bg);
+         color:var(--txt);border:1px solid var(--line);font:inherit;font-size:13px}
+  select:disabled{opacity:.55;cursor:not-allowed}
+  .spec{width:100%;font-size:12px}
+  .spec td{border:0;padding:3px 0;vertical-align:top}
+  .spec td:first-child{color:var(--muted);white-space:nowrap;padding-right:10px;width:1%}
+  .note{font-size:11px;color:var(--muted);margin:10px 0 0;line-height:1.45}
+  .banner{font-size:12px;padding:8px 10px;border-radius:8px;margin-top:10px;
+          background:rgba(255,180,84,.12);border:1px solid rgba(255,180,84,.35);
+          color:var(--warn)}
+  .banner.err{background:rgba(255,95,86,.12);border-color:rgba(255,95,86,.35);
+              color:var(--alert)}
+  .switching{opacity:.5;pointer-events:none}
 </style>
 </head>
 <body>
@@ -60,6 +73,7 @@
   <span class="pill" id="status">connecting…</span>
   <span class="pill" id="clock">t = 0.0 s</span>
   <span class="pill" id="src"></span>
+  <span class="pill" id="modelpill"></span>
 </header>
 
 <div class="wrap">
@@ -67,7 +81,7 @@
     <div class="card">
       <h2>Live view</h2>
       <img id="frame" alt="live classroom view">
-      <p class="empty" id="noframe">No video frame (replay mode shows cue data only).</p>
+      <p class="empty" id="noframe">No video frame (cue-log replay shows cue data only).</p>
     </div>
 
     <div class="card">
@@ -85,17 +99,27 @@
     <div class="card scroll">
       <h2>Per-student cues</h2>
       <table>
-        <thead><tr><th>Seat</th><th>Visible cue</th><th>Duration</th></tr></thead>
+        <thead><tr><th>Seat</th><th>Visible cue</th><th>Duration</th><th>Confidence</th></tr></thead>
         <tbody id="students"></tbody>
       </table>
       <p class="empty" id="nostudents">No students detected yet.</p>
     </div>
   </div>
 
-  <div class="card">
-    <h2>Alerts</h2>
-    <ul id="alerts"></ul>
-    <p class="empty" id="noalerts">No sustained off-task episodes.</p>
+  <div style="display:grid;gap:16px;min-width:0">
+    <div class="card" id="modelcard">
+      <h2>Model</h2>
+      <select id="modelsel" disabled><option>loading…</option></select>
+      <table class="spec"><tbody id="modelspec"></tbody></table>
+      <div id="modelbanner"></div>
+      <p class="note" id="modelnote"></p>
+    </div>
+
+    <div class="card">
+      <h2>Alerts</h2>
+      <ul id="alerts"></ul>
+      <p class="empty" id="noalerts">No sustained off-task episodes.</p>
+    </div>
   </div>
 </div>
 
@@ -107,9 +131,8 @@
 </footer>
 
 <script>
-const CUES = ["screen_oriented","looking_away","head_down","turned_to_peer","phone_use","uncertain"];
-
 function fmt(s){ s=Math.round(s); return s<60 ? s+"s" : Math.floor(s/60)+"m "+(s%60)+"s"; }
+function f4(x){ return (x==null||isNaN(x)) ? "—" : Number(x).toFixed(4); }
 
 function drawSpark(hist){
   const c=document.getElementById("spark"), x=c.getContext("2d");
@@ -128,6 +151,120 @@ function drawSpark(hist){
   x.lineTo(W,H); x.lineTo(0,H); x.closePath();
   x.fillStyle="rgba(106,169,255,.12)"; x.fill();
 }
+
+/* ---------------- model selector ---------------- */
+
+let MODELS=null, SWITCHING=false;
+
+function optionLabel(m){
+  const val = f4(m.val && m.val.macro_f1);
+  return `${m.label}  ·  val macro-F1 ${val}  ·  ${m.sweep_label}`;
+}
+
+async function loadModels(){
+  const r = await fetch("/api/models",{cache:"no-store"});
+  MODELS = await r.json();
+  const sel = document.getElementById("modelsel");
+  sel.innerHTML = "";
+
+  if(!MODELS.models.length){
+    sel.innerHTML = "<option>no model (cue-log replay)</option>";
+    sel.disabled = true;
+    document.getElementById("modelnote").textContent =
+      "A recorded cue log stores decisions, not features, so there is no model to swap.";
+    return;
+  }
+
+  const live = MODELS.models.filter(m=>m.deployable);
+  const dead = MODELS.models.filter(m=>!m.deployable);
+
+  const g1=document.createElement("optgroup");
+  g1.label="Deployable — ranked by validation macro-F1";
+  live.forEach(m=>{
+    const o=document.createElement("option");
+    o.value=m.variant_id; o.textContent=optionLabel(m);
+    g1.appendChild(o);
+  });
+  sel.appendChild(g1);
+
+  if(dead.length){
+    const g2=document.createElement("optgroup");
+    g2.label="Trained but not deployable in a streaming path";
+    dead.forEach(m=>{
+      const o=document.createElement("option");
+      o.value=m.variant_id; o.disabled=true;
+      o.textContent=optionLabel(m)+"  — unavailable live";
+      o.title=m.blocked_reason;
+      g2.appendChild(o);
+    });
+    sel.appendChild(g2);
+  }
+
+  sel.disabled = !MODELS.switchable;
+  if(MODELS.active) sel.value = MODELS.active;
+  document.getElementById("modelnote").innerHTML =
+    (MODELS.switchable
+      ? `Switching restarts the session under the selected checkpoint — ${MODELS.switch_cost}. `
+      : "This source cannot switch models. ") +
+    "Each entry is the <strong>best validation seed</strong> of its variant; " +
+    "the test column is shown but never ranks anything.";
+}
+
+document.getElementById("modelsel").addEventListener("change", async (ev)=>{
+  const id = ev.target.value;
+  SWITCHING = true;
+  document.getElementById("modelcard").classList.add("switching");
+  banner("Switching to "+id+"…", false);
+  try{
+    const r = await fetch("/api/model",{
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({variant_id:id})});
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.error || r.statusText);
+    banner("", false);
+  }catch(e){
+    banner("Could not switch: "+e.message, true);
+    if(MODELS && MODELS.active) ev.target.value = MODELS.active;
+  }finally{
+    SWITCHING = false;
+    document.getElementById("modelcard").classList.remove("switching");
+  }
+});
+
+function banner(text, isError){
+  const b=document.getElementById("modelbanner");
+  b.innerHTML = text ? `<div class="banner${isError?" err":""}">${text}</div>` : "";
+}
+
+function renderModelSpec(m, notice){
+  const tb=document.getElementById("modelspec");
+  if(!m || !m.variant_id){ tb.innerHTML=""; document.getElementById("modelpill").textContent=""; return; }
+  document.getElementById("modelpill").textContent = m.label;
+
+  const vm=m.val_seed_mean||{}, tm=m.test_seed_mean||{};
+  const seedMean=(o)=> o.macro_f1==null ? "—"
+      : `${f4(o.macro_f1)} ± ${f4(o.macro_f1_sd)} (${o.n} seeds)`;
+
+  const rows=[
+    ["checkpoint", `${m.experiment_id} · seed ${m.seed} of ${m.n_seeds}`],
+    ["macro-F1, val", `<strong>${f4(m.val_macro_f1)}</strong> &nbsp; this seed`],
+    ["", `${seedMean(vm)} &nbsp; variant mean, as reported`],
+    ["macro-F1, test", m.test_macro_f1==null ? "not evaluated on test"
+        : `${f4(m.test_macro_f1)} &nbsp; this seed`],
+    ["head pose", m.head_pose_backend==="mediapipe_detector"
+        ? "BlazeFace detector (face-found flag)"
+        : "FaceLandmarker mesh (angles + flag)"],
+    ["display ≥", m.display_threshold==null ? "—"
+        : `${Number(m.display_threshold).toFixed(2)} — below this the chip reads “uncertain”`],
+    ["alerts", m.alerts_enabled===false ? "<strong>disabled for this model</strong>"
+        : (m.alert_threshold==null ? "—"
+           : `confidence ≥ ${Number(m.alert_threshold).toFixed(2)}`)],
+  ];
+  tb.innerHTML = rows.map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join("");
+  if(notice && !SWITCHING) banner(notice, false);
+}
+
+/* ---------------- polling ---------------- */
 
 async function tick(){
   try{
@@ -157,7 +294,8 @@ async function tick(){
       const tr=document.createElement("tr");
       tr.innerHTML = `<td>${seat}</td>`+
         `<td><span class="cue c-${st.cue}">${st.cue.replace(/_/g," ")}</span></td>`+
-        `<td>${fmt(st.dwell||0)}</td>`;
+        `<td>${fmt(st.dwell||0)}</td>`+
+        `<td>${st.conf==null?"—":Number(st.conf).toFixed(2)}</td>`;
       tb.appendChild(tr);
     }
 
@@ -170,11 +308,19 @@ async function tick(){
       ul.appendChild(li);
     }
     drawSpark(s.history||[]);
+
+    renderModelSpec(s.model, s.notice);
+    if(MODELS && s.model && s.model.variant_id && MODELS.active!==s.model.variant_id){
+      MODELS.active = s.model.variant_id;
+      if(!SWITCHING) document.getElementById("modelsel").value = s.model.variant_id;
+    }
   }catch(e){
     document.getElementById("status").textContent="disconnected";
     document.getElementById("status").className="pill";
   }
 }
+
+loadModels();
 tick(); setInterval(tick, 1000);
 </script>
 </body>

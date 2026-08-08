@@ -50,6 +50,10 @@ test*.jpg
 *.tar.gz
 gold_annotation_bundle*
 
+# Dashboard session caches: derived from a video + the detector, ~100 MB each,
+# and rebuildable with tools/dashboard/precompute_session.py
+tools/dashboard/sessions/
+
 # Gold annotation outputs stay local until finalized
 tools/gold_annotator/gold_annotations_*.jsonl
 tools/gold_annotator/gold_events_*.jsonl

@@ -28,6 +28,35 @@ except ImportError:
 from .head_pose import HeadPoseEstimator  # noqa: F401  (re-export)
 
 
+def crop_boxes(frame_bgr: np.ndarray, bboxes_xyxy: List[List[float]]):
+    """Clip boxes to the frame and cut the crops the feature blocks see.
+
+    Factored out of ``extract_batch`` so that anything needing *the same* crops
+    — the dashboard's session precompute, which runs two head-pose backends over
+    one CLIP pass — cuts them identically instead of reimplementing the
+    rounding and clipping and drifting away from it. A head-pose block computed
+    on a crop one pixel different from the one the model was trained on is the
+    kind of mismatch that shows up as an unexplained accuracy drop.
+
+    Returns ``(crops, clipped_xyxy, valid_idx)``; degenerate boxes are dropped,
+    so ``valid_idx`` maps each crop back to its position in ``bboxes_xyxy``.
+    """
+    h, w = frame_bgr.shape[:2]
+    crops, clipped, valid_idx = [], [], []
+    for i, bbox in enumerate(bboxes_xyxy):
+        x1, y1, x2, y2 = [int(v) for v in bbox]
+        x1 = max(0, min(x1, w - 1))
+        x2 = max(0, min(x2, w - 1))
+        y1 = max(0, min(y1, h - 1))
+        y2 = max(0, min(y2, h - 1))
+        if x2 <= x1 or y2 <= y1:
+            continue
+        crops.append(frame_bgr[y1:y2, x1:x2])
+        clipped.append((x1, y1, x2, y2))
+        valid_idx.append(i)
+    return crops, clipped, valid_idx
+
+
 class StudentFeatureExtractor:
     """Per-student feature vector: CLIP embedding + bbox geometry + color
     statistics + posture-geometry proxies.
@@ -95,18 +124,7 @@ class StudentFeatureExtractor:
             return out
 
         h, w = frame_bgr.shape[:2]
-        crops, clipped, valid_idx = [], [], []
-        for i, bbox in enumerate(bboxes_xyxy):
-            x1, y1, x2, y2 = [int(v) for v in bbox]
-            x1 = max(0, min(x1, w - 1))
-            x2 = max(0, min(x2, w - 1))
-            y1 = max(0, min(y1, h - 1))
-            y2 = max(0, min(y2, h - 1))
-            if x2 <= x1 or y2 <= y1:
-                continue
-            crops.append(frame_bgr[y1:y2, x1:x2])
-            clipped.append((x1, y1, x2, y2))
-            valid_idx.append(i)
+        crops, clipped, valid_idx = crop_boxes(frame_bgr, bboxes_xyxy)
 
         if not crops:
             return out
