@@ -126,16 +126,55 @@ python tools/dashboard/session_replay.py --cache tools/dashboard/sessions/0325 \
 Same frames, same boxes, same features — the only difference is the temporal
 head, so any disagreement is attributable to the model.
 
-### Live from a video (expensive)
+### Live: a webcam, an IP camera, or a video file
 
 ```bash
-python tools/dashboard/server.py \
-    --config LLMDet/configs/attention_runtime.yaml \
+# webcam / capture card — the device index
+python tools/dashboard/server.py --config LLMDet/configs/attention_runtime.yaml \
+    --video 0 --device cuda:0
+
+# IP camera
+python tools/dashboard/server.py --config LLMDet/configs/attention_runtime.yaml \
+    --video rtsp://user:pass@10.0.0.5/stream1 --device cuda:0
+
+# a file, played through the full pipeline rather than from a cache
+python tools/dashboard/server.py --config LLMDet/configs/attention_runtime.yaml \
     --video LLMDet/0325.mp4 --device cpu
 ```
 
-Model switching works here too, but each switch restarts the video and re-runs
-the whole pipeline. `--device cuda:0` if a GPU is free.
+`--video` takes a device index, a URL with a scheme OpenCV can open
+(`rtsp/rtsps/http/https/udp/tcp/rtmp`), or a path. Model switching works here
+too, but each switch restarts the source and re-runs the whole pipeline.
+
+**A camera is not a file, in two ways that matter.**
+
+*Frames keep arriving whether or not anything reads them.* The pipeline runs at
+a few frames a second, so reading sequentially would mean consuming a queue: the
+overlay falls further behind the room the longer it runs, unbounded, with
+nothing on screen saying so. A reader thread drains the source and hands the
+pipeline the newest frame; everything in between is dropped and **counted**. The
+header shows `2.1 fps processed · 92% of 25 fps camera dropped`, amber past 50%
+and red past 90%. `cv2.CAP_PROP_BUFFERSIZE` is not used for this — the FFMPEG
+backend that handles RTSP ignores it.
+
+*Timestamps have to be wall-clock.* Alert thresholds are durations — "head down
+for 30 s". For a file, frame index ÷ fps is real time. For a live source with
+dropped frames it is not: at 2 fps processed against a 25 fps camera, `n/fps`
+runs about 12× slow, and a 30-second episode would be announced roughly six
+minutes late. Live sources timestamp from the wall clock instead.
+
+**Throughput.** Measured 5.77 FPS at detector-stride 3:2 on a GPU (§11.17),
+p50 158 ms. That is the ceiling for live use; a real classroom camera at 25 fps
+will drop most frames, which is fine for sustained-episode alerts (the shortest
+per-channel minimum is 2 s) and not fine for anything needing every frame. On
+CPU it will be far slower — how much slower is unmeasured, and is the first
+thing worth measuring when the machine frees up.
+
+**One caveat not yet addressed.** `max_age: 45` and `min_hits: 8` are counted in
+*processed* frames and were tuned at ~25 fps processed. At 2 fps a track
+survives 45 processed frames ≈ 22 s of occlusion instead of 1.8 s. The stride
+controller already rescales `min_hits`; `max_age` is not rescaled by capture
+rate. Worth checking against a real camera before deployment.
 
 ### From a recorded cue log (no model)
 
@@ -160,6 +199,8 @@ Each of these was a real failure mode in this project before it became a check.
 | a checkpoint's architecture disagrees with the config | `load_runtime_model` builds from the checkpoint's own `spec`. The old path caught the exception and ran on **randomly initialised weights** |
 | a model trained on the BlazeFace flag | is fed the BlazeFace block, not the landmarker one, chosen from its own `run_record.json` |
 | a session cache predates `source_width` | replay refuses rather than drawing every box at the wrong scale |
+| a live source outruns the pipeline | frames are dropped to stay current and the drop rate is shown, instead of the overlay silently falling behind the room |
+| an IP camera URL is passed | opened as a URL. It used to be run through `Path(...).resolve()`, which turned `rtsp://cam/s` into `<cwd>/rtsp:/cam/s` and failed naming a path the user never typed |
 | a model switch arrives mid-run | the previous producer thread is stopped and joined first; if it will not stop, the switch returns 409 rather than running two pipelines into one state |
 
 ---

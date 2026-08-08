@@ -74,6 +74,7 @@
   <span class="pill" id="clock">t = 0.0 s</span>
   <span class="pill" id="src"></span>
   <span class="pill" id="modelpill"></span>
+  <span class="pill" id="capture"></span>
 </header>
 
 <div class="wrap">
@@ -308,6 +309,17 @@ async function tick(){
       ul.appendChild(li);
     }
     drawSpark(s.history||[]);
+
+    // A live source drops frames when the pipeline cannot keep up. Saying so is
+    // the point: an overlay that looks current and is not is worse than one
+    // labelled as running behind.
+    const cap=s.capture||{}, cp=document.getElementById("capture");
+    if(cap.live){
+      cp.textContent = `${cap.processed_fps} fps processed · ${cap.drop_pct}% of `
+                     + `${cap.source_fps} fps camera dropped`;
+      cp.style.color = cap.drop_pct >= 90 ? "var(--alert)"
+                     : cap.drop_pct >= 50 ? "var(--warn)" : "";
+    } else { cp.textContent=""; cp.style.color=""; }
 
     renderModelSpec(s.model, s.notice);
     if(MODELS && s.model && s.model.variant_id && MODELS.active!==s.model.variant_id){

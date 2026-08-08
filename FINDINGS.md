@@ -2107,6 +2107,46 @@ parameter defaulting to the config and then to CPU.
 the end-to-end check that switching models changes the cue stream and that the
 figures shown match `work_dirs/thesis/tables/`.
 
+### 11.19 Live capture: a camera is not a file, in two ways that matter
+
+Asked whether the dashboard can take live video. It could open a **webcam**
+(`--video 0`) and could not open an **IP camera**, and its handling of a live
+source was wrong in two ways that would have produced confident, plausible,
+late output. All three are fixed; none is yet verified against real hardware.
+
+**1. Stream URLs were destroyed before use.** `Path(video).resolve()` was
+applied to anything non-numeric, so `rtsp://cam/stream1` became
+`<cwd>/rtsp:/cam/stream1` and failed with "cannot open" naming a path the user
+never typed. Sources are now classified — camera index / URL scheme / path —
+and only paths are resolved.
+
+**2. A live source was read as a queue, not as a clock.** Frames arrive whether
+or not anything consumes them. At ~5.8 processed fps against a 25 fps camera,
+sequential reading means the overlay falls behind the room by a growing,
+unbounded amount, with nothing on screen to say so: an instructor would be
+alerted about a phone put away minutes earlier. A reader thread now drains the
+source and hands over the newest frame; skipped frames are counted and the drop
+rate is displayed (amber ≥50%, red ≥90%). `CAP_PROP_BUFFERSIZE` was not used —
+the FFMPEG backend serving RTSP ignores it.
+
+**3. Timestamps ran slow, which is an alert-correctness bug.** `t = n / fps` is
+correct for a file and wrong for a dropped-frame live source: at 2 fps processed
+against 25 fps it runs ~12× slow, so the 30 s `head_down` threshold would fire
+after roughly six real minutes. Live sources now timestamp from the wall clock.
+This is the same class of defect as the rest of §11: the system kept working and
+kept producing sensible-looking alerts, just at the wrong time.
+
+**Known and not addressed.** `max_age: 45` is counted in *processed* frames and
+was tuned at ~25 fps processed. At 2 fps a track would survive ~22 s of
+occlusion rather than 1.8 s. `StrideController` already rescales `min_hits`;
+nothing rescales `max_age` by capture rate. Flagged rather than guessed at,
+because the right value depends on the real capture rate, which is unmeasured.
+
+**Unmeasured.** CPU throughput for the live path. The 5.77 FPS in §11.17 is a
+GPU figure at stride 3:2; the CPU number is the first thing to measure when the
+machine frees up, and determines whether live capture is demonstrable without a
+GPU or only with one.
+
 ---
 
 ## 10. Changelog
@@ -2120,6 +2160,13 @@ figures shown match `work_dirs/thesis/tables/`.
   on. Per-model calibration added — previously 16 of 18 variants would have run
   with no abstention at all. Not yet executed: GPUs busy, CPU compute paused at
   the user's request.
+- **Live capture fixed in three places** (§11.19): IP-camera URLs were being
+  mangled by `Path.resolve()` and could never open; a live source was read
+  sequentially so the overlay fell behind the room without bound; and `n/fps`
+  timestamps ran ~12× slow under frame dropping, which would have delayed a 30 s
+  alert by about six minutes. Frames are now dropped to stay current, the drop
+  rate is displayed, and live sources use the wall clock. `max_age` is still not
+  rescaled by capture rate — flagged, not fixed.
 
 **2026-08-03**
 - **Detector + temporal striding: 3.69 -> 5.77 FPS (+56%)** at 94.7% cue

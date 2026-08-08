@@ -75,6 +75,7 @@ STATE = {
     "source": "",
     "model": {},           # the active entry, as shown in the header
     "notice": "",          # e.g. "alerts disabled for this model"
+    "capture": {},         # live-source throughput and drop rate
 }
 LOCK = threading.Lock()
 
@@ -142,6 +143,7 @@ def reset_state():
         STATE["alerts"].clear()
         STATE["history"].clear()
         STATE["class_summary"] = {}
+        STATE["capture"] = {}
         STATE["running"] = False
 
 
@@ -175,6 +177,7 @@ class Handler(BaseHTTPRequestHandler):
                     "class_summary": STATE["class_summary"],
                     "model": STATE["model"],
                     "notice": STATE["notice"],
+                    "capture": STATE["capture"],
                 }
             return self._send(200, json.dumps(s))
         if self.path == "/api/models":
@@ -288,20 +291,34 @@ def run_session(entry, cache, device, blur_faces, speed):
 
 
 def run_live_source(entry, config, video, device, blur_faces, max_frames):
-    """Full pipeline over a video. Expensive; the detector dominates on CPU."""
+    """Full pipeline over a video, a webcam or an IP camera.
+
+    Expensive: the detector dominates, and on CPU it dominates completely. For a
+    live source that shows up as a drop rate rather than as a slowdown — the
+    reader thread keeps the newest frame and the pipeline skips the rest — so
+    the capture stats are surfaced to the page instead of only the log.
+    """
     import session_replay as SR
-    from pipeline_bridge import run_live
+    from pipeline_bridge import classify_source, run_live
     cal_path = SR.calibration_path(entry.variant_id)
     cal = json.loads(cal_path.read_text()) if cal_path.exists() else {}
+    kind, source = classify_source(video)
     with LOCK:
         STATE["running"] = True
-        STATE["source"] = f"live: {Path(video).name} on {device}"
+        STATE["source"] = (f"{kind}: "
+                           f"{Path(video).name if kind == 'file' else video}"
+                           f" on {device}")
         STATE["model"] = model_card(entry, cal)
         STATE["notice"] = "" if cal.get("alerts_enabled", True) else \
             cal.get("alerts_disabled_reason", "")
+
+    def on_stats(s):
+        with LOCK:
+            STATE["capture"] = s
+
     run_live(config, video, push_frame, blur_faces=blur_faces,
              max_frames=max_frames, device=device, entry=entry,
-             should_stop=RUNNER.should_stop)
+             should_stop=RUNNER.should_stop, stats_fn=on_stats)
     with LOCK:
         STATE["running"] = False
 
