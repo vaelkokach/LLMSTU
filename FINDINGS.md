@@ -2240,6 +2240,81 @@ displayed and the user can switch in one click.
 (T 1.12–1.30). The transformers need more smoothing, not less, to be honest
 about what they know.
 
+### 11.22 ★ Dashboard verified end to end on CPU — and ASRF is 4.5× slower to replay
+
+`0325.mp4` precomputed on **CPU**, no GPU touched: 900 frames (30 s at 30 fps),
+7 tracks, 5,136 student-frames, 80 MB, **865 s at 1.04 fps**.
+`tools/dashboard/verify_dashboard.py` then checked the three things that can be
+wrong while the page still looks right. **All 8 HTTP checks and both data checks
+passed** (`work_dirs/thesis/runtime/dashboard_verification.json`).
+
+**CPU throughput, measured (§11.19 and §11.20 listed this as unknown).**
+
+| stage | rate | note |
+|---|---|---|
+| precompute (detector + tracker + CLIP + **both** head-pose backends) | **1.04 fps** | one-off per video |
+| GPU live path at stride 3:2, for reference | 5.77 fps | §11.17 |
+
+The 1.04 fps is *not* the live-path CPU figure: the precompute runs both
+head-pose backends so one cache serves every model, which the live path never
+does. It is an upper bound on the cost, not an estimate of live CPU speed.
+
+**The selector demonstrably switches.** Four models over the identical cache
+disagree on 8.5–15.0% of the 5,073 shared (frame, track) pairs. No pair is
+identical, which is the failure a working-looking switch would have hidden.
+
+| pair | cue agreement |
+|---|---|
+| `ff_det/mstcn_553_facefound` vs `arch/mstcn_556_hp` | 91.5% |
+| `arch/asrf_556_hp` vs `posefix/asrf_556_hp` | 88.7% |
+| `ff_det/mstcn` vs `posefix/asrf` | 87.4% |
+| `arch/asrf_556_hp` vs `ff_det/mstcn_553_facefound` | 85.9% |
+| `arch/mstcn_556_hp` vs `posefix/asrf_556_hp` | 85.1% |
+| `arch/asrf_556_hp` vs `arch/mstcn_556_hp` | 85.0% |
+
+**This independently reproduces §11.3.** The two *same-architecture* pairs agree
+most (91.5%, 88.7%) and every *cross-architecture* pair agrees least
+(85.0–87.4%) — even when the cross-architecture pair shares a feature config and
+the same-architecture pair does not. Architecture separates the models more than
+features do, now visible in raw cue disagreement on a video from outside the
+training data, with no metric in between.
+
+**★ ASRF costs 4.5× more than MS-TCN at inference, which the accuracy tables
+never showed.** Temporal head only, over the same 900-frame cache:
+
+| variant | replay | head fps | × real time (30 fps source) |
+|---|---|---|---|
+| `arch/mstcn_556_hp` | 34.2 s | 26.3 | 0.88 |
+| `ff_det/mstcn_553_facefound` | 35.4 s | 25.4 | 0.85 |
+| `arch/asrf_556_hp` *(default)* | 153.9 s | 5.8 | **0.19** |
+| `posefix/asrf_556_hp` | 157.0 s | 5.7 | 0.19 |
+
+So on CPU an ASRF session replays at roughly **a fifth of real time** while
+MS-TCN nearly keeps up. `--speed` cannot fix it: the pacing loop is already
+waiting on compute, not on the clock. ASRF buys +0.019 validation macro-F1 over
+MS-TCN (0.5258 vs 0.5067, best seeds) for 4.5× the inference cost — and on
+*test* the ordering reverses (0.4940 vs 0.5011). Combined with §11.21, where
+MS-TCN also has the higher alert coverage (69.5% vs 55.6%), the case for ASRF
+rests on one validation metric and loses on the other three.
+
+**The default is left on ASRF** for now: validation macro-F1 is the
+pre-registered selection rule and changing it after seeing test and timing
+numbers is the selection-after-the-fact move this file keeps recording.
+`arch/mstcn_556_hp` is one dropdown entry away and is very likely the better
+choice for a live demonstration — recorded here so the decision is explicit
+rather than inherited.
+
+**Also confirmed:** all 18 variants' displayed macro-F1 matches
+`eval_val/metrics.json` to machine precision (no hand-copied numbers); all 5
+non-deployable variants carry a reason; a switch to a non-deployable model is
+refused with HTTP 400; an unknown model with 4xx; thresholds move with the model
+(`alert ≥ 0.64` after switching to `ff_det/mstcn`).
+
+**One cosmetic defect, not fixed:** MediaPipe's `FaceLandmarker.__del__` and
+`FaceDetector.__del__` raise `TypeError: 'NoneType' object is not callable` at
+interpreter teardown. Both are `Exception ignored in`, the process exits 0 and
+the cache is complete and correct — a MediaPipe shutdown-ordering bug, not ours.
+
 ---
 
 ## 10. Changelog
@@ -2260,6 +2335,15 @@ about what they know.
   alert by about six minutes. Frames are now dropped to stay current, the drop
   rate is displayed, and live sources use the wall clock. `max_age` is still not
   rescaled by capture rate — flagged, not fixed.
+- **Dashboard verified end to end on CPU, all checks passed** (§11.22). Measured
+  the previously-unknown CPU cost: precompute 1.04 fps (865 s for 900 frames).
+  Four models over one cache disagree on 8.5–15% of cue decisions, and
+  same-architecture pairs agree most — an independent reproduction of §11.3 in
+  raw cue disagreement. **ASRF replays 4.5× slower than MS-TCN** (5.8 vs 26 fps,
+  0.19× real time on CPU), a cost the accuracy tables never showed.
+- **Alert coverage spans 2.6×** at fixed 85% precision and does not rank like
+  macro-F1 (§11.21). All 13 deployable models calibrated; none needed alerts
+  disabled.
 - **Upload/recorded-video mode** (§11.20): drop a recording on the page, analyse
   it into a session cache with progress and cancel, then play it with instant
   model switching. Cancelling deletes the partial cache; uploads never

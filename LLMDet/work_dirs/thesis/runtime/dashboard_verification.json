@@ -1,0 +1,134 @@
+{
+  "cache": {
+    "cache_version": "dashboard_session/1.0.0",
+    "git_commit": "7a4d509897efae10c56d381019d82f3a8ba1b173",
+    "config": "LLMDet/configs/attention_runtime.yaml",
+    "video": "/home/jovyan/Computer_vision/LLMDet/0325.mp4",
+    "fps": 30.0,
+    "n_frames": 900,
+    "n_student_frames": 5136,
+    "n_tracks": 7,
+    "source_width": 1918,
+    "source_height": 1080,
+    "jpeg_width": 960,
+    "device": "cpu",
+    "wall_clock_s": 865.4,
+    "detector": {
+      "config_path": "configs/student_llmstu_exact.py",
+      "checkpoint_path": "work_dirs/thesis_bundle/checkpoints/main_llmstu_exact_iter25000_final.pth",
+      "text_prompt": "a student sitting",
+      "score_thr": 0.1,
+      "max_det": 80,
+      "nms_iou_thr": 0.45
+    },
+    "tracking": {
+      "iou_match_thr": 0.15,
+      "max_age": 45,
+      "min_hits": 8,
+      "appearance_weight": 0.45,
+      "min_match_score": 0.35
+    },
+    "inference": {
+      "detector_stride": 3,
+      "temporal_stride": 2,
+      "window_size": 32,
+      "min_frames_for_pred": 10,
+      "label_smooth_window": 3,
+      "label_switch_margin": 0
+    },
+    "layout": {
+      "base": 552,
+      "head_landmarker": 4,
+      "head_detector": 4
+    },
+    "note": "Front end only. Contains no temporal-model output, so it is shared by every model in the registry and does not need rebuilding when the selected model changes."
+  },
+  "card_mismatches": [],
+  "replay_seconds": {
+    "arch/asrf_556_hp": 153.86955189704895,
+    "ff_det/mstcn_553_facefound": 35.40717339515686,
+    "arch/mstcn_556_hp": 34.22112274169922,
+    "posefix/asrf_556_hp": 157.01412153244019
+  },
+  "pairwise_agreement": [
+    {
+      "a": "arch/asrf_556_hp",
+      "b": "ff_det/mstcn_553_facefound",
+      "agreement": 0.8586635127143702,
+      "n": 5073
+    },
+    {
+      "a": "arch/asrf_556_hp",
+      "b": "arch/mstcn_556_hp",
+      "agreement": 0.8497930218805441,
+      "n": 5073
+    },
+    {
+      "a": "arch/asrf_556_hp",
+      "b": "posefix/asrf_556_hp",
+      "agreement": 0.8870490833826138,
+      "n": 5073
+    },
+    {
+      "a": "ff_det/mstcn_553_facefound",
+      "b": "arch/mstcn_556_hp",
+      "agreement": 0.9150404100137985,
+      "n": 5073
+    },
+    {
+      "a": "ff_det/mstcn_553_facefound",
+      "b": "posefix/asrf_556_hp",
+      "agreement": 0.8736447861226099,
+      "n": 5073
+    },
+    {
+      "a": "arch/mstcn_556_hp",
+      "b": "posefix/asrf_556_hp",
+      "agreement": 0.8507786319731914,
+      "n": 5073
+    }
+  ],
+  "http": [
+    {
+      "check": "startup model is --model",
+      "pass": true,
+      "detail": "arch/asrf_556_hp"
+    },
+    {
+      "check": "registry served over HTTP",
+      "pass": true,
+      "detail": "18 of 18 models"
+    },
+    {
+      "check": "non-deployable entries carry a reason",
+      "pass": true,
+      "detail": "5 disabled"
+    },
+    {
+      "check": "session listed as a source",
+      "pass": true,
+      "detail": "1 sources"
+    },
+    {
+      "check": "switch takes effect in /api/state",
+      "pass": true,
+      "detail": "ff_det/mstcn_553_facefound"
+    },
+    {
+      "check": "thresholds move with the model",
+      "pass": true,
+      "detail": "alert>=0.64"
+    },
+    {
+      "check": "non-deployable model is refused",
+      "pass": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "check": "unknown model is refused",
+      "pass": true,
+      "detail": "HTTP 4xx"
+    }
+  ],
+  "failures": 0
+}

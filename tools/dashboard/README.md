@@ -74,6 +74,20 @@ the ablation look smaller than it was; the previous bridge instead
 **zero-padded** up to their width, which produced a running system whose extra
 14 dims were all zeros.
 
+### Measured cost of each choice (CPU, `0325.mp4`, 900 frames)
+
+| stage | rate | |
+|---|---|---|
+| **Analyse** — detector + tracker + CLIP + both head-pose backends | **1.04 fps** | 865 s for 900 frames; one-off per video |
+| Replay, MS-TCN head | **26 fps** | 0.88× real time |
+| Replay, ASRF head | **5.8 fps** | **0.19× real time** |
+
+ASRF is 4.5× more expensive at inference than MS-TCN for +0.019 validation
+macro-F1 — and on test the ordering reverses. On CPU an ASRF session plays at
+about a fifth of real time, and `--speed` will not help: the pacing loop is
+already waiting on compute rather than on the clock. **For a live demonstration,
+switch to `arch/mstcn_556_hp`.** It is one dropdown entry away.
+
 ### The default: `arch/asrf_556_hp` seed 43
 
 ASRF over 556-dim features (CLIP + geometry + colour + posture + head pose),
