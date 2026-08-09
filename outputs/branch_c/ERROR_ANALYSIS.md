@@ -380,7 +380,9 @@ No unblurred person crop was written by this analysis.
 | video_0009_..._20251017115031 | 0 | 437.9 | turned_to_peer | screen_oriented | 0.964 | talking_to_peer | "leaning forward and gesturing with his hand while looking to the side, appearing to converse with a peer" |
 | video_0009_..._20251017115031 | 0 | 841.8 | turned_to_peer | screen_oriented | 0.964 | talking_to_peer | "leaning forward and gesturing with his hand while looking at a laptop screen" |
 
-![turned_to_peer misread as screen_oriented](error_analysis/crops/turned_to_peer_misread_as_screen_oriented__video_0009_0_10_20251017113819_20251017115031__seat0__t437.904.jpg)
+*[turned_to_peer misread as screen_oriented — image withheld]* `turned_to_peer_misread_as_screen_oriented__video_0009_0_10_20251017113819_20251017115031__seat0__t437.904.jpg`
+
+> Crop not published. It is blurred over the head region, but this repository is public, the project has no consent or ethics record, and the filename carries video id, seat and timestamp, so it is re-identifiable against the source video. The file exists locally at `outputs/branch_c/error_analysis/crops/` and is gitignored.
 
 Both examples: `occluded=false`, `det_conf≈0.94`, `head_span_px≈255` — good head
 evidence by every quality proxy available, and the model is still 96% confident on
@@ -397,7 +399,9 @@ orientation.
 | video_0116_..._113708 | 2 | 220.0 | looking_away | screen_oriented | 0.966 | listening | "sitting at a desk with a monitor, looking away to the side" |
 | video_0116_..._113708 | 2 | 947.5 | looking_away | screen_oriented | 0.964 | using_laptop | "wearing glasses and a green hoodie... looking away from the screen" |
 
-![looking_away misread as screen_oriented](error_analysis/crops/looking_away_misread_as_screen_oriented__video_0116_0_10_20251111112529_20251111113708__seat2__t219.961.jpg)
+*[looking_away misread as screen_oriented — image withheld]* `looking_away_misread_as_screen_oriented__video_0116_0_10_20251111112529_20251111113708__seat2__t219.961.jpg`
+
+> Crop not published. It is blurred over the head region, but this repository is public, the project has no consent or ethics record, and the filename carries video id, seat and timestamp, so it is re-identifiable against the source video. The file exists locally at `outputs/branch_c/error_analysis/crops/` and is gitignored.
 
 Same seat, same student track, two widely separated timestamps (220 s and 947 s),
 same error, same near-identical confidence (~0.965) — this looks like a
@@ -416,8 +420,12 @@ here it shows up in the *appearance* channel the MS-TCN is already dominated by
 | video_0029_..._152531 | 2 | 430.8 | head_down | uncertain | 0.933 | head_down_sleeping | (same) |
 | video_0248_..._115330 | 3 | 137.7 | uncertain | head_down | 0.971 | using_laptop | "leaning forward, looking intently at a laptop screen" |
 
-![head_down misread as uncertain](error_analysis/crops/head_down_-_uncertain_confusion__video_0029_0_10_20251014151431_20251014152531__seat2__t431.748.jpg)
-![uncertain misread as head_down](error_analysis/crops/uncertain_head_down_confusion_other_direction__video_0248_0_10_20251027114242_20251027115330__seat3__t137.749.jpg)
+*[head_down misread as uncertain — image withheld]* `head_down_-_uncertain_confusion__video_0029_0_10_20251014151431_20251014152531__seat2__t431.748.jpg`
+
+> Crop not published. It is blurred over the head region, but this repository is public, the project has no consent or ethics record, and the filename carries video id, seat and timestamp, so it is re-identifiable against the source video. The file exists locally at `outputs/branch_c/error_analysis/crops/` and is gitignored.
+*[uncertain misread as head_down — image withheld]* `uncertain_head_down_confusion_other_direction__video_0248_0_10_20251027114242_20251027115330__seat3__t137.749.jpg`
+
+> Crop not published. It is blurred over the head region, but this repository is public, the project has no consent or ethics record, and the filename carries video id, seat and timestamp, so it is re-identifiable against the source video. The file exists locally at `outputs/branch_c/error_analysis/crops/` and is gitignored.
 
 This pair is the most interesting qualitatively. The `head_down`→`uncertain` case
 (`occluded=true`, activity literally labeled `head_down_sleeping`) is a genuine
