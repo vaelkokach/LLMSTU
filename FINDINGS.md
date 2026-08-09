@@ -1170,12 +1170,23 @@ it. Anything added below states where the detail lives.*
     compute. Detail and procedure: `THESIS_PLAN.md` §P0.7 (the annotator tool
     already supports it). Previously deferred by explicit instruction — still
     open, not closed.
-14. ★ **The temporal model has no test number.** 23 of the 27 test videos are in
+14. ~~★ **The temporal model has no test number.** 23 of the 27 test videos are in
     the cue model's training set, so macro-F1 **0.4098 is labelled validation**
     and must stay that way. Closing it means rebuilding the sequences under the
     *detector's* video split and retraining, ~2.5 h on GPU.
     `TEST_SPLIT_PROTOCOL.md` records this as a known limitation; the detector's
-    own test result (R@1 0.6462) is unaffected and final.
+    own test result (R@1 0.6462) is unaffected and final.~~
+    — **STALE. Closed 2026-08-01, eight days before this item was written.**
+    Correction added 2026-08-09. §11.1 re-partitioned the sequences onto the
+    detector's leak-free video split *by metadata alone* (no feature
+    re-extraction, far cheaper than the 2.5 h estimated here) and retrained every
+    model from scratch; §11.9 reports the resulting single pre-registered test
+    run. The temporal model **does** have a test number: MS-TCN-556 macro-F1
+    0.500 ± 0.011, ASRF-556 0.477 ± 0.016, transformer-556 0.407 ± 0.004, three
+    seeds, 27 held-out videos. Those entries are ✅ citable in
+    `outputs/FINAL_RESULTS_REGISTER.md`. This item restated the *pre-rebuild*
+    problem and contradicted "Closed" item 7 three lines above it. Left visible
+    rather than deleted, per the rule that findings are corrected, not erased.
 15. **The dashboard's default model is contestable.** `arch/asrf_556_hp` wins on
     validation macro-F1 — the pre-registered rule — and loses on test (0.4940 vs
     0.5011), on alert coverage (55.6% vs 69.5%) and on inference cost (4.5×).
@@ -2444,6 +2455,120 @@ processes and dispatches to whichever GPU frees first. Confirmed with the resear
 - Disk: 811 GB free of 3.5 T (76% used). `LLMDet/work_dirs/` alone holds ~180 GB and
   `grounding_data/` ~120 GB, so Branch-C caches must be budgeted, sharded and
   hash-keyed rather than written speculatively.
+
+### 12.4 ★ P0 — per-student behavioural annotations are tracked in Git
+
+Found by the reproducibility audit, independently verified by the lead with
+`git ls-files`. Four tracked JSONL files carry per-student behavioural labels keyed
+to an identifiable frame:
+
+| tracked file | lines | key fields |
+|---|---|---|
+| `event_gold_bundle/events_Admin.jsonl` | 1,073 | `file_name`, `activity`, `engagement_level`, `posture`, `phone_visible`, `talking`, `annotator` |
+| `event_gold_bundle/gold_annotations_Admin.jsonl` | 984 | same schema |
+| `grounding_data/llmstu_tools/outputs/gold_candidates.jsonl` | 1,000 | adds `video_id`, `seat_id`, `bbox_person`, `image_path`, `caption` |
+| `tools/gold_annotator/gold_candidates_sample.jsonl` | 50 | adds `abs_path` |
+
+`file_name` embeds video id, frame index and person index
+(`shard_000/part_000/t000000_000_f000000_video_0069_..._p07.jpg`), so each record
+binds a behavioural judgement to one identifiable student in one recording. The
+records contain no pixels, but they are not de-identified: anyone holding the video
+can resolve them to a person.
+
+**This is an inconsistency, not a policy.** The sibling bundle is ignored —
+`.gitignore:51` matches `gold_annotation_bundle*` — but no rule matches
+`event_gold_bundle/`. `git check-ignore` confirms the file is not ignored. Every
+comparable directory (`tools/dashboard/sessions/`, `tools/gold_annotator/gold_*.jsonl`,
+`gold_annotation_bundle*`) is excluded; this one was missed.
+
+Remotes are `github.com/vaelkokach/LLMSTU` and `.../LLMDET_STU`. If either is public
+these records are already published, and adding a `.gitignore` rule now would not
+retract them — that needs a history rewrite and a force-push. **Left untouched pending
+the researcher's decision**: removing tracked files and rewriting history is not a
+change to make unilaterally on someone else's published repository.
+
+Scope check performed at the same time, for the record:
+
+- Tracked images: 28. All are upstream LLMDet/LLaVA demo assets except
+  `overall system.png`, which was opened and inspected — it is a system architecture
+  diagram containing no student imagery. **No student pixels are tracked in Git.**
+- No secrets found (targeted greps for `api_key`/`token`/`secret`/`password`/`hf_`/
+  `sk-`/`Bearer`/`AWS` returned only false positives).
+
+Incidentally, that diagram independently corroborates §12.1: its own data box reads
+"corner-camera classroom/lab videos". The project has described this camera correctly
+since its first system diagram. Only the Branch-C prompt called it overhead.
+
+### 12.5 Ethics status — already known, still unresolved, not for this agent to close
+
+The audit flagged the absence of any ethics/consent record as P0. Verified, and it is
+**not a new finding**: `THESIS_DEFENSIBILITY_REVIEW.md:92` records that "the early
+system diagram says ethics approval is a prerequisite, and the supervisor's notes
+state that approval was forgotten", and `THESIS_FIRST_DRAFT.md:47` carries an explicit
+`[INSERT THE VERIFIED ETHICS/CONSENT BASIS...]` placeholder with the instruction that
+"this text must not be completed by inference".
+
+The repository is handling this correctly by leaving it open. Per the Branch-C
+specification guardrail 9, no ethics approval, consent evidence or human label is
+invented here. Recorded as an external dependency on the researcher and the ethics
+office; it blocks publication, not Branch-C development.
+
+### 12.6 No dependency declaration exists
+
+`git ls-files | grep -E 'requirements|environment|pyproject|setup.py|Pipfile|poetry'`
+returns nothing. There is no requirements.txt, environment.yml, pyproject.toml,
+Dockerfile or Makefile anywhere in the repository. The only environment description is
+upstream LLMDet's README paragraph, which does not mention mediapipe, opencv, sklearn
+or any `attention/` dependency, and whose own `numpy<1.24` constraint is violated by
+the live `numpy 1.26.4`.
+
+`mmdet` is not pip-installed: it resolves through `sys.path.insert(0, LLMDet/)` onto
+the vendored copy at `LLMDet/mmdet/` (v3.3.0, 326 tracked files), which carries local
+patches in four files. Only one of those patches is explained by its commit message.
+
+Detail: `docs/branch_c/ENVIRONMENT_AUDIT.md`, `docs/branch_c/RELEASE_RISK_REGISTER.md`.
+
+### 12.7 Documentation reconciliation — one stale item, one real ambiguity
+
+Full map: `docs/branch_c/DOCUMENTATION_MAP.md` (all 34 tracked Markdown files
+classified, with a precedence order, a conflicts table and a do-not-cite list).
+
+**Open item 14 was stale and is now corrected in place** (§9, annotated 2026-08-09).
+The Branch-C specification's quoted figures — transformer-556 ≈0.407, ASRF-556
+≈0.477, MS-TCN-556 ≈0.500 on test — are correct and citable; §11.1 and §11.9 are the
+authority and `outputs/FINAL_RESULTS_REGISTER.md` marks them ✅. Verified directly by
+the lead against §11.9's table, not accepted on the agent's word.
+
+**A real ambiguity, and it matters for Branch C.** There is no single "deployed
+model": two entry points pick different checkpoints by different rules.
+
+| entry point | checkpoint | width | face backend | selection rule |
+|---|---|---|---|---|
+| `LLMDet/configs/attention_runtime.yaml:86` | `thesis/ff_det/mstcn_553_ff_s42/checkpoints/best.pth` | 553 | BlazeFace detector | the deployment config, chosen on cost + tie in accuracy (§11.16) |
+| `tools/dashboard/model_registry.py:215` | `arch/asrf_556_hp` | 556 | FaceLandmarker | "best deployable variant on validation" (§11.18) |
+
+Both checkpoints exist on disk and both load; this is not a broken path. But
+"Legacy Branch B", which BRANCH_C_PROTOCOL.md §7.3 requires to remain the dashboard
+default and to be reproduced within tolerance, is **two different systems depending
+on how it is launched**. The Branch-C legacy fixture must therefore be frozen for
+*both* entry points, or the regression test will silently validate only one.
+Recorded as a Branch-C integration requirement rather than a defect in Branch B —
+§9 item 15 already records the default as a decision to be made.
+
+Confirmed while checking: `attention_runtime.yaml:39-41` already reads architecture
+and feature width **from the checkpoint's own spec, not from the YAML**, which is the
+strict-loading behaviour the Branch-C specification demands. Branch C inherits this
+rather than reinventing it. Both checkpoints the config names are present
+(`main_llmstu_exact_iter25000_final.pth`, 4.0 G; `mstcn_553_ff_s42/best.pth`, 11 M).
+
+Also confirmed, and not a conflict: the pose-over-`face_found` delta of ~0.0058 with
+0/3 seeds significant agrees across §11.10 and the Branch-C specification.
+
+Documents flagged as misleading if read in isolation, all superseded by §11:
+`THESIS_PLAN.md` status sections (dashboard "dropped", 570-dim headline, the 81.5%
+matching figure), `MODEL_COMPARISON_GUIDE.md` (predates MS-TCN/ASRF entirely), and
+`outputs/FINAL_RESULTS_REGISTER.md`'s runtime rows (3.05 FPS, superseded by 5.77 in
+§11.17). None are Branch-C blockers; all are listed with line citations in the map.
 
 ---
 
