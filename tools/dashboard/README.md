@@ -18,6 +18,69 @@ detector pass is the expensive part of the whole system.
 
 ---
 
+## 0. Start here
+
+**The one-off setup is already done.** Thresholds are fitted for all 13
+deployable models, and `0325.mp4` is already analysed. From the repo root:
+
+```bash
+python tools/dashboard/server.py --session tools/dashboard/sessions/0325 \
+    --model arch/mstcn_556_hp --host 127.0.0.1
+```
+
+Open <http://localhost:8080>. It starts playing immediately — no GPU, no
+detector, nothing to wait for.
+
+Why `--model arch/mstcn_556_hp` and not the registry default: on CPU the default
+(ASRF) replays at **0.19× real time** while MS-TCN manages 0.88×. Drop the flag
+to get the best validation score instead; the reasoning is in §1.
+
+Three things to try once it is up:
+
+1. **Switch models.** Pick another entry in *Model*. The session restarts and
+   every cue is re-decided — the detector never runs. Watch `alert coverage` in
+   the card: it ranges 78.7% down to 30.5% across the registry at the same 85%
+   alert precision.
+2. **Add your own recording.** Drop a video on *Recording*, press **Analyse**,
+   watch the progress bar. Budget ~15 min per 900 frames on CPU (1.04 fps). It
+   plays automatically when done.
+3. **Point it at a camera.** Restart with `--video 0` (webcam) or
+   `--video rtsp://user:pass@host/stream`. See §2 for what changes when the
+   source is live.
+
+### Reading the page
+
+| panel | what it shows |
+|---|---|
+| **Live view** | the frame with a box per tracked student, coloured and labelled by cue |
+| **Class overview** | students tracked, how many are off-task now, and the off-task fraction over time |
+| **Per-student cues** | one row per seat: current cue, how long it has held, and the model's confidence |
+| **Alerts** | sustained episodes only — never a single frame |
+| **Model** | the running checkpoint and what it scores; switch here |
+| **Recording** | upload, analyse, and choose what is playing |
+
+Cues are **visible behaviours**, not mental states: `screen_oriented`,
+`looking_away`, `head_down`, `turned_to_peer`, `phone_use`, and `uncertain`. The
+system reports "head down for 45 s" and never "not paying attention" — it cannot
+see attention, and saying otherwise would be a claim the data does not support.
+
+`uncertain` is not a sixth behaviour, it is an **abstention**: the model's
+confidence fell below its display threshold, so the chip declines to name a cue.
+The raw prediction is still recorded underneath — abstention withholds a claim,
+not the evidence.
+
+An alert needs **three** things at once, which is why the alert count stays far
+below the number of off-task students: a cue in the alertable set, held for its
+minimum duration (phone 15 s, looking away 20 s, head down and turned-to-peer
+30 s), *and* model confidence above that model's own alert threshold. A student
+who glances away cannot generate one.
+
+Seats are track numbers assigned in detection order. They are not identities,
+they do not persist across runs, and no demographic attribute is read anywhere
+in the pipeline.
+
+---
+
 ## 1. What the selector offers
 
 `model_registry.py` reduces the 54 checkpoints under `work_dirs/thesis/` to one
@@ -142,13 +205,17 @@ character allowlist, extension allowlist, and a containment check under
 
 ### The same thing from the command line
 
+Both setup steps are **already done** in this repo. You need them only after
+retraining (step 0) or for a new video you would rather not upload (step 1).
+
 ```bash
-# 0. one-off: thresholds for every model, fitted on ITS OWN validation
-#    predictions. Seconds. Without this the dashboard refuses to load a model.
+# 0. thresholds for every model, fitted on ITS OWN validation predictions.
+#    Seconds. Rerun after adding or retraining a checkpoint; without it the
+#    dashboard refuses to load that model rather than running it uncalibrated.
 python tools/dashboard/calibrate_registry.py
 
-# 1. one-off per video: the expensive pass — what the Analyse button runs.
-#    Detector, tracker, CLIP and BOTH head-pose backends. CPU-bound.
+# 1. per video: the expensive pass — exactly what the Analyse button runs.
+#    Detector, tracker, CLIP and BOTH head-pose backends. ~1.04 fps on CPU.
 python tools/dashboard/precompute_session.py \
     --config LLMDet/configs/attention_runtime.yaml \
     --video LLMDet/0325.mp4 --frames 900 --device cpu \
@@ -159,9 +226,30 @@ python tools/dashboard/server.py --session tools/dashboard/sessions/0325
 #    -> http://localhost:8080
 ```
 
-Useful flags: `--speed 4` to replay faster than real time, `--blur-faces` for a
-classroom deployment or a screenshot, `--model VARIANT_ID` to start on something
-other than the default, `--port`.
+Server flags worth knowing:
+
+| flag | effect |
+|---|---|
+| `--model VARIANT_ID` | start on a specific checkpoint instead of the registry default |
+| `--host 127.0.0.1` | do not expose the port (and its upload endpoint) to the network |
+| `--device cuda:0` | use a GPU if one is free; CPU is the default everywhere |
+| `--blur-faces` | blur the top 35% of each box — for a classroom or a screenshot |
+| `--speed 4` | replay faster than real time. Only helps when the model can keep up: ASRF on CPU is already compute-bound at 0.19×, so this does nothing for it |
+| `--no-upload` | serve read-only |
+| `--analyse-frames N` | frame cap for the Analyse button (default 900) |
+| `--port` | default 8080 |
+
+### Checking it still works
+
+```bash
+python tools/dashboard/verify_dashboard.py --cache tools/dashboard/sessions/0325
+```
+
+Replays several models over one cache and asserts they actually disagree,
+re-reads every `eval_val/metrics.json` to confirm the model card is not showing
+hand-copied numbers, and exercises the HTTP surface including that a
+non-deployable model is refused. Exits non-zero on any failure. Last run: all
+8 HTTP checks and both data checks passed (FINDINGS 11.22).
 
 ### Headless — diff two models over the same session
 
