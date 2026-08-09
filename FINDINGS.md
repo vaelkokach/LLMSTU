@@ -2353,6 +2353,100 @@ the cache is complete and correct — a MediaPipe shutdown-ordering bug, not our
 
 ---
 
+## 12. Branch C — OVERT-Cue integration (2026-08-09)
+
+Working branch `branch-c/overt-cue`, based on `ce1add2` (clean tree, no stash applied).
+Driven by `OPUS_OVERHEAD_ARCHITECTURE_INTEGRATION_PROMPT.md`, treated as the binding
+execution specification. All Branch-C artifacts live under `docs/branch_c/`,
+`outputs/branch_c/`, `LLMDet/configs/branch_c/`, `tools/branch_c/`. No Branch-A or
+Branch-B file, checkpoint, config, split or dashboard route is modified.
+
+### 12.1 ★ P0 — the data is not overhead. The specification's premise is wrong.
+
+The spec builds its entire contribution on "fixed **overhead** multi-student video"
+and names the method OVERT = **Overhead** Viewpoint-invariant... Guardrail 2 of that
+same spec requires the geometry to be quantified rather than assumed. It was assumed
+wrongly.
+
+**Evidence.** Six recordings sampled across four distinct capture dates
+(`video_0005` 2025-10-14, `video_0018` 2025-10-14, `video_0052` 2025-11-10,
+`video_0070` 2025-11-10, `video_0133` 2025-11-11, `video_0270` 2025-10-27), median
+frame of each, rendered from `grounding_data/stu_img/frames/` via
+`grounding_data/llmstu_tools/outputs/frame_to_video.json`:
+
+| observation | value |
+|---|---|
+| camera mount | fixed, corner of room, elevated ~2-3 m |
+| elevation angle | oblique, roughly 20-30 deg above horizontal — **not top-down** |
+| rooms | 1 (same wall, bins, door, floor, desk layout in every sample) |
+| camera poses | 1 (identical framing across all four dates) |
+| resolution | 2812x1050, constant (`DATA_INVENTORY.md`) |
+| scene | computer lab, rows of desks, one Dell monitor per seat |
+| dominant head aspect | rear/three-quarter — students face monitors *away* from camera |
+
+This independently corroborates FINDINGS §9a, which already recorded the setting as
+"a *computer lab* (students facing monitors)". The repository was right; the Branch-C
+prompt's "overhead" framing was not.
+
+**Consequences, all binding on the rest of Branch C:**
+
+1. The name and claim are narrowed. Decision recorded and confirmed by the researcher
+   2026-08-09. "Overhead" is dropped from the contribution wording. The retained claim
+   is *seat/task-relative* pose canonicalisation for a **fixed oblique classroom
+   camera**, not overhead-specific adaptation.
+2. **Viewpoint invariance cannot be validated empirically.** One camera pose exists in
+   the entire corpus, so there is no held-out viewpoint. The SO(2)/SO(3) invariance is
+   provable and unit-testable, and can be probed with synthetic global rotations only.
+   Any claim of cross-camera generalisation would be unsupported and will not be made.
+3. The task-relative motivation is **stronger** here than the overhead framing would
+   have been, and this is now the falsifiable core: every seat faces a monitor at a
+   seat-dependent direction, so the camera-frame head yaw corresponding to
+   `screen_oriented` differs systematically between a front-left seat and a right-hand
+   seat. Camera-frame pose therefore confounds cue with seat identity; seat-frame pose
+   should not. This is a directly testable prediction, and it is the test that decides
+   whether the pose contribution survives (spec critical success condition).
+4. Full-range head pose (DirectMHP / 6DRepNet360) is genuinely motivated over WHENet,
+   because rear-of-head views dominate rather than being an edge case.
+5. It also predicts the known `face_found` shortcut (§11.4): a face is detectable
+   mainly when a student has turned away from their monitor, so face presence is
+   nearly a cue label. This is the shortcut the new gate must be audited against.
+
+### 12.2 ★ P0 — no unused external holdout exists
+
+The spec's preferred protocol is to freeze genuinely unused videos as an external
+holdout. Checked exhaustively:
+
+- `grounding_data/llmstu_tools/outputs/splits.json` — 73 train / 27 val / 27 test = **127 videos**
+- `grounding_data/llmstu_tools/outputs/frame_to_video.json` — **128 distinct videos**, 104,069 frames
+- set difference: exactly one unused video, `video_0162_0_10_20251026030716_20251026032847`,
+  carrying **4 frames**.
+
+Four frames is not a holdout. The spec's fallback therefore applies and is not
+optional: **nested grouped cross-validation**, grouped by video, with the old Branch-B
+test reported only as a legacy retrospective. Frozen in `BRANCH_C_PROTOCOL.md` before
+any held-out result is read. Camera grouping is vacuous here (one camera) and
+subject grouping is not recoverable — students are not identified across recordings —
+so video is the only defensible grouping unit, and that limitation is stated rather
+than papered over.
+
+### 12.3 Environment and scheduler
+
+No cluster scheduler exists on this host: `sinfo`, `squeue`, `sbatch`, `scontrol` are
+all absent. The repository's dispatcher is
+`LLMDet/attention/thesis_eval/launch_sweep.py`, which runs independent single-GPU
+processes and dispatches to whichever GPU frees first. Confirmed with the researcher
+2026-08-09 that this is the mechanism to extend; there is no cluster to submit to.
+
+- Host GPUs: 8x A100-SXM4-40GB. **Concurrency capped at 4** by standing instruction
+  (shared box); GPUs 0 and 4 already carried other users' processes at audit time
+  (4206 MiB and 664 MiB).
+- Python 3.11.9, torch 2.2.2+cu121, CUDA 12.1, 8 devices visible.
+- Disk: 811 GB free of 3.5 T (76% used). `LLMDet/work_dirs/` alone holds ~180 GB and
+  `grounding_data/` ~120 GB, so Branch-C caches must be budgeted, sharded and
+  hash-keyed rather than written speculatively.
+
+---
+
 ## 10. Changelog
 
 **2026-08-08**
