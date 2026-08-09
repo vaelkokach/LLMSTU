@@ -1129,6 +1129,11 @@ Fixed by `llmstu_tools/add_conversations.py` (127,099 records, 0 empty fallbacks
 completed, and the dashboard was listed as dropped after it had been rebuilt and
 verified; both contradictions are removed. See `outputs/thesis_audit_report.md` §8.*
 
+*Updated 2026-08-09 with items 13–17. Between 08-01 and 08-09 this list went
+stale in the other direction: §11.12–11.22 opened five items and none of them
+appeared here, so the one place a reader would look for open work showed none of
+it. Anything added below states where the detail lives.*
+
 **Closed**
 
 1. ~~Matching sweep at `spatial_weight = 0.0`~~ — **done 2026-07-31**, §3.2. The
@@ -1155,6 +1160,37 @@ verified; both contradictions are removed. See `outputs/thesis_audit_report.md` 
     could give it one. See §11.2.
 12. Pseudo-label model identity is not recorded anywhere in the pipeline outputs.
     §2.1 and `outputs/thesis_audit_report.md` §7.
+
+**Still open — added 2026-08-09**
+
+13. ★ **No second annotator.** All 1,984 gold labels come from one person and
+    Cohen's kappa is unmeasured, so every human-gold number in the thesis rests
+    on an inter-annotator agreement nobody has computed. The **largest remaining
+    defence exposure**, and the only item here that needs a *person* rather than
+    compute. Detail and procedure: `THESIS_PLAN.md` §P0.7 (the annotator tool
+    already supports it). Previously deferred by explicit instruction — still
+    open, not closed.
+14. ★ **The temporal model has no test number.** 23 of the 27 test videos are in
+    the cue model's training set, so macro-F1 **0.4098 is labelled validation**
+    and must stay that way. Closing it means rebuilding the sequences under the
+    *detector's* video split and retraining, ~2.5 h on GPU.
+    `TEST_SPLIT_PROTOCOL.md` records this as a known limitation; the detector's
+    own test result (R@1 0.6462) is unaffected and final.
+15. **The dashboard's default model is contestable.** `arch/asrf_556_hp` wins on
+    validation macro-F1 — the pre-registered rule — and loses on test (0.4940 vs
+    0.5011), on alert coverage (55.6% vs 69.5%) and on inference cost (4.5×).
+    Left unchanged deliberately: switching after seeing test and timing numbers
+    is selection-after-the-fact. §11.21, §11.22. A decision to be *made*, not a
+    bug to fix.
+16. **`max_age` is not rescaled by capture rate.** It counts *processed* frames
+    and was tuned at ~25 fps processed, so on a live camera at 2 fps a track
+    survives ~22 s of occlusion instead of 1.8 s. `StrideController` already
+    rescales `min_hits`; nothing rescales this. Only bites with a real camera,
+    and the right value needs a measured capture rate. §11.19.
+17. **Live-path CPU throughput is unmeasured.** §11.22 measured the *precompute*
+    at 1.04 fps, which runs both head-pose backends and is therefore an upper
+    bound on cost, not the live figure. The GPU live path is 5.77 fps (§11.17).
+    Decides whether live capture is demonstrable without a GPU.
 
 ---
 
