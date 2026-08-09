@@ -64,3 +64,8 @@ grounding_data/external/
 grounding_data/llmstu_sequences_full_bp/
 grounding_data/llmstu_sequences_full_det/
 huggingface/mediapipe/*.tflite
+
+# Branch-C error-analysis crops: derived identifiable student media. Blurred, but
+# the filenames carry video id + seat + timestamp and the repo is public, so they
+# stay local. See FINDINGS 12.4 and docs/branch_c/RELEASE_RISK_REGISTER.md.
+outputs/branch_c/error_analysis/crops/
