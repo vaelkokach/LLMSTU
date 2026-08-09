@@ -1,0 +1,74 @@
+{
+  "screen_oriented": {
+    "support": 168028,
+    "n_errors": 24630,
+    "error_rate": 0.14658271240507534,
+    "top_confusions": {
+      "looking_away": 0.35757206658546486,
+      "turned_to_peer": 0.2027202598457166,
+      "uncertain": 0.1535931790499391,
+      "phone_use": 0.15330897279740155,
+      "head_down": 0.13280552172147786
+    }
+  },
+  "looking_away": {
+    "support": 14498,
+    "n_errors": 9722,
+    "error_rate": 0.6705752517588633,
+    "top_confusions": {
+      "screen_oriented": 0.8487965439210039,
+      "turned_to_peer": 0.06655009257354454,
+      "phone_use": 0.03312075704587533,
+      "head_down": 0.026434889940341495,
+      "uncertain": 0.025097716519234724
+    }
+  },
+  "head_down": {
+    "support": 12302,
+    "n_errors": 5602,
+    "error_rate": 0.4553731100634043,
+    "top_confusions": {
+      "screen_oriented": 0.599785790789004,
+      "uncertain": 0.28364869689396643,
+      "looking_away": 0.09103891467333096,
+      "phone_use": 0.017136736879685827,
+      "turned_to_peer": 0.008389860764012852
+    }
+  },
+  "turned_to_peer": {
+    "support": 5409,
+    "n_errors": 4079,
+    "error_rate": 0.7541135145128489,
+    "top_confusions": {
+      "screen_oriented": 0.7874479038980142,
+      "looking_away": 0.13704339298847756,
+      "uncertain": 0.04780583476342241,
+      "phone_use": 0.0201029664133366,
+      "head_down": 0.007599901936749203
+    }
+  },
+  "phone_use": {
+    "support": 10135,
+    "n_errors": 4639,
+    "error_rate": 0.4577207696102615,
+    "top_confusions": {
+      "screen_oriented": 0.8663505065746928,
+      "looking_away": 0.07242940288855357,
+      "turned_to_peer": 0.02823884457857297,
+      "head_down": 0.01940073291657685,
+      "uncertain": 0.013580513041603794
+    }
+  },
+  "uncertain": {
+    "support": 10283,
+    "n_errors": 4718,
+    "error_rate": 0.45881552076242343,
+    "top_confusions": {
+      "screen_oriented": 0.4720220432386604,
+      "head_down": 0.3658329800763035,
+      "turned_to_peer": 0.0824501907587961,
+      "looking_away": 0.05871131835523527,
+      "phone_use": 0.020983467571004662
+    }
+  }
+}

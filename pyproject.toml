@@ -51,16 +51,34 @@ demo = [
     "Pillow==10.3.0",
 ]
 
-# `research` -- the full live pipeline: detector inference (via the vendored
-# LLMDet/mmdet, see note below -- NOT listed here), CLIP appearance features,
-# and the MediaPipe head-pose/face backends. Matches `bootstrap.py --profile
-# research` and `--profile full-data`. Includes everything in `demo`.
+# `research` -- the full live pipeline: detector inference, CLIP appearance
+# features, and the MediaPipe head-pose/face backends. Matches
+# `bootstrap.py --profile research` and `--profile full-data`. Includes
+# everything in `demo`.
+#
+# addict/matplotlib/pycocotools/shapely/six/terminaltables/yapf below are NOT
+# mmdet itself (see the big note at the bottom of this file for why mmdet is
+# never declared) -- they are the VENDORED LLMDet/mmdet/ tree's own runtime
+# prerequisites (its `import` chain: LLMDet/attention/detector_adapter.py ->
+# mmdet.apis.inference -> ... -> these). Without them, `import mmdet` against
+# the vendored copy fails with ModuleNotFoundError even though mmdet itself
+# is never pip-installed. Versions pinned to what is actually installed and
+# exercised on the reference box (2026-08-09).
 research = [
     "opencv-python==4.11.0.86",
     "PyYAML==6.0.1",
     "Pillow==10.3.0",
     "transformers==4.44.2",
     "mediapipe==1.0.0",
+    "mmcv==2.2.0",
+    "mmengine==0.10.7",
+    "addict==2.4.0",
+    "matplotlib==3.8.4",
+    "pycocotools==2.0.10",
+    "shapely==2.1.1",
+    "six==1.16.0",
+    "terminaltables==3.1.10",
+    "yapf==0.43.0",
 ]
 
 # `train` -- training-only scripts (LLMDet/attention/train_temporal_ddp.py's
@@ -85,11 +103,11 @@ py-modules = []
 # the detector path must run from a working directory where `LLMDet/` is on
 # `sys.path` (every entry point in `tools/dashboard/` and `LLMDet/tools/`
 # already does this insertion itself) rather than `pip install`-ing mmdet at
-# all. `mmcv` and `mmengine` (mmdet's own dependencies, confirmed pip-installed
-# at 2.2.0 / 0.10.7 on the reference box) are likewise left undeclared here
-# for the same reason: they must match whatever the vendored mmdet/3.3.0
-# actually expects, and pinning them independently in this file could silently
-# drift from that.
+# all. `mmcv`/`mmengine`/`addict`/`matplotlib`/`pycocotools`/`shapely`/`six`/
+# `terminaltables`/`yapf` ARE declared, in `[research]` above -- but as the
+# vendored copy's own prerequisites, pinned to what makes `import mmdet`
+# against LLMDet/mmdet/ actually succeed on the reference box, not as a
+# statement that this project depends on "mmdet" as a package name.
 #
 # `ultralytics` (AGPL-3.0) and any GPL-3.0 component (e.g. DirectMHP) are
 # intentionally never declared here, in any extra, under any circumstance --

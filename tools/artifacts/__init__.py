@@ -403,6 +403,11 @@ def atomic_install(tmp_path: Path, dest_path: Path) -> None:
     try:
         os.replace(tmp_path, dest_path)
     except OSError:
+        # Different filesystems (e.g. EXDEV): os.replace can't do a plain
+        # rename. Copy+fsync+rename-of-the-copy is still atomic from the
+        # destination directory's point of view, and to match os.replace's
+        # own move (not copy) semantics, the original tmp_path is removed
+        # once its bytes are safely installed.
         fd, tmp_name = tempfile.mkstemp(dir=str(dest_path.parent))
         try:
             with os.fdopen(fd, "wb") as out_f, open(tmp_path, "rb") as in_f:
@@ -410,6 +415,7 @@ def atomic_install(tmp_path: Path, dest_path: Path) -> None:
                 out_f.flush()
                 os.fsync(out_f.fileno())
             os.replace(tmp_name, dest_path)
+            tmp_path.unlink(missing_ok=True)
         finally:
             if os.path.exists(tmp_name):
                 os.remove(tmp_name)

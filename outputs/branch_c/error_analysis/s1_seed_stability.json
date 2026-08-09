@@ -1,0 +1,122 @@
+{
+  "42": {
+    "macro_f1": 0.5000794019834583,
+    "per_class_f1": {
+      "screen_oriented": 0.8625547375006015,
+      "looking_away": 0.3209353895776635,
+      "head_down": 0.549698486278049,
+      "turned_to_peer": 0.20546887069365055,
+      "phone_use": 0.5494351694491653,
+      "uncertain": 0.5123837584016204
+    },
+    "top5_error_pairs": [
+      [
+        "screen_oriented",
+        "looking_away",
+        8807
+      ],
+      [
+        "looking_away",
+        "screen_oriented",
+        8252
+      ],
+      [
+        "screen_oriented",
+        "turned_to_peer",
+        4993
+      ],
+      [
+        "phone_use",
+        "screen_oriented",
+        4019
+      ],
+      [
+        "screen_oriented",
+        "uncertain",
+        3783
+      ]
+    ],
+    "n_errors": 53390,
+    "n": 220655
+  },
+  "43": {
+    "macro_f1": 0.4904890254641155,
+    "per_class_f1": {
+      "screen_oriented": 0.8511628479617842,
+      "looking_away": 0.2993612885309636,
+      "head_down": 0.5535933965633556,
+      "turned_to_peer": 0.23526610310751278,
+      "phone_use": 0.5323437874072301,
+      "uncertain": 0.4712067292138466
+    },
+    "top5_error_pairs": [
+      [
+        "screen_oriented",
+        "looking_away",
+        8595
+      ],
+      [
+        "looking_away",
+        "screen_oriented",
+        7917
+      ],
+      [
+        "screen_oriented",
+        "turned_to_peer",
+        7552
+      ],
+      [
+        "screen_oriented",
+        "uncertain",
+        5803
+      ],
+      [
+        "screen_oriented",
+        "phone_use",
+        4465
+      ]
+    ],
+    "n_errors": 57739,
+    "n": 220655
+  },
+  "44": {
+    "macro_f1": 0.4891265859390181,
+    "per_class_f1": {
+      "screen_oriented": 0.8367845748633258,
+      "looking_away": 0.32878736220025007,
+      "head_down": 0.519708224586763,
+      "turned_to_peer": 0.22554806070826305,
+      "phone_use": 0.5208206187502934,
+      "uncertain": 0.5031106745252129
+    },
+    "top5_error_pairs": [
+      [
+        "screen_oriented",
+        "looking_away",
+        12847
+      ],
+      [
+        "screen_oriented",
+        "head_down",
+        6713
+      ],
+      [
+        "looking_away",
+        "screen_oriented",
+        6580
+      ],
+      [
+        "screen_oriented",
+        "turned_to_peer",
+        6060
+      ],
+      [
+        "screen_oriented",
+        "uncertain",
+        5356
+      ]
+    ],
+    "n_errors": 61483,
+    "n": 220655
+  }
+}

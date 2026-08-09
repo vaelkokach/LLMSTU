@@ -3109,6 +3109,80 @@ model that is not being claimed, and would spend a resource that cannot be
 regenerated. Preserving five untouched outer folds is worth more to future work
 than confirming a null.
 
+### 12.17 `seat_id` is two different namespaces, and one of them is not the model's
+
+Raised by the error-analysis agent, which found its `(video_id, seat_id)` join from
+predictions back to `labels_tracked.jsonl` succeeding on only 73% of frames and
+**correctly refused to make any join-dependent claim** rather than guessing. Verified
+by the lead:
+
+| source | (video, seat) pairs | seat id range |
+|---|---|---|
+| `predictions.npz` (any Branch-C eval) | 151 in fold 0 val | 0…11 |
+| `grounding_data/llmstu_seq_split_manifest.json` | 1,099 | 0…11 |
+| `grounding_data/llmstu_tools/outputs/labels_tracked.jsonl` | 893 | **−1**…10 |
+
+Overlap of prediction pairs with `labels_tracked`: **62.3%**.
+Overlap of prediction pairs with the sequence manifest: **100%, zero unmatched.**
+
+**Cause, not a defect.** Seats are clustered twice by two independent passes:
+`grounding_data/llmstu_tools/build_seat_tracks.py` writes the `seat_id` in
+`labels_tracked.jsonl`, while `attention/sequence_builder.py:assign_seats()`
+re-derives seats from centroid clustering when the sequences are built. Two
+independent clusterings over the same crops agree on *content* but not on *index*,
+and `labels_tracked` additionally carries `seat_id = -1` for unassigned crops.
+
+**Consequences, in order of importance:**
+
+1. **Nothing in the Branch-C results is affected.** Folds are grouped by
+   `video_id`, never by seat, and every model, evaluation and manifest in this
+   branch uses the sequence-builder namespace consistently. Predictions being a
+   strict subset of the manifest is the check that matters, and it passes exactly.
+2. **Any analysis joining predictions to `labels_tracked` on `seat_id` is invalid**
+   and will silently drop or mis-attribute ~38% of tracks. The correct join is via
+   the sequence file plus frame index, recovered by
+   `thesis_eval/patch_pose_columns.replay_chunks`, which proves alignment by
+   requiring exact timestamp equality — that is how every Branch-C feature build in
+   §12.14-12.16 attached data to rows, so those are sound.
+3. This is a trap for future work and is recorded as one. The two namespaces look
+   identical (same field name, overlapping integer range) and differ silently.
+
+### 12.18 ★ Error analysis: the pose block changes predictions less than the seed does
+
+Full analysis: `outputs/branch_c/ERROR_ANALYSIS.md`. Inner validation only;
+the agent independently re-verified that all 45 prediction files are exactly their
+fold's inner-validation set with zero outer-fold overlap before analysing anything.
+
+**The measurement that most sharpens §12.16.** Frame-level prediction agreement:
+
+| pair | agreement |
+|---|---|
+| arm 2 (MediaPipe angles) vs arm 5 (full-range rotation) | **81.9%** |
+| same arm, different seed — the noise floor | **82.7%** (range 81.7-83.6) |
+
+Swapping a face-gated 63%-coverage estimator for a validated full-range one
+**changes predictions slightly less than changing the random seed does**, and the
+~18% that do change are near-symmetric right↔wrong swaps (6.9% vs 7.9%). "−0.0022
+macro-F1" understates this: the pose block is not merely failing to help, it is not
+being used in any reproducible way.
+
+**Dominant failure is a majority-class attractor.** `screen_oriented` ↔
+`looking_away` is 32.0% of all errors; every minority class's single largest error
+destination is `screen_oriented` (28.9% of all errors). `turned_to_peer` errs on
+75.4% of its frames, 78.7% of those into `screen_oriented`; `looking_away` errs on
+67.1%, 84.9% into `screen_oriented`. With 85% of frames being `screen_oriented`,
+the model's residual error is overwhelmingly "gave up and said on-task".
+
+**Abstention does not rescue it**, which matters because the dashboard ships an
+abstention mechanism. Macro-F1 peaks at 50% coverage (0.630) and then *collapses*
+to 0.418 at 10% coverage: thresholding on confidence removes the rare classes
+before it removes the wrong predictions, driving `turned_to_peer` and
+`looking_away` recall to zero. 29% of errors survive a 0.7 confidence threshold.
+
+**Errors are sustained, not cosmetic.** 65% of error frames sit in runs of ≥3
+consecutive frames, so the event layer's debouncing will not absorb them; they
+become false alerts rather than flicker.
+
 ---
 
 ## 10. Changelog

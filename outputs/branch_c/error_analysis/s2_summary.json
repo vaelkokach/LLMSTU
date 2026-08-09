@@ -1,0 +1,14 @@
+{
+  "arm2_vs_arm5_mean_agreement_rate": 0.8192729874866438,
+  "arm2_vs_arm5_sd_agreement_rate": 0.05445499130224985,
+  "seed_noise_floor_mean_agreement_rate": 0.8267759286616467,
+  "seed_noise_floor_sd_agreement_rate": 0.04384219190308615,
+  "seed_noise_floor_by_arm": {
+    "arm2": 0.8364494478925522,
+    "arm5": 0.8171024094307416
+  },
+  "mean_both_correct_frac": 0.6614291370783149,
+  "mean_both_wrong_frac": 0.19030258216210025,
+  "mean_arm5_right_arm2_wrong_frac": 0.06944490350254943,
+  "mean_arm2_right_arm5_wrong_frac": 0.07882337725703553
+}
