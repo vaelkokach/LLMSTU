@@ -25,6 +25,7 @@ REPO = Path(__file__).resolve().parents[2]
 RUNS = REPO / "outputs/branch_c/runs"
 
 LABELS = {
+    "arm0_mstcn_quality": "arm 0  quality/missingness only (shortcut audit)",
     "arm1_mstcn_553_ff": "arm 1  base + face_found (deployment / presence-only control)",
     "arm2_mstcn_556_mp": "arm 2  + MediaPipe angles (legacy pose baseline)",
     "arm5_mstcn_556_fr": "arm 5  + 6DRepNet360 full-range rotation (candidate)",
@@ -87,7 +88,8 @@ def main() -> None:
     print("\nPAIRED CONTRASTS (same fold and seed, 15 matched pairs)")
     print(f"{'contrast':<44}{'pairs':>7}{'mean d':>10}{'95% CI':>22}{'p':>9}{'wins':>8}")
     print("-" * 100)
-    contrasts = [("arm2_mstcn_556_mp", "arm1_mstcn_553_ff"),
+    contrasts = [("arm1_mstcn_553_ff", "arm0_mstcn_quality"),
+                 ("arm2_mstcn_556_mp", "arm1_mstcn_553_ff"),
                  ("arm5_mstcn_556_fr", "arm1_mstcn_553_ff"),
                  ("arm5_mstcn_556_fr", "arm2_mstcn_556_mp")]
     pairs_out = {}

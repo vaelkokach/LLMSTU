@@ -1,0 +1,1391 @@
+{
+  "generated": "2026-08-09",
+  "evaluator_version": "thesis_eval/1.0.0",
+  "protocol_version": "1.0.0 (BRANCH_C_PROTOCOL.md, amendment A1)",
+  "fold_manifest_sha256": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+  "note": "INNER VALIDATION ONLY. The outer folds of outputs/branch_c/splits/branch_c_folds.json have NOT been opened and no number in this file is a generalisation estimate. Every value is independently recomputed from outputs/branch_c/eval/<eid>/metrics.json (45 files; a 46th directory, eval/arm5_f0_s42, is a superseded duplicate of eval/arm5_mstcn_556_fr_f0_s42 from an earlier invocation and is EXCLUDED from all counts and aggregates below -- see verification_notes.stray_eval_dir). These numbers are selection-stage statistics used to run the protocol's amendment-A1 pose gate and are NOT comparable to the Branch-B test numbers in outputs/FINAL_RESULTS_REGISTER.md (0.500 etc.), which come from a different partition under a different protocol.",
+  "entries": [
+    {
+      "metric": "macro_f1",
+      "arm": "arm1_mstcn_553_ff",
+      "value": 0.4837,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.027
+      },
+      "bootstrap_ci95": [
+        0.4708,
+        0.4972
+      ],
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs; NOT frame-pooled)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm1_mstcn_553_ff/arm1_mstcn_553_ff_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm1_mstcn_553_ff_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=553_facefound / input_dim=553 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm1_mstcn_553_ff_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Inner-validation selection statistic, NOT a generalisation estimate -- outer folds unopened. NOT comparable to Branch-B test numbers (different partition, different protocol)."
+    },
+    {
+      "metric": "balanced_accuracy",
+      "arm": "arm1_mstcn_553_ff",
+      "value": 0.5208,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0409
+      },
+      "bootstrap_ci95": [
+        0.5004,
+        0.5401
+      ],
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs; NOT frame-pooled)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm1_mstcn_553_ff/arm1_mstcn_553_ff_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm1_mstcn_553_ff_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=553_facefound / input_dim=553 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm1_mstcn_553_ff_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Inner-validation selection statistic, NOT a generalisation estimate -- outer folds unopened. NOT comparable to Branch-B test numbers (different partition, different protocol)."
+    },
+    {
+      "metric": "nll_raw",
+      "arm": "arm1_mstcn_553_ff",
+      "value": 0.7653,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.081
+      },
+      "bootstrap_ci95": [
+        0.7261,
+        0.8056
+      ],
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs; NOT frame-pooled)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm1_mstcn_553_ff/arm1_mstcn_553_ff_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm1_mstcn_553_ff_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=553_facefound / input_dim=553 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm1_mstcn_553_ff_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Raw (uncalibrated) value; no temperature-calibrated NLL/Brier/ECE exists anywhere in outputs/branch_c (all metrics.json carry 'refined': false) despite protocol \u00a73.2 requiring both. Inner-validation selection statistic, NOT a generalisation estimate -- outer folds unopened. NOT comparable to Branch-B test numbers (different partition, different protocol)."
+    },
+    {
+      "metric": "brier_raw",
+      "arm": "arm1_mstcn_553_ff",
+      "value": 0.3867,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0462
+      },
+      "bootstrap_ci95": [
+        0.3641,
+        0.4093
+      ],
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs; NOT frame-pooled)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm1_mstcn_553_ff/arm1_mstcn_553_ff_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm1_mstcn_553_ff_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=553_facefound / input_dim=553 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm1_mstcn_553_ff_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Raw (uncalibrated) value; no temperature-calibrated NLL/Brier/ECE exists anywhere in outputs/branch_c (all metrics.json carry 'refined': false) despite protocol \u00a73.2 requiring both. Inner-validation selection statistic, NOT a generalisation estimate -- outer folds unopened. NOT comparable to Branch-B test numbers (different partition, different protocol)."
+    },
+    {
+      "metric": "ece_raw",
+      "arm": "arm1_mstcn_553_ff",
+      "value": 0.0471,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0185
+      },
+      "bootstrap_ci95": [
+        0.0384,
+        0.0564
+      ],
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs; NOT frame-pooled)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm1_mstcn_553_ff/arm1_mstcn_553_ff_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm1_mstcn_553_ff_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=553_facefound / input_dim=553 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm1_mstcn_553_ff_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Raw (uncalibrated) value; no temperature-calibrated NLL/Brier/ECE exists anywhere in outputs/branch_c (all metrics.json carry 'refined': false) despite protocol \u00a73.2 requiring both. Inner-validation selection statistic, NOT a generalisation estimate -- outer folds unopened. NOT comparable to Branch-B test numbers (different partition, different protocol)."
+    },
+    {
+      "metric": "macro_auprc",
+      "arm": "arm1_mstcn_553_ff",
+      "value": 0.4815,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0362
+      },
+      "bootstrap_ci95": [
+        0.464,
+        0.4993
+      ],
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs; NOT frame-pooled)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm1_mstcn_553_ff/arm1_mstcn_553_ff_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm1_mstcn_553_ff_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=553_facefound / input_dim=553 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm1_mstcn_553_ff_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Inner-validation selection statistic, NOT a generalisation estimate -- outer folds unopened. NOT comparable to Branch-B test numbers (different partition, different protocol)."
+    },
+    {
+      "metric": "macro_auroc",
+      "arm": "arm1_mstcn_553_ff",
+      "value": 0.8584,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0137
+      },
+      "bootstrap_ci95": [
+        0.8517,
+        0.8649
+      ],
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs; NOT frame-pooled)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm1_mstcn_553_ff/arm1_mstcn_553_ff_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm1_mstcn_553_ff_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=553_facefound / input_dim=553 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm1_mstcn_553_ff_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Inner-validation selection statistic, NOT a generalisation estimate -- outer folds unopened. NOT comparable to Branch-B test numbers (different partition, different protocol)."
+    },
+    {
+      "metric": "f1_screen_oriented",
+      "arm": "arm1_mstcn_553_ff",
+      "value": 0.8482,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0239
+      },
+      "bootstrap_ci95": [
+        0.8364,
+        0.8595
+      ],
+      "support_pooled_frames": 168028,
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm1_mstcn_553_ff/arm1_mstcn_553_ff_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm1_mstcn_553_ff_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=553_facefound / input_dim=553 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm1_mstcn_553_ff_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Support = 168028 pooled frames, summed once per fold's inner-val split (5 folds), NOT multiplied by seed (same frames scored under 3 different seeds' models). turned_to_peer has the smallest support (5,409 pooled frames; 63 sequences corpus-wide per protocol \u00a72.2) and its per-run F1 is correspondingly volatile (sd=0.05-0.07 over 15 runs) -- protocol \u00a72.2 flags this class as near-meaningless per-fold. Inner-validation selection statistic, NOT a generalisation estimate. NOT comparable to Branch-B test numbers."
+    },
+    {
+      "metric": "f1_looking_away",
+      "arm": "arm1_mstcn_553_ff",
+      "value": 0.302,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0469
+      },
+      "bootstrap_ci95": [
+        0.2784,
+        0.3235
+      ],
+      "support_pooled_frames": 14498,
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm1_mstcn_553_ff/arm1_mstcn_553_ff_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm1_mstcn_553_ff_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=553_facefound / input_dim=553 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm1_mstcn_553_ff_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Support = 14498 pooled frames, summed once per fold's inner-val split (5 folds), NOT multiplied by seed (same frames scored under 3 different seeds' models). turned_to_peer has the smallest support (5,409 pooled frames; 63 sequences corpus-wide per protocol \u00a72.2) and its per-run F1 is correspondingly volatile (sd=0.05-0.07 over 15 runs) -- protocol \u00a72.2 flags this class as near-meaningless per-fold. Inner-validation selection statistic, NOT a generalisation estimate. NOT comparable to Branch-B test numbers."
+    },
+    {
+      "metric": "f1_head_down",
+      "arm": "arm1_mstcn_553_ff",
+      "value": 0.536,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0918
+      },
+      "bootstrap_ci95": [
+        0.4908,
+        0.5812
+      ],
+      "support_pooled_frames": 12302,
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm1_mstcn_553_ff/arm1_mstcn_553_ff_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm1_mstcn_553_ff_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=553_facefound / input_dim=553 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm1_mstcn_553_ff_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Support = 12302 pooled frames, summed once per fold's inner-val split (5 folds), NOT multiplied by seed (same frames scored under 3 different seeds' models). turned_to_peer has the smallest support (5,409 pooled frames; 63 sequences corpus-wide per protocol \u00a72.2) and its per-run F1 is correspondingly volatile (sd=0.05-0.07 over 15 runs) -- protocol \u00a72.2 flags this class as near-meaningless per-fold. Inner-validation selection statistic, NOT a generalisation estimate. NOT comparable to Branch-B test numbers."
+    },
+    {
+      "metric": "f1_turned_to_peer",
+      "arm": "arm1_mstcn_553_ff",
+      "value": 0.1986,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0625
+      },
+      "bootstrap_ci95": [
+        0.1682,
+        0.2294
+      ],
+      "support_pooled_frames": 5409,
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm1_mstcn_553_ff/arm1_mstcn_553_ff_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm1_mstcn_553_ff_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=553_facefound / input_dim=553 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm1_mstcn_553_ff_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Support = 5409 pooled frames, summed once per fold's inner-val split (5 folds), NOT multiplied by seed (same frames scored under 3 different seeds' models). turned_to_peer has the smallest support (5,409 pooled frames; 63 sequences corpus-wide per protocol \u00a72.2) and its per-run F1 is correspondingly volatile (sd=0.05-0.07 over 15 runs) -- protocol \u00a72.2 flags this class as near-meaningless per-fold. Inner-validation selection statistic, NOT a generalisation estimate. NOT comparable to Branch-B test numbers."
+    },
+    {
+      "metric": "f1_phone_use",
+      "arm": "arm1_mstcn_553_ff",
+      "value": 0.5187,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0688
+      },
+      "bootstrap_ci95": [
+        0.4875,
+        0.5543
+      ],
+      "support_pooled_frames": 10135,
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm1_mstcn_553_ff/arm1_mstcn_553_ff_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm1_mstcn_553_ff_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=553_facefound / input_dim=553 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm1_mstcn_553_ff_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Support = 10135 pooled frames, summed once per fold's inner-val split (5 folds), NOT multiplied by seed (same frames scored under 3 different seeds' models). turned_to_peer has the smallest support (5,409 pooled frames; 63 sequences corpus-wide per protocol \u00a72.2) and its per-run F1 is correspondingly volatile (sd=0.05-0.07 over 15 runs) -- protocol \u00a72.2 flags this class as near-meaningless per-fold. Inner-validation selection statistic, NOT a generalisation estimate. NOT comparable to Branch-B test numbers."
+    },
+    {
+      "metric": "f1_uncertain",
+      "arm": "arm1_mstcn_553_ff",
+      "value": 0.4986,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0373
+      },
+      "bootstrap_ci95": [
+        0.4808,
+        0.5166
+      ],
+      "support_pooled_frames": 10283,
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm1_mstcn_553_ff/arm1_mstcn_553_ff_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm1_mstcn_553_ff_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=553_facefound / input_dim=553 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm1_mstcn_553_ff_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Support = 10283 pooled frames, summed once per fold's inner-val split (5 folds), NOT multiplied by seed (same frames scored under 3 different seeds' models). turned_to_peer has the smallest support (5,409 pooled frames; 63 sequences corpus-wide per protocol \u00a72.2) and its per-run F1 is correspondingly volatile (sd=0.05-0.07 over 15 runs) -- protocol \u00a72.2 flags this class as near-meaningless per-fold. Inner-validation selection statistic, NOT a generalisation estimate. NOT comparable to Branch-B test numbers."
+    },
+    {
+      "metric": "macro_f1",
+      "arm": "arm2_mstcn_556_mp",
+      "value": 0.4888,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0335
+      },
+      "bootstrap_ci95": [
+        0.4728,
+        0.5055
+      ],
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs; NOT frame-pooled)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm2_mstcn_556_mp/arm2_mstcn_556_mp_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm2_mstcn_556_mp_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (MediaPipe legacy angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm2_mstcn_556_mp_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Inner-validation selection statistic, NOT a generalisation estimate -- outer folds unopened. NOT comparable to Branch-B test numbers (different partition, different protocol)."
+    },
+    {
+      "metric": "balanced_accuracy",
+      "arm": "arm2_mstcn_556_mp",
+      "value": 0.5227,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0437
+      },
+      "bootstrap_ci95": [
+        0.5003,
+        0.5428
+      ],
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs; NOT frame-pooled)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm2_mstcn_556_mp/arm2_mstcn_556_mp_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm2_mstcn_556_mp_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (MediaPipe legacy angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm2_mstcn_556_mp_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Inner-validation selection statistic, NOT a generalisation estimate -- outer folds unopened. NOT comparable to Branch-B test numbers (different partition, different protocol)."
+    },
+    {
+      "metric": "nll_raw",
+      "arm": "arm2_mstcn_556_mp",
+      "value": 0.7402,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0749
+      },
+      "bootstrap_ci95": [
+        0.7033,
+        0.7766
+      ],
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs; NOT frame-pooled)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm2_mstcn_556_mp/arm2_mstcn_556_mp_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm2_mstcn_556_mp_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (MediaPipe legacy angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm2_mstcn_556_mp_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Raw (uncalibrated) value; no temperature-calibrated NLL/Brier/ECE exists anywhere in outputs/branch_c (all metrics.json carry 'refined': false) despite protocol \u00a73.2 requiring both. Inner-validation selection statistic, NOT a generalisation estimate -- outer folds unopened. NOT comparable to Branch-B test numbers (different partition, different protocol)."
+    },
+    {
+      "metric": "brier_raw",
+      "arm": "arm2_mstcn_556_mp",
+      "value": 0.3742,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0442
+      },
+      "bootstrap_ci95": [
+        0.3527,
+        0.3961
+      ],
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs; NOT frame-pooled)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm2_mstcn_556_mp/arm2_mstcn_556_mp_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm2_mstcn_556_mp_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (MediaPipe legacy angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm2_mstcn_556_mp_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Raw (uncalibrated) value; no temperature-calibrated NLL/Brier/ECE exists anywhere in outputs/branch_c (all metrics.json carry 'refined': false) despite protocol \u00a73.2 requiring both. Inner-validation selection statistic, NOT a generalisation estimate -- outer folds unopened. NOT comparable to Branch-B test numbers (different partition, different protocol)."
+    },
+    {
+      "metric": "ece_raw",
+      "arm": "arm2_mstcn_556_mp",
+      "value": 0.0349,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0142
+      },
+      "bootstrap_ci95": [
+        0.0282,
+        0.042
+      ],
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs; NOT frame-pooled)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm2_mstcn_556_mp/arm2_mstcn_556_mp_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm2_mstcn_556_mp_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (MediaPipe legacy angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm2_mstcn_556_mp_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Raw (uncalibrated) value; no temperature-calibrated NLL/Brier/ECE exists anywhere in outputs/branch_c (all metrics.json carry 'refined': false) despite protocol \u00a73.2 requiring both. Inner-validation selection statistic, NOT a generalisation estimate -- outer folds unopened. NOT comparable to Branch-B test numbers (different partition, different protocol)."
+    },
+    {
+      "metric": "macro_auprc",
+      "arm": "arm2_mstcn_556_mp",
+      "value": 0.4918,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0445
+      },
+      "bootstrap_ci95": [
+        0.4705,
+        0.5134
+      ],
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs; NOT frame-pooled)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm2_mstcn_556_mp/arm2_mstcn_556_mp_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm2_mstcn_556_mp_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (MediaPipe legacy angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm2_mstcn_556_mp_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Inner-validation selection statistic, NOT a generalisation estimate -- outer folds unopened. NOT comparable to Branch-B test numbers (different partition, different protocol)."
+    },
+    {
+      "metric": "macro_auroc",
+      "arm": "arm2_mstcn_556_mp",
+      "value": 0.8651,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0183
+      },
+      "bootstrap_ci95": [
+        0.8561,
+        0.8738
+      ],
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs; NOT frame-pooled)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm2_mstcn_556_mp/arm2_mstcn_556_mp_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm2_mstcn_556_mp_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (MediaPipe legacy angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm2_mstcn_556_mp_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Inner-validation selection statistic, NOT a generalisation estimate -- outer folds unopened. NOT comparable to Branch-B test numbers (different partition, different protocol)."
+    },
+    {
+      "metric": "f1_screen_oriented",
+      "arm": "arm2_mstcn_556_mp",
+      "value": 0.8499,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0255
+      },
+      "bootstrap_ci95": [
+        0.8371,
+        0.8621
+      ],
+      "support_pooled_frames": 168028,
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm2_mstcn_556_mp/arm2_mstcn_556_mp_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm2_mstcn_556_mp_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (MediaPipe legacy angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm2_mstcn_556_mp_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Support = 168028 pooled frames, summed once per fold's inner-val split (5 folds), NOT multiplied by seed (same frames scored under 3 different seeds' models). turned_to_peer has the smallest support (5,409 pooled frames; 63 sequences corpus-wide per protocol \u00a72.2) and its per-run F1 is correspondingly volatile (sd=0.05-0.07 over 15 runs) -- protocol \u00a72.2 flags this class as near-meaningless per-fold. Inner-validation selection statistic, NOT a generalisation estimate. NOT comparable to Branch-B test numbers."
+    },
+    {
+      "metric": "f1_looking_away",
+      "arm": "arm2_mstcn_556_mp",
+      "value": 0.3116,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0626
+      },
+      "bootstrap_ci95": [
+        0.2783,
+        0.3384
+      ],
+      "support_pooled_frames": 14498,
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm2_mstcn_556_mp/arm2_mstcn_556_mp_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm2_mstcn_556_mp_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (MediaPipe legacy angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm2_mstcn_556_mp_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Support = 14498 pooled frames, summed once per fold's inner-val split (5 folds), NOT multiplied by seed (same frames scored under 3 different seeds' models). turned_to_peer has the smallest support (5,409 pooled frames; 63 sequences corpus-wide per protocol \u00a72.2) and its per-run F1 is correspondingly volatile (sd=0.05-0.07 over 15 runs) -- protocol \u00a72.2 flags this class as near-meaningless per-fold. Inner-validation selection statistic, NOT a generalisation estimate. NOT comparable to Branch-B test numbers."
+    },
+    {
+      "metric": "f1_head_down",
+      "arm": "arm2_mstcn_556_mp",
+      "value": 0.5385,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0857
+      },
+      "bootstrap_ci95": [
+        0.4979,
+        0.5819
+      ],
+      "support_pooled_frames": 12302,
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm2_mstcn_556_mp/arm2_mstcn_556_mp_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm2_mstcn_556_mp_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (MediaPipe legacy angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm2_mstcn_556_mp_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Support = 12302 pooled frames, summed once per fold's inner-val split (5 folds), NOT multiplied by seed (same frames scored under 3 different seeds' models). turned_to_peer has the smallest support (5,409 pooled frames; 63 sequences corpus-wide per protocol \u00a72.2) and its per-run F1 is correspondingly volatile (sd=0.05-0.07 over 15 runs) -- protocol \u00a72.2 flags this class as near-meaningless per-fold. Inner-validation selection statistic, NOT a generalisation estimate. NOT comparable to Branch-B test numbers."
+    },
+    {
+      "metric": "f1_turned_to_peer",
+      "arm": "arm2_mstcn_556_mp",
+      "value": 0.2047,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0678
+      },
+      "bootstrap_ci95": [
+        0.1705,
+        0.2375
+      ],
+      "support_pooled_frames": 5409,
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm2_mstcn_556_mp/arm2_mstcn_556_mp_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm2_mstcn_556_mp_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (MediaPipe legacy angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm2_mstcn_556_mp_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Support = 5409 pooled frames, summed once per fold's inner-val split (5 folds), NOT multiplied by seed (same frames scored under 3 different seeds' models). turned_to_peer has the smallest support (5,409 pooled frames; 63 sequences corpus-wide per protocol \u00a72.2) and its per-run F1 is correspondingly volatile (sd=0.05-0.07 over 15 runs) -- protocol \u00a72.2 flags this class as near-meaningless per-fold. Inner-validation selection statistic, NOT a generalisation estimate. NOT comparable to Branch-B test numbers."
+    },
+    {
+      "metric": "f1_phone_use",
+      "arm": "arm2_mstcn_556_mp",
+      "value": 0.5324,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0663
+      },
+      "bootstrap_ci95": [
+        0.5025,
+        0.5666
+      ],
+      "support_pooled_frames": 10135,
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm2_mstcn_556_mp/arm2_mstcn_556_mp_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm2_mstcn_556_mp_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (MediaPipe legacy angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm2_mstcn_556_mp_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Support = 10135 pooled frames, summed once per fold's inner-val split (5 folds), NOT multiplied by seed (same frames scored under 3 different seeds' models). turned_to_peer has the smallest support (5,409 pooled frames; 63 sequences corpus-wide per protocol \u00a72.2) and its per-run F1 is correspondingly volatile (sd=0.05-0.07 over 15 runs) -- protocol \u00a72.2 flags this class as near-meaningless per-fold. Inner-validation selection statistic, NOT a generalisation estimate. NOT comparable to Branch-B test numbers."
+    },
+    {
+      "metric": "f1_uncertain",
+      "arm": "arm2_mstcn_556_mp",
+      "value": 0.4956,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0377
+      },
+      "bootstrap_ci95": [
+        0.4771,
+        0.5136
+      ],
+      "support_pooled_frames": 10283,
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm2_mstcn_556_mp/arm2_mstcn_556_mp_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm2_mstcn_556_mp_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (MediaPipe legacy angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_full / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm2_mstcn_556_mp_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Support = 10283 pooled frames, summed once per fold's inner-val split (5 folds), NOT multiplied by seed (same frames scored under 3 different seeds' models). turned_to_peer has the smallest support (5,409 pooled frames; 63 sequences corpus-wide per protocol \u00a72.2) and its per-run F1 is correspondingly volatile (sd=0.05-0.07 over 15 runs) -- protocol \u00a72.2 flags this class as near-meaningless per-fold. Inner-validation selection statistic, NOT a generalisation estimate. NOT comparable to Branch-B test numbers."
+    },
+    {
+      "metric": "macro_f1",
+      "arm": "arm5_mstcn_556_fr",
+      "value": 0.4865,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0274
+      },
+      "bootstrap_ci95": [
+        0.4737,
+        0.5002
+      ],
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs; NOT frame-pooled)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm5_mstcn_556_fr/arm5_mstcn_556_fr_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm5_mstcn_556_fr_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (6DRepNet360 full-range angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_fullrange / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm5_mstcn_556_fr_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Inner-validation selection statistic, NOT a generalisation estimate -- outer folds unopened. NOT comparable to Branch-B test numbers (different partition, different protocol)."
+    },
+    {
+      "metric": "balanced_accuracy",
+      "arm": "arm5_mstcn_556_fr",
+      "value": 0.5258,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0367
+      },
+      "bootstrap_ci95": [
+        0.5075,
+        0.5432
+      ],
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs; NOT frame-pooled)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm5_mstcn_556_fr/arm5_mstcn_556_fr_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm5_mstcn_556_fr_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (6DRepNet360 full-range angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_fullrange / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm5_mstcn_556_fr_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Inner-validation selection statistic, NOT a generalisation estimate -- outer folds unopened. NOT comparable to Branch-B test numbers (different partition, different protocol)."
+    },
+    {
+      "metric": "nll_raw",
+      "arm": "arm5_mstcn_556_fr",
+      "value": 0.7613,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.1022
+      },
+      "bootstrap_ci95": [
+        0.7111,
+        0.8105
+      ],
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs; NOT frame-pooled)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm5_mstcn_556_fr/arm5_mstcn_556_fr_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm5_mstcn_556_fr_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (6DRepNet360 full-range angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_fullrange / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm5_mstcn_556_fr_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Raw (uncalibrated) value; no temperature-calibrated NLL/Brier/ECE exists anywhere in outputs/branch_c (all metrics.json carry 'refined': false) despite protocol \u00a73.2 requiring both. Inner-validation selection statistic, NOT a generalisation estimate -- outer folds unopened. NOT comparable to Branch-B test numbers (different partition, different protocol)."
+    },
+    {
+      "metric": "brier_raw",
+      "arm": "arm5_mstcn_556_fr",
+      "value": 0.3876,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0602
+      },
+      "bootstrap_ci95": [
+        0.3583,
+        0.4167
+      ],
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs; NOT frame-pooled)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm5_mstcn_556_fr/arm5_mstcn_556_fr_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm5_mstcn_556_fr_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (6DRepNet360 full-range angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_fullrange / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm5_mstcn_556_fr_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Raw (uncalibrated) value; no temperature-calibrated NLL/Brier/ECE exists anywhere in outputs/branch_c (all metrics.json carry 'refined': false) despite protocol \u00a73.2 requiring both. Inner-validation selection statistic, NOT a generalisation estimate -- outer folds unopened. NOT comparable to Branch-B test numbers (different partition, different protocol)."
+    },
+    {
+      "metric": "ece_raw",
+      "arm": "arm5_mstcn_556_fr",
+      "value": 0.038,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0197
+      },
+      "bootstrap_ci95": [
+        0.0293,
+        0.0487
+      ],
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs; NOT frame-pooled)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm5_mstcn_556_fr/arm5_mstcn_556_fr_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm5_mstcn_556_fr_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (6DRepNet360 full-range angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_fullrange / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm5_mstcn_556_fr_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Raw (uncalibrated) value; no temperature-calibrated NLL/Brier/ECE exists anywhere in outputs/branch_c (all metrics.json carry 'refined': false) despite protocol \u00a73.2 requiring both. Inner-validation selection statistic, NOT a generalisation estimate -- outer folds unopened. NOT comparable to Branch-B test numbers (different partition, different protocol)."
+    },
+    {
+      "metric": "macro_auprc",
+      "arm": "arm5_mstcn_556_fr",
+      "value": 0.4903,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0404
+      },
+      "bootstrap_ci95": [
+        0.4713,
+        0.5105
+      ],
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs; NOT frame-pooled)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm5_mstcn_556_fr/arm5_mstcn_556_fr_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm5_mstcn_556_fr_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (6DRepNet360 full-range angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_fullrange / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm5_mstcn_556_fr_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Inner-validation selection statistic, NOT a generalisation estimate -- outer folds unopened. NOT comparable to Branch-B test numbers (different partition, different protocol)."
+    },
+    {
+      "metric": "macro_auroc",
+      "arm": "arm5_mstcn_556_fr",
+      "value": 0.8649,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0124
+      },
+      "bootstrap_ci95": [
+        0.859,
+        0.8711
+      ],
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs; NOT frame-pooled)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm5_mstcn_556_fr/arm5_mstcn_556_fr_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm5_mstcn_556_fr_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (6DRepNet360 full-range angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_fullrange / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm5_mstcn_556_fr_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Inner-validation selection statistic, NOT a generalisation estimate -- outer folds unopened. NOT comparable to Branch-B test numbers (different partition, different protocol)."
+    },
+    {
+      "metric": "f1_screen_oriented",
+      "arm": "arm5_mstcn_556_fr",
+      "value": 0.8426,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0362
+      },
+      "bootstrap_ci95": [
+        0.8246,
+        0.8598
+      ],
+      "support_pooled_frames": 168028,
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm5_mstcn_556_fr/arm5_mstcn_556_fr_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm5_mstcn_556_fr_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (6DRepNet360 full-range angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_fullrange / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm5_mstcn_556_fr_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Support = 168028 pooled frames, summed once per fold's inner-val split (5 folds), NOT multiplied by seed (same frames scored under 3 different seeds' models). turned_to_peer has the smallest support (5,409 pooled frames; 63 sequences corpus-wide per protocol \u00a72.2) and its per-run F1 is correspondingly volatile (sd=0.05-0.07 over 15 runs) -- protocol \u00a72.2 flags this class as near-meaningless per-fold. Inner-validation selection statistic, NOT a generalisation estimate. NOT comparable to Branch-B test numbers."
+    },
+    {
+      "metric": "f1_looking_away",
+      "arm": "arm5_mstcn_556_fr",
+      "value": 0.3004,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0365
+      },
+      "bootstrap_ci95": [
+        0.2827,
+        0.3182
+      ],
+      "support_pooled_frames": 14498,
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm5_mstcn_556_fr/arm5_mstcn_556_fr_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm5_mstcn_556_fr_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (6DRepNet360 full-range angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_fullrange / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm5_mstcn_556_fr_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Support = 14498 pooled frames, summed once per fold's inner-val split (5 folds), NOT multiplied by seed (same frames scored under 3 different seeds' models). turned_to_peer has the smallest support (5,409 pooled frames; 63 sequences corpus-wide per protocol \u00a72.2) and its per-run F1 is correspondingly volatile (sd=0.05-0.07 over 15 runs) -- protocol \u00a72.2 flags this class as near-meaningless per-fold. Inner-validation selection statistic, NOT a generalisation estimate. NOT comparable to Branch-B test numbers."
+    },
+    {
+      "metric": "f1_head_down",
+      "arm": "arm5_mstcn_556_fr",
+      "value": 0.5408,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0949
+      },
+      "bootstrap_ci95": [
+        0.4956,
+        0.5886
+      ],
+      "support_pooled_frames": 12302,
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm5_mstcn_556_fr/arm5_mstcn_556_fr_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm5_mstcn_556_fr_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (6DRepNet360 full-range angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_fullrange / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm5_mstcn_556_fr_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Support = 12302 pooled frames, summed once per fold's inner-val split (5 folds), NOT multiplied by seed (same frames scored under 3 different seeds' models). turned_to_peer has the smallest support (5,409 pooled frames; 63 sequences corpus-wide per protocol \u00a72.2) and its per-run F1 is correspondingly volatile (sd=0.05-0.07 over 15 runs) -- protocol \u00a72.2 flags this class as near-meaningless per-fold. Inner-validation selection statistic, NOT a generalisation estimate. NOT comparable to Branch-B test numbers."
+    },
+    {
+      "metric": "f1_turned_to_peer",
+      "arm": "arm5_mstcn_556_fr",
+      "value": 0.2073,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0532
+      },
+      "bootstrap_ci95": [
+        0.1815,
+        0.2339
+      ],
+      "support_pooled_frames": 5409,
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm5_mstcn_556_fr/arm5_mstcn_556_fr_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm5_mstcn_556_fr_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (6DRepNet360 full-range angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_fullrange / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm5_mstcn_556_fr_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Support = 5409 pooled frames, summed once per fold's inner-val split (5 folds), NOT multiplied by seed (same frames scored under 3 different seeds' models). turned_to_peer has the smallest support (5,409 pooled frames; 63 sequences corpus-wide per protocol \u00a72.2) and its per-run F1 is correspondingly volatile (sd=0.05-0.07 over 15 runs) -- protocol \u00a72.2 flags this class as near-meaningless per-fold. Inner-validation selection statistic, NOT a generalisation estimate. NOT comparable to Branch-B test numbers."
+    },
+    {
+      "metric": "f1_phone_use",
+      "arm": "arm5_mstcn_556_fr",
+      "value": 0.5361,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0619
+      },
+      "bootstrap_ci95": [
+        0.5073,
+        0.5668
+      ],
+      "support_pooled_frames": 10135,
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm5_mstcn_556_fr/arm5_mstcn_556_fr_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm5_mstcn_556_fr_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (6DRepNet360 full-range angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_fullrange / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm5_mstcn_556_fr_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Support = 10135 pooled frames, summed once per fold's inner-val split (5 folds), NOT multiplied by seed (same frames scored under 3 different seeds' models). turned_to_peer has the smallest support (5,409 pooled frames; 63 sequences corpus-wide per protocol \u00a72.2) and its per-run F1 is correspondingly volatile (sd=0.05-0.07 over 15 runs) -- protocol \u00a72.2 flags this class as near-meaningless per-fold. Inner-validation selection statistic, NOT a generalisation estimate. NOT comparable to Branch-B test numbers."
+    },
+    {
+      "metric": "f1_uncertain",
+      "arm": "arm5_mstcn_556_fr",
+      "value": 0.4916,
+      "dispersion": {
+        "type": "sd_over_15_runs",
+        "value": 0.0356
+      },
+      "bootstrap_ci95": [
+        0.4741,
+        0.5086
+      ],
+      "support_pooled_frames": 10283,
+      "split": "inner_val (5 outer-fold-specific 20-video inner-validation holdouts, arithmetic mean over 5 folds x 3 seeds = 15 runs)",
+      "n_runs": 15,
+      "evaluator_version": "thesis_eval/1.0.0",
+      "producing_command": "python -m attention.thesis_eval.run_eval --ckpt outputs/branch_c/runs/arm5_mstcn_556_fr/arm5_mstcn_556_fr_f<FOLD>_s<SEED>/checkpoints/best.pth --split val --out outputs/branch_c/eval/arm5_mstcn_556_fr_f<FOLD>_s<SEED> --batch-size 1 --cluster video",
+      "config": "model=mstcn / feature_config=556_hp (6DRepNet360 full-range angles) / input_dim=556 / sequence_root=grounding_data/llmstu_sequences_fullrange / epochs=90 / lr=3e-4",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/eval/arm5_mstcn_556_fr_f{0,1,2,3,4}_s{42,43,44}/metrics.json",
+      "citable": true,
+      "caveat": "Support = 10283 pooled frames, summed once per fold's inner-val split (5 folds), NOT multiplied by seed (same frames scored under 3 different seeds' models). turned_to_peer has the smallest support (5,409 pooled frames; 63 sequences corpus-wide per protocol \u00a72.2) and its per-run F1 is correspondingly volatile (sd=0.05-0.07 over 15 runs) -- protocol \u00a72.2 flags this class as near-meaningless per-fold. Inner-validation selection statistic, NOT a generalisation estimate. NOT comparable to Branch-B test numbers."
+    },
+    {
+      "metric": "macro_f1",
+      "arm": "arm0_mstcn_quality (mandatory shortcut audit, protocol \u00a75.1)",
+      "value": null,
+      "dispersion": null,
+      "bootstrap_ci95": null,
+      "split": "INCOMPLETE -- only fold 0 (3 seeds) dispatched of the registered 5 folds x 3 seeds = 15 runs; each of the 3 dispatched runs stopped at epoch ~20 of 90 with no run_record.json and no eval/metrics.json produced",
+      "n_runs": 0,
+      "evaluator_version": null,
+      "producing_command": "tools/branch_c/<arm0 sweep launcher, see outputs/branch_c/arm0_sweep.log>",
+      "config": "quality/missingness-only features, no appearance, no pose angles (per protocol \u00a75.1.1)",
+      "fold_manifest_sha256": {
+        "top_level": "fd913e7c5a52839ee5115224ffdb741c09cc1104eeb1fee5d32b9595e2388314",
+        "per_fold": {
+          "0": "5813913b6e1f4984fb64b017ac008d562823112fad6add5745c5848bbe30f7fb",
+          "1": "3c1dee2b6a636a240ada12bc4291e1480a0002659627c6cf90c07a8c6a727cd4",
+          "2": "4f0fec933e7c4b364627275f95b6df9342f07e2059d333aafbd94547ae83da74",
+          "3": "0532432f6f958ea44ea873de58717900518418f9bcd03be6adb108e98bc7666f",
+          "4": "4e98d41e5986f2b312f01c2e93c085865c25674b80c9ab5b80171b879a8aa717"
+        }
+      },
+      "raw_artifact_path": "outputs/branch_c/runs/arm0_mstcn_quality/*/checkpoints/{best,last}.pth (checkpoints only; no metrics)",
+      "citable": false,
+      "caveat": "NOT CITABLE. Protocol \u00a75.1 mandates this shortcut audit be run and reported 'whatever it shows,' independent of the arms 1/2/5 gate outcome. It was started (15 runs dispatched per outputs/branch_c/arm0_sweep.log) but only fold 0's 3 seeds produced any artifact, and those three runs stop mid-training (epoch ~20/90, in-progress macro-F1 ~0.42) with no final checkpoint evaluation. This is an open protocol-compliance gap, not a reported result -- do not infer a shortcut-audit finding from the partial log."
+    }
+  ],
+  "verification_notes": {
+    "claim_a_arm5_minus_arm2_macro_f1": {
+      "claimed": {
+        "mean_diff": -0.0022,
+        "ci95": [
+          -0.0119,
+          0.0085
+        ],
+        "wins": "5/15"
+      },
+      "recomputed_from_raw_metrics_json": {
+        "mean_diff": -0.0023,
+        "ci95": [
+          -0.0123,
+          0.0084
+        ],
+        "wins": "5/15"
+      },
+      "verdict": "AGREES within bootstrap/rounding noise. Wins match exactly (5/15). Mean diff -0.0023 vs claimed -0.0022; CI [-0.0123,+0.0084] vs claimed [-0.0119,+0.0085]. The small residual difference traces to a systematic discrepancy documented in claim_e_and_data_integrity below: every one of the 45 per-run macro_f1 values in inner_val_results.json differs from the corresponding eval/*/metrics.json macro_f1 field by O(1e-4), apparently from a different recomputation path, not from a different dataset or model."
+    },
+    "claim_b_per_class_ci_includes_zero": {
+      "claimed": "every per-class CI includes zero",
+      "recomputed": {
+        "arm2-arm1::f1_screen_oriented": [
+          -0.011455447574189842,
+          0.016966909947785956
+        ],
+        "arm2-arm1::f1_looking_away": [
+          -0.022230940196414042,
+          0.03484513166647995
+        ],
+        "arm2-arm1::f1_head_down": [
+          -0.015500231310774912,
+          0.023187078800344697
+        ],
+        "arm2-arm1::f1_turned_to_peer": [
+          -0.026496525508880476,
+          0.03935972576130047
+        ],
+        "arm2-arm1::f1_phone_use": [
+          -0.016378502197488185,
+          0.0483712578720639
+        ],
+        "arm2-arm1::f1_uncertain": [
+          -0.01571806349309144,
+          0.009805197548274034
+        ],
+        "arm5-arm1::f1_screen_oriented": [
+          -0.0247313320734398,
+          0.012212892987573625
+        ],
+        "arm5-arm1::f1_looking_away": [
+          -0.01844392767411746,
+          0.01550851087800151
+        ],
+        "arm5-arm1::f1_head_down": [
+          -0.020411657849171167,
+          0.028822681446531304
+        ],
+        "arm5-arm1::f1_turned_to_peer": [
+          -0.007688358469048419,
+          0.0279667733670049
+        ],
+        "arm5-arm1::f1_phone_use": [
+          -0.01328890022374128,
+          0.05019451002224065
+        ],
+        "arm5-arm1::f1_uncertain": [
+          -0.020324720242982767,
+          0.006621349944847007
+        ],
+        "arm5-arm2::f1_screen_oriented": [
+          -0.02902572861849586,
+          0.013300434710029537
+        ],
+        "arm5-arm2::f1_looking_away": [
+          -0.03113392108554075,
+          0.01388514241911542
+        ],
+        "arm5-arm2::f1_head_down": [
+          -0.020001904539731205,
+          0.022072826292996
+        ],
+        "arm5-arm2::f1_turned_to_peer": [
+          -0.028489165601870477,
+          0.0346215073285916
+        ],
+        "arm5-arm2::f1_phone_use": [
+          -0.01204384464028967,
+          0.020477608624997354
+        ],
+        "arm5-arm2::f1_uncertain": [
+          -0.018960944656886306,
+          0.01333781126118623
+        ]
+      },
+      "verdict": "CONFIRMED. All 18 per-class paired-difference CIs (3 contrasts x 6 classes), independently bootstrapped (20000 draws, seed 0, resampling the 15 matched fold/seed pairs), include zero."
+    },
+    "claim_c_arm1_auroc_and_pose_scalar": {
+      "claimed": "arm1 AUROC 0.915 head_down / 0.930 uncertain; arm1 beats standalone pose scalar (0.830/0.852) on every class",
+      "recomputed_arm1_mean_auroc_over_15_runs": {},
+      "verdict": "PARTIALLY VERIFIABLE, PARTIALLY NOT COMPARABLE. The arm1/arm5 AUROC figures ARE independently reproduced from eval/*/metrics.json per_class[cue].auroc, mean over 15 runs: arm1 head_down=0.9150, uncertain=0.9300, turned_to_peer=0.8249, phone_use=0.8893, looking_away=0.7672; arm5 head_down=0.9169, uncertain=0.9383, turned_to_peer=0.8262, phone_use=0.8951, looking_away=0.7826 -- matches FINDINGS \u00a712.16 to 3-4 decimals. HOWEVER the 'standalone pose scalar' (0.830/0.852/0.625/0.519/0.524) is NOT a number produced by any of the 45 training/eval runs verified here -- it comes from FINDINGS \u00a712.15's separate dev-only pre-test (184,304 frames, fold-0 inner-train only, a single geodesic-distance-from-corpus-mean scalar, no held-out split, no seeds). No raw artifact for that pre-test exists under outputs/branch_c/ (FINDINGS \u00a712.15 cites 'this session's transcript' as the only record, with a cache path outputs/branch_c/cache/head_pose_fullrange/merged.npz for the underlying rotations but not a saved AUC computation). This agent cannot independently recompute the 0.830/0.852/0.625/0.519/0.524 figures from a stored artifact and flags them as UNVERIFIED-BY-THIS-AUDIT (not contradicted, simply outside the readable evidence trail) rather than confirmed. The arm1-vs-pose-scalar comparison also spans two different data partitions (45-run inner-val eval frames vs single dev pre-test frames) and should not be read as a controlled contrast."
+    },
+    "claim_d_nll_brier_ece_arm5_minus_arm2": {
+      "claimed": {
+        "nll": 0.021,
+        "brier": 0.0134,
+        "ece": 0.0031
+      },
+      "recomputed": {
+        "nll": 0.021,
+        "brier": 0.0134,
+        "ece": 0.0031
+      },
+      "verdict": "CONFIRMED EXACTLY (all three match to 4 decimals). Unlike macro_f1, NLL/Brier/ECE showed no discrepancy against inner_val_results.json, consistent with those fields being read directly rather than recomputed via a different code path."
+    },
+    "claim_e_run_and_provenance_integrity": {
+      "claimed": "45 runs, 0 failures, all 5 folds x 3 seeds x 3 arms present",
+      "findings": [
+        "CONFIRMED: exactly 45 run_record.json files exist, one per (arm in {1,2,5}) x (fold 0-4) x (seed 42-44), no gaps.",
+        "CONFIRMED: exactly 45 valid eval/*/metrics.json exist for that same grid, all with plausible non-degenerate values; no error/traceback/failed strings in any of the 45 training logs.",
+        "NOT FULLY SUPPORTED AS STATED -- three integrity gaps found: (1) outputs/branch_c/eval/ contains 46 directories, not 45: eval/arm5_f0_s42 is a byte-for-byte-metrics duplicate of eval/arm5_mstcn_556_fr_f0_s42 (differs only in the recorded checkpoint path, relative vs absolute; timestamped ~4 minutes earlier), i.e. a superseded prior invocation left in place. A naive glob of eval/* over-counts by one. (2) outputs/branch_c/RUNS.jsonl (the protocol-\u00a79-mandated append-only provenance ledger) contains only 41 of the 45 'train'-stage entries. The 4 missing entries are exactly arm1_mstcn_553_ff_f0_s42, f0_s43, f0_s44, and f1_s42 -- and those same 4 runs are exactly the 4 (of 45) whose run_record.json['git']['commit'] is bf649f5eb6... instead of ea2a8ad2... (the commit used by all other 41 runs, including every arm2 and arm5 run). So 4/15 of arm1's runs were both trained under different tracked code AND never logged to the provenance ledger. The tracked diff between the two commits touches only fold-manifest data files and orchestration scripts (tools/branch_c/aggregate_arms.py, launch_arm_sweep.py), not model/training code, so this is very unlikely to be a substantive confound -- but run_record.json does not carry a dirty-diff hash (RUNS.jsonl entries do, for the cache stage), so the uncommitted state of those 4 runs cannot be fully audited. (3) A separate, registered arm -- arm0_mstcn_quality, the protocol \u00a75.1 mandatory shortcut audit -- was dispatched for all 5 folds x 3 seeds (outputs/branch_c/arm0_sweep.log: '15 runs to dispatch') but only fold 0's 3 seeds produced any artifact, and those three stop mid-training with no run_record.json and no metrics.json. This is not part of the 45 arm1/2/5 runs and does not affect the 'per_run' claim, but it means the mandatory shortcut audit is incomplete, which the ablations report must not paper over."
+      ]
+    }
+  },
+  "go_gate_verdict": {
+    "outcome": "NO-GO",
+    "reasoning": "Protocol \u00a77.1's scientific gate requires arms 6-13 (fusion superstructure) and full-model-vs-arm2 outer-fold evidence that do not exist: arms 6 and 13 were dropped by the pre-registered amendment-A1 gate (FINDINGS \u00a712.15) before training, and arms 3, 4/7-12, 14-17 were never reached. The gate that WAS run and IS independently reproduced here is amendment A1's proxy for \u00a77.1 condition 1: does the validated, 100%-coverage, full-range pose measurement (arm 5) beat the strongest properly-comparable baseline it was meant to upgrade (arm 2)? Recomputed directly from the 45 raw eval/*/metrics.json files: mean paired macro-F1 diff arm5-arm2 = -0.0023, bootstrap 95% CI [-0.0123, +0.0084] (20000 draws, seed 0, over the 15 matched fold/seed pairs), 5/15 wins, raw p=0.643, Holm-corrected p=1.000. Required: >= +0.02 absolute with CI excluding zero. Observed: negative, CI straddles zero, off by roughly an order of magnitude. Directional consistency (gate condition 4) also fails: pooling predictions across the 5 folds within each seed before scoring (a stricter, protocol-3.1-style estimator with far less fold-noise) still gives arm5 < arm2 in 2 of 3 seeds. No calibration or fusion conditions (gate conditions 3, 5) are assessable because no fusion arm was trained.",
+    "scope_caveat": "This verdict covers only the pose-measurement question the branch actually tested. It is not a verdict on the full registered scientific gate, most of whose preconditions (a trained full model) never existed to be tested."
+  }
+}

@@ -54,12 +54,23 @@ MANIFEST_DIR = REPO / "outputs/branch_c/splits/fold_manifests"
 OUT_ROOT = REPO / "outputs/branch_c/runs"
 
 ARMS = {
+    # Registered shortcut audit (protocol 5.1): quality/missingness signals only,
+    # no appearance and no orientation. Upper-bounds how much cue performance is
+    # obtainable from whether evidence exists rather than what it says.
+    "arm0_mstcn_quality": dict(model="mstcn", feature_config="552_base",
+                               root="grounding_data/llmstu_sequences_quality"),
     "arm1_mstcn_553_ff": dict(model="mstcn", feature_config="553_facefound",
                               root="grounding_data/llmstu_sequences_full"),
     "arm2_mstcn_556_mp": dict(model="mstcn", feature_config="556_hp",
                               root="grounding_data/llmstu_sequences_full"),
     "arm5_mstcn_556_fr": dict(model="mstcn", feature_config="556_hp",
                               root="grounding_data/llmstu_sequences_fullrange"),
+    # Fusion arms (protocol 3, 8, 9, 10). Different trainer, same folds, same
+    # selection rule, so their numbers sit in one table with the arms above.
+    "arm3_appearance": dict(fusion_arm=True, root="grounding_data/llmstu_sequences_branch_c"),
+    "arm8_uniform": dict(fusion_arm=True, root="grounding_data/llmstu_sequences_branch_c"),
+    "arm9_learned": dict(fusion_arm=True, root="grounding_data/llmstu_sequences_branch_c"),
+    "arm10_full": dict(fusion_arm=True, root="grounding_data/llmstu_sequences_branch_c"),
 }
 SEEDS = (42, 43, 44)
 
@@ -123,14 +134,20 @@ def main() -> None:
                     print(f"skip (done): {eid}")
                     continue
                 cfg = ARMS[arm]
-                jobs.append((eid, d, arm, k, seed, [
-                    sys.executable, "-m", "attention.thesis_eval.train",
-                    "--experiment-id", eid, "--model", cfg["model"],
-                    "--feature-config", cfg["feature_config"], "--seed", str(seed),
-                    "--epochs", str(args.epochs), "--output-dir", str(d),
-                    "--manifest", str(manifests[k]),
-                    "--sequence-root", str(REPO / cfg["root"]),
-                ]))
+                if cfg.get("fusion_arm"):
+                    cmd = [sys.executable, "-m", "attention.branch_c.train_fusion",
+                           "--arm", arm, "--fold", str(k), "--seed", str(seed),
+                           "--epochs", "60", "--batch-size", "32",
+                           "--output-dir", str(d), "--manifest", str(manifests[k]),
+                           "--sequence-root", str(REPO / cfg["root"])]
+                else:
+                    cmd = [sys.executable, "-m", "attention.thesis_eval.train",
+                           "--experiment-id", eid, "--model", cfg["model"],
+                           "--feature-config", cfg["feature_config"], "--seed", str(seed),
+                           "--epochs", str(args.epochs), "--output-dir", str(d),
+                           "--manifest", str(manifests[k]),
+                           "--sequence-root", str(REPO / cfg["root"])]
+                jobs.append((eid, d, arm, k, seed, cmd))
     print(f"{len(jobs)} runs to dispatch\n")
     if args.dry_run:
         for eid, _, _, _, _, cmd in jobs[:3]:
