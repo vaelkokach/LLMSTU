@@ -2717,6 +2717,127 @@ merely a better angle regressor here, it is the difference between a feature tha
 can express the dominant regime and one that cannot. Asserted, so the claim cannot
 rot: `test_legacy_block_saturation_is_visible_not_silent`.
 
+**Correction, added the same day after measuring it (§12.13).** The paragraph above
+overstated the *clipping* specifically. In the cached `llmstu_sequences_hp` features
+only 0.0-4.7% of face-visible frames actually sit at the |yaw| = 1.0 rail, because
+MediaPipe simply fails to detect a face long before the head reaches 90 degrees. The
+binding limitation is therefore not saturation but **absence**: 37% of frames carry
+no angle at all, and `face_found = 0` frames hold exact zeros in all three angle
+columns (verified: 15,815 such frames, 0 with non-zero angles). The clipping is real
+and the test still guards it, but it is not the operative mechanism. The operative
+mechanism is missingness.
+
+### 12.13 ★★ P0 — the seat-relative hypothesis fails its cheap pre-test on existing angles
+
+**This is a negative result, obtained before any GPU was used, and it lowers the
+prior on the branch's central claim.** Reported here in full rather than deferred
+to a training run that would have cost days and reached the same place.
+
+All numbers below come from **development data only** — the 81 inner-train videos
+of fold 0 (`outputs/branch_c/splits/branch_c_folds.json`). No outer-test fold and
+no legacy Branch-B test split was touched. 176,433 frames, 4,175 sequences, source
+`grounding_data/llmstu_sequences_hp` (556-dim: `[552]` yaw, `[553]` pitch,
+`[554]` roll, `[555]` face_found).
+
+#### 12.13a First: `face_found` does not mean what §12.1 assumed
+
+| cue | frames | `face_found` rate |
+|---|---|---|
+| screen_oriented | 135,240 | **67.8%** |
+| looking_away | 11,224 | **75.0%** |
+| phone_use | 8,907 | **74.8%** |
+| turned_to_peer | 4,458 | 61.4% |
+| head_down | 8,967 | **15.1%** |
+| uncertain | 7,637 | **3.9%** |
+| all | 176,433 | 63.0% |
+
+I wrote in §12.1 that "a face becomes detectable largely *because* the student has
+turned away from their monitor". **That is wrong and this table refutes it.**
+`looking_away` (75.0%) and `phone_use` (74.8%) are *higher* than `screen_oriented`
+(67.8%), not lower. Face detection is not an orientation proxy.
+
+What `face_found` actually separates is **{head_down, uncertain} from everything
+else** — the two classes where the face is physically not visible at all. The
+screen/away ratio is 4.5x here, not the 11.5x that §11.10's 92%-vs-8% implies;
+§11.10 measured MediaPipe at crop level on a different pipeline stage, so both can
+be right about different things, and the number that matters for the model is this
+one, because these are the arrays it trains on.
+
+**This sharpens the branch's target rather than blunting it.** The four
+"face-visible" classes — screen_oriented, looking_away, phone_use, turned_to_peer —
+sit at 61-75% and are therefore *mutually indistinguishable by `face_found`*.
+Separating them is exactly what pose geometry would have to do, and exactly what
+§11.10 found the existing angles fail to do (+0.0058, 0/3 seeds). Registered as a
+per-class prediction: any pose contribution must show up on those four classes.
+
+#### 12.13b Seat identity does explain a large share of camera-frame yaw
+
+Variance decomposition of camera-frame yaw among face-visible frames, grouped by
+(video, seat) track, tracks with >= 30 frames:
+
+| cue | tracks | frames | pooled sd | within-track sd | eta^2 (track) |
+|---|---|---|---|---|---|
+| screen_oriented | 388 | 89,425 | 12.0 deg | 9.2 deg | **0.420** |
+| looking_away | 76 | 6,181 | 15.0 | 12.0 | 0.356 |
+| head_down | 13 | 625 | 30.1 | 14.5 | 0.769 |
+| turned_to_peer | 21 | 1,480 | 16.7 | 13.2 | 0.377 |
+| phone_use | 47 | 5,903 | 11.9 | 7.7 | 0.589 |
+
+42% of the yaw variance among `screen_oriented` frames is between-track, not
+within-track. Read alone this looks like direct support for H2 — camera-frame yaw
+carries a large per-track nuisance component, exactly as predicted.
+
+#### 12.13c But neither reference frame converts that into discriminability
+
+Two reference estimators, both causal, both leakage-free, tested on the same frames.
+AUC for separating `screen_oriented` from each other cue using yaw alone:
+
+| contrast | raw yaw | **causal running-mean reference** | **scene reference (per-seat, other videos)** |
+|---|---|---|---|
+| vs looking_away | 0.613 | 0.580 ⬇ | 0.620 ⬆ |
+| vs head_down | 0.605 | 0.564 ⬇ | 0.608 ⬆ |
+| vs turned_to_peer | 0.588 | 0.559 ⬇ | 0.585 ⬇ |
+| vs phone_use | 0.580 | 0.524 ⬇ | 0.555 ⬇ |
+
+- The **causal per-track running mean** (protocol §5 estimator 3) makes separation
+  *worse on all four contrasts*. This is the circularity risk BRANCH_C_PROTOCOL.md
+  §5 warned about, showing up as measurement rather than speculation: a reference
+  averaged over a track's own past absorbs the very signal being classified,
+  because most of that past is `screen_oriented`.
+- The **scene reference** (protocol §5 estimator 1, per-seat mean from *other*
+  videos, leave-one-video-out, available for 98% of frames) is **null**: +0.007,
+  +0.003, -0.003, -0.025.
+
+The reason the eta^2 in §12.13b does not cash out: per-seat mean yaw across videos
+spans only 5.5-20.3 degrees, while the sd of per-video means *within* one seat is
+5-15 degrees. **Seat id does not identify a stable monitor direction in this
+corpus.** So the 42% between-track variance is mostly *person/track idiosyncrasy*,
+not seat geometry — and a per-seat scene reference cannot remove it, while a
+per-track reference removes the signal along with it.
+
+#### 12.13d What this does and does not falsify
+
+It **does** falsify: seat-relative centring of the *existing MediaPipe yaw* improves
+cue separation. On dev data it does not, under either causal reference.
+
+It **does not** falsify the registered claim, because this test is confined to the
+63% subpopulation where MediaPipe already finds a face, using a single clipped Euler
+angle. The registered proposal is seat-relative canonicalisation of **full-range 3D
+rotation on all frames** (H1 → H2 chain, protocol §5). This test cannot reach the
+37% of frames with no angle at all, which is where a full-range estimator would
+contribute and where `head_down`/`uncertain` live.
+
+**Honest status: the prior on H2 is materially lower than when the protocol was
+frozen.** Two of the three reference estimators the protocol nominates have now
+been shown not to work on available angles, before spending a GPU-hour. The
+protocol is not amended and no metric is changed — arms 4, 5, 6 and 13 stand
+exactly as registered, and this entry is the pre-registered expectation against
+which their outcome will be read.
+
+Reproduce: the four analysis blocks are recorded in this session's transcript and
+operate only on `llmstu_sequences_hp` + the fold manifest; no artifact was written
+and no cache was modified.
+
 ---
 
 ## 10. Changelog
