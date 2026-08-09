@@ -2838,6 +2838,170 @@ Reproduce: the four analysis blocks are recorded in this session's transcript an
 operate only on `llmstu_sequences_hp` + the fold manifest; no artifact was written
 and no cache was modified.
 
+### 12.14 ★★ The cached MediaPipe head-pose angles carry almost no orientation signal
+
+Built the full-range backend the repository has referred to but never had.
+`head_pose.py:23` documents a `6drepnet` backend; `_BACKENDS` at line 263 contains
+only `opencv`, `mediapipe` and `mediapipe_detector`, and no weights were present.
+
+- Implementation: `LLMDet/attention/branch_c/head_pose_fullrange.py`
+- Weights: `6DRepNet360_Full-Rotation_300W_LP+Panoptic.pth`, 94 MB, sha256
+  `3ee08f1e04b8d452a6c4a40926a6f38051894ae6d0aaa6d191fe6d8bc6e4f9c6`, MIT licence,
+  from the official OVGU cloud link in `github.com/thohemp/6DRepNet360`.
+- Architecture read off the checkpoint, not assumed: 320 tensors, `conv1`/`bn1`/
+  `layer1-4` in a bottleneck [3,4,6,3] arrangement, `linear_reg` of shape
+  `(6, 2048)` — a torchvision ResNet-50 with a 6D rotation head. Loads with
+  `strict=True`.
+- The upstream 6D→matrix convention (`utils.py:145`) was checked **numerically**
+  against `canonical.rot6d_to_matrix` rather than by reading: max deviation
+  3.5e-6 over 512 random inputs. They are the same map.
+
+#### 12.14a The instrument is validated, convention-free
+
+6DRepNet360 emits a rotation for every input, so "it produced angles" is no
+evidence it worked. Validated instead by rotating the input image in-plane by a
+known angle and measuring the **geodesic** angle between the predicted rotations —
+which needs no ground truth and no Euler naming convention:
+
+| applied in-plane rotation | median geodesic between R(0) and R(θ) | IQR |
+|---|---|---|
+| ±10° | 9.7° / 9.9° | 2.0 / 2.3 |
+| ±20° | 19.3° / 19.7° | 3.8 / 3.4 |
+| ±40° | 39.6° / 40.0° | 5.7 / 6.8 |
+
+The estimator recovers applied rotation to within a degree at every magnitude.
+It works, on these crops, at this resolution.
+
+#### 12.14b And it is uncorrelated with the angles the project has been using
+
+On 800 development crops where **MediaPipe itself reports a face**, circular
+correlation between the two estimators, tested across *every* pairing of the three
+Euler components in both the local and upstream conventions:
+
+| | max \|circular corr\| over all 9 axis pairings |
+|---|---|
+| 6DRepNet360 vs MediaPipe | **0.035** |
+
+Zero, on every axis, at every head-crop fraction from 0.30 to 1.00 (the 1.00 row
+feeds the whole person box and is the control). Spreads differ by a factor of
+four: 6DRepNet360's yaw has sd 54° against MediaPipe's 14°.
+
+Two estimators disagreeing does not by itself say which is wrong. But §12.14a
+validates one of them against a known quantity, and the other has independently
+been measured as contributing nothing: §11.10 found the metric angles add
+**+0.0058 macro-F1, 0/3 seeds significant**, on top of `face_found`.
+
+**The most economical explanation is that the cached MediaPipe angles are close to
+noise on this corpus** — small, obliquely-viewed, frequently rear-facing heads are
+outside what a frontal face-mesh recovers reliably. That is a second, independent
+mechanism for §11.10's null, and it is a *measurement* problem rather than a
+statistical one: the 556-dim block's three angle columns have been carrying
+approximately no head-orientation information since they were built.
+
+This does not retract anything. §11.10's number stands and was correctly
+interpreted at the time. It changes what the null *means*: not "head orientation
+does not help this task", but "head orientation was never actually measured".
+Which is precisely the question the registered gate (protocol amendment A1) now
+puts to the full-range angles.
+
+#### 12.14c Head localisation
+
+The corpus stores person crops; 6DRepNet360 needs head crops (specification
+guardrail 3). `head_span_px` cannot bridge it — floored at exactly 120 px, median
+0.43× the person-box height. Used instead an explicit geometric crop, the top 42%
+of the person box squared up, documented in
+`head_pose_fullrange.head_box_from_person` and calibrated by
+`tools/branch_c/calibrate_head_crop.py`. Because §12.14b shows MediaPipe cannot
+serve as a reference, the crop is justified by §12.14a's rotation-recovery test
+rather than by agreement with the old estimator.
+
+### 12.15 ★★★ THE POSE GATE: H1 confirmed decisively, H2 fails. Both matter.
+
+Registered gate from BRANCH_C_PROTOCOL.md amendment A1, run exactly as written:
+same development videos (fold 0 inner-train), same contrasts, same AUC statistic,
+same two causal reference estimators as §12.13 — on full-range 6DRepNet360
+rotations instead of MediaPipe angles.
+
+Command: `python tools/branch_c/run_pose_gate.py`
+Cache: `outputs/branch_c/cache/head_pose_fullrange/merged.npz`, 283,913/283,913
+crops (100%), 3 shards on GPUs 1/2/3, ~1,100 crops/s, provenance in
+`outputs/branch_c/RUNS.jsonl`.
+Data: 184,304 development frames across 563 (video, seat) tracks.
+
+#### H1 — CONFIRMED, and larger than expected
+
+Coverage goes from 63% to **100%** by construction, and the resulting rotation is
+strongly class-dependent in a way MediaPipe's angles never were:
+
+| cue | frames | mean geodesic from corpus mean | sd |
+|---|---|---|---|
+| screen_oriented | 140,049 | 29.4° | 23.0 |
+| looking_away | 12,175 | 29.2° | 24.9 |
+| phone_use | 9,170 | 29.6° | 21.6 |
+| turned_to_peer | 4,797 | **41.3°** | 30.1 |
+| head_down | 9,336 | **78.0°** | 45.8 |
+| uncertain | 8,777 | **74.8°** | 40.7 |
+
+A *single scalar* — geodesic distance from the corpus-mean rotation — separates
+`head_down` from `screen_oriented` at **AUC 0.830**, and `uncertain` at **0.852**.
+The same contrasts on the cached MediaPipe yaw give 0.529 and 0.554, i.e. nothing.
+
+This is the §12.14 conclusion cashed out: head orientation was never the problem,
+it was never measured. The 556-dim block's angle columns were noise; a full-range
+estimator on the same crops recovers a large, real signal.
+
+#### H2 — FAILS the registered gate
+
+| contrast | raw yaw | raw geodesic | causal ref | scene ref | best Δ vs raw |
+|---|---|---|---|---|---|
+| vs looking_away | 0.612 | 0.524 | 0.582 | 0.513 | **−0.030** |
+| vs head_down | 0.529 | 0.830 | 0.733 | 0.824 | −0.006 |
+| vs turned_to_peer | 0.513 | 0.625 | 0.681 | 0.625 | **+0.056** |
+| vs phone_use | 0.510 | 0.519 | 0.508 | 0.518 | −0.001 |
+| vs uncertain | 0.554 | 0.852 | 0.772 | 0.844 | −0.008 |
+
+**Mean AUC delta over the face-visible contrasts: +0.0083.** Null, exactly as the
+registered criterion defined it. Only `turned_to_peer` gains (+0.056), which is
+mechanistically sensible — turning to a neighbour is defined relative to where you
+were facing — but it is one contrast out of four, on the corpus's rarest class
+(63 sequences total), and the protocol does not permit promoting it after the fact.
+
+The pose signal is real. **The canonicalisation is not what produces it.**
+
+#### What is claimed and what is dropped
+
+- **Dropped:** the seat/task-relative canonicalisation contribution. Arms 6 and 13
+  are not trained. No invariance claim beyond the proved-and-unit-tested
+  mathematical property, which remains true and remains untestable across real
+  viewpoints on a one-camera corpus.
+- **Retained and now well-supported:** replacing a face-detection-gated angle block
+  with a full-range head-rotation estimator, which converts a missingness artifact
+  into a measured geometric signal. That is an engineering and measurement
+  contribution, and the evidence for it is strong.
+
+Thesis wording moves to the specification's third case: *an observability-aware
+multimodal extension, without claiming head-pose canonicalisation is responsible
+for the gain* — amended to record that head-pose **measurement**, as distinct from
+canonicalisation, demonstrably is.
+
+#### A protocol reading that must not be made silently
+
+A1 says "the pose arms (5, 6, 13) are not trained" on a null gate. Read literally
+that discards **arm 5, absolute full-range pose**, which this gate shows is the
+strong condition (AUC 0.830/0.852). That reading would throw away the positive
+result the gate just produced.
+
+The reading taken instead, stated plainly because it is a judgement and not a
+mechanical application of the rule: A1's stated purpose in its own paragraph is to
+decide the *canonicalisation* claim, and arm 5 is the control **against which
+canonicalisation is judged**. The negative result for arm 6 cannot be reported
+without arm 5. So arms 6 and 13 are dropped as registered; arm 5 is trained, and
+is reported as a control that outperformed the thing it was controlling for.
+
+Anyone reviewing this should check that reasoning rather than accept it. The
+alternative — dropping arm 5 too — is defensible on a strict reading and would
+lose a real finding.
+
 ---
 
 ## 10. Changelog

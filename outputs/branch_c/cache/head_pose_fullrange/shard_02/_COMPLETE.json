@@ -1,0 +1,10 @@
+{
+  "completed_at": "2026-08-09T14:27:05",
+  "device": "cuda:3",
+  "head_fraction": 0.42,
+  "n": 94637,
+  "n_ok": 94637,
+  "n_shards": 3,
+  "shard": 2,
+  "weights_sha256": "3ee08f1e04b8d452a6c4a40926a6f38051894ae6d0aaa6d191fe6d8bc6e4f9c6"
+}

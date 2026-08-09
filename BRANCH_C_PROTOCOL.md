@@ -369,5 +369,45 @@ deleted.
 
 ## 10. Amendments
 
-None. Any amendment must be appended below with date, reason, and the list of
-results produced under the previous version.
+### A1 — 2026-08-09: full-range pose gate, registered before the cache exists
+
+**No outer fold has been opened. No Branch-C model has been trained. No result
+exists under the previous version of this protocol.**
+
+FINDINGS §12.13 reports a pre-test on development data (fold 0 inner-train, 81
+videos, 176,433 frames): seat-relative centring of the *existing* MediaPipe yaw does
+not improve cue separation under either causal reference estimator. That lowers the
+prior on H2 but does not test the registered claim, which concerns full-range 3D
+rotation on all frames — the existing angles exist on only 63% of frames and only
+where a face is already detectable.
+
+A full-range head-pose backend does not exist in this repository. `head_pose.py:23`
+documents a `6drepnet` backend but `_BACKENDS` (line 263) contains only `opencv`,
+`mediapipe` and `mediapipe_detector`, and no weights are present. Building it is
+therefore a prerequisite for arms 5, 6, 13 and 14.
+
+**Registered stopping rule, agreed with the researcher before the cache was built:**
+
+1. Implement a full-range backend (**6DRepNet360**, MIT; DirectMHP is GPL-3.0 and
+   rejected on licence grounds, FINDINGS §12.9) and generate the head-pose cache
+   over the crop corpus.
+2. Re-run **exactly the pre-test of §12.13** on the new angles — same development
+   videos, same contrasts, same AUC statistic, same two reference estimators.
+3. **Gate.** If seat-relative canonicalisation of full-range rotation still yields
+   ~null AUC improvement over raw rotation on the four face-visible classes
+   (screen_oriented, looking_away, phone_use, turned_to_peer), then:
+   - the pose arms (5, 6, 13) are **not trained**;
+   - the result is reported as a negative result under the specification's
+     fourth wording case;
+   - Branch C continues, if at all, as the fusion/observability contribution only,
+     which retains its own falsification test in arm 17.
+4. If the gate passes, proceed to the registered arms unchanged.
+
+The gate threshold is deliberately the same statistic already computed and
+published in §12.13, so it cannot be reshaped after seeing the new numbers. H1
+(does a full-range estimator flatten the `face_found` coverage contrast?) is
+measured and reported at the same time, whatever the gate outcome, because it is
+independently informative.
+
+Nothing else in this protocol changes. Arms, metrics, folds, seeds and gates in
+§§2-7 stand exactly as frozen.
