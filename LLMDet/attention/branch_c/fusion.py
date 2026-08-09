@@ -159,5 +159,14 @@ class ReliabilityFusion(nn.Module):
         tau_ = self.tau if tau is None else tau
         r = self.head(quality)                       # [M, B, T]
         alpha = masked_softmax(r / tau_, mask, dim=0)  # [M, B, T]
-        z_fused = z_base + (alpha.unsqueeze(-1) * z_experts).sum(dim=0)
+
+        # Neutralise unavailable experts *before* weighting. A zero alpha is not
+        # enough on its own: IEEE says 0 * NaN is NaN, and an unavailable expert's
+        # slot legitimately holds whatever placeholder the feature builder left
+        # there. Without this, one missing head-pose estimate turns the entire
+        # fused output for that track into NaN.
+        z_avail = torch.where(
+            mask.unsqueeze(-1), z_experts, torch.zeros_like(z_experts)
+        )
+        z_fused = z_base + (alpha.unsqueeze(-1) * z_avail).sum(dim=0)
         return z_fused, {"alpha": alpha, "r": r}

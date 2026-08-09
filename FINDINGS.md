@@ -2649,6 +2649,74 @@ busy cards. Existing Branch-A/B behaviour is untouched; this is additive.
 Tests: `LLMDet/attention/tests/test_branch_c_provenance.py` (11) and
 `test_branch_c_splits.py` (8) — **19 passed**.
 
+### 12.11 Method core implemented; two bugs the tests caught
+
+`LLMDet/attention/branch_c/` — `canonical.py` (written by the lead after the
+subagent handling it was killed by a session limit), `fusion.py`, `losses.py`.
+Tests: `test_branch_c_canonical.py` (25) and `test_branch_c_fusion_losses.py` (31).
+
+**Suite: 132 before → 188 after, 0 failures, no pre-existing test touched.**
+The 132 baseline was captured first, precisely so that nothing later gets blamed
+on, or hidden by, Branch C.
+
+Two genuine defects, both caught by tests rather than by reading:
+
+1. **`matrix_to_rot6d` broke its own round trip.** `R[..., :, :2].reshape(..., 6)`
+   flattens the `(3, 2)` column slice **row-major**, producing
+   `[r00, r01, r10, r11, r20, r21]` — the two columns interleaved — while
+   `rot6d_to_matrix` reads `x[0:3]` and `x[3:6]` as consecutive columns. Every
+   round trip returned a different rotation. Fixed with a transpose before the
+   reshape. This would not have shown up as a crash; it would have shown up as a
+   pose feature that silently meant nothing.
+
+2. **A missing expert turned the whole fused output into NaN.** `ReliabilityFusion`
+   weighted every expert by `alpha` and summed. For an unavailable modality
+   `alpha` is exactly 0, but IEEE `0 * NaN` is `NaN`, and an unavailable expert's
+   slot legitimately holds whatever placeholder the feature builder left there.
+   One missing head-pose estimate would have poisoned every cue logit for that
+   track. Fixed by masking the expert logits to zero *before* weighting.
+
+Both are the class of bug the specification's "never replace a missing expert with
+an all-zero vector without a separate validity mask" rule is aimed at, and neither
+was visible without a test that deliberately fed in garbage.
+
+**The strongest test in the branch** is
+`test_relative_rotation_is_invariant_to_global_camera_rotation`: 256 random
+`(Q, R_ref, R_head)` triples, asserting `(Q R_ref)^T (Q R_head) == R_ref^T R_head`
+to 1e-10. `test_invariance_holds_for_the_derived_features_too` extends it through
+the whole feature assembler, because an invariance that the feature builder undoes
+is worthless. `test_rotation_invariance_does_not_imply_homography_invariance`
+asserts the *opposite* for a projective perturbation — it fails if anyone starts
+over-reading the claim.
+
+Causality is tested structurally, not asserted: `test_causal_seat_reference_never_
+uses_the_current_or_future_frame` runs the estimator over 40 frames and over an
+18-frame prefix and requires the overlapping outputs to be identical.
+
+### 12.12 ★ A second reason the legacy pose angles are uninformative here
+
+Independent of the `face_found` shortcut (§11.10), and found while writing the
+adapter from the legacy feature block:
+
+`head_pose.py:181` computes `v = [yaw, pitch, roll] / 90.0` and then
+`np.clip(v, -1, 1)`. **Any head turned more than 90 degrees from the camera
+saturates.** In this room students sit facing monitors with their backs to the
+lens, so away-facing heads are not an edge case — they are the common case, and
+every one of them lands on the same clipped value regardless of how far round they
+are turned.
+
+So the existing 556-dim block cannot represent the very configuration that
+distinguishes `looking_away`, `turned_to_peer` and `screen_oriented` for a
+back-facing student. §11.10 showed the angles add +0.0058 with 0/3 seeds
+significant and attributed it to `face_found` carrying the signal; this is a
+second, independent mechanism for the same observation, and it is a
+*representational* limit rather than a statistical one.
+
+It also sharpens H1 (BRANCH_C_PROTOCOL.md §5): a full-range estimator is not
+merely a better angle regressor here, it is the difference between a feature that
+can express the dominant regime and one that cannot. Asserted, so the claim cannot
+rot: `test_legacy_block_saturation_is_visible_not_silent`.
+
 ---
 
 ## 10. Changelog
