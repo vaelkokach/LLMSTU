@@ -3183,6 +3183,75 @@ before it removes the wrong predictions, driving `turned_to_peer` and
 consecutive frames, so the event layer's debouncing will not absorb them; they
 become false alerts rather than flicker.
 
+### 12.19 ★★★ P0 — 95% of the model's macro-F1 is obtainable WITHOUT looking at the student
+
+The shortcut audit required by BRANCH_C_PROTOCOL.md §5.1, finally run. A classifier
+trained on **eight availability/quality signals alone** — no appearance, no
+orientation, no CLIP, nothing describing what the student looks like or which way
+they face:
+
+    face_found · det_conf · occluded · head_kpts/5 · face_kpts/5
+    head_span_px/300 · box_w/2812 · box_h/1050
+
+Same MS-TCN, same folds, same seeds, same selection rule as every other arm.
+
+| arm | what it sees | macro-F1 (15 runs) | sd | share of arm 1 |
+|---|---|---|---|---|
+| **0** | **8 quality signals only** | **0.4602** | 0.0229 | **95.1%** |
+| 1 | + full 552-dim CLIP appearance | 0.4837 | 0.0270 | 100% |
+| 2 | + MediaPipe angles | 0.4887 | 0.0334 | — |
+| 5 | + full-range rotation | 0.4865 | 0.0273 | — |
+
+Paired over 15 matched (fold, seed) pairs: **arm1 − arm0 = +0.0234, 95% CI
+[+0.0137, +0.0346], p < 0.0001, 13/15 wins.** Real, significant — and small.
+
+**The entire 552-dimensional appearance representation is worth +0.023 macro-F1
+over knowing how big the box is and whether a face was detected.**
+
+Verified before believing it: across 40 sampled sequences of
+`llmstu_sequences_quality`, the only non-zero columns are 0-7 (of 570). The model
+provably saw nothing else.
+
+#### Why this is the branch's most important result
+
+It reframes every other number in §12. Pose adds nothing (§12.16) because there is
+very little left for it to add: the six-cue task **as posed by these pseudo-labels**
+is largely solvable from patterns of evidence availability. What has been measured
+as a behaviour classifier is, to a first approximation, a crop-quality classifier.
+
+It also explains the majority-class attractor in §12.18. Availability signals can
+separate "something is occluding this student / the face is not visible" from "clear
+frontal-ish view", which maps onto {head_down, uncertain} vs the rest — and beyond
+that the model has little to go on, so it defaults to `screen_oriented`.
+
+#### The honest caveat, stated because it bounds the claim
+
+Three of the eight signals — `occluded`, `head_kpts`, `face_kpts` — come from the
+**same annotation record as the `activity` field the cue label is derived from**.
+They are teacher-side, not independent pipeline measurements, so some of arm 0's
+performance may be label-internal correlation rather than a genuine shortcut
+available at inference. The other five (`face_found`, `det_conf`, `head_span_px`,
+box width, box height) are produced by the detector and the face backend and *are*
+available at inference.
+
+**This must be separated before the number is cited.** A follow-up arm restricted to
+the five pipeline-measured signals is registered and queued; until it reports,
+**0.4602 is an upper bound on the shortcut, not a measurement of it.** No thesis
+claim may rest on the unseparated figure.
+
+#### Consequences beyond Branch C
+
+This is not a Branch-C artifact. Arms 0 and 1 use the same features, splits and
+trainer lineage as the deployed Branch-B model, so the deployed system's reported
+macro-F1 is subject to the same decomposition. That does not retract §11.9's test
+numbers — they are correctly measured — but it changes what they mean, and
+`THESIS_BRANCH_C_DRAFT.md` and the Branch-B discussion must both say so.
+
+The defensible reading, pending the five-signal arm: *the visible-cue task on this
+corpus is substantially predictable from whether a student's face and body are
+cleanly observable, and appearance, head pose and action evidence add comparatively
+little on top of that.*
+
 ---
 
 ## 10. Changelog
