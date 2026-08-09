@@ -3002,6 +3002,113 @@ Anyone reviewing this should check that reasoning rather than accept it. The
 alternative — dropping arm 5 too — is defensible on a strict reading and would
 lose a real finding.
 
+### 12.16 ★★★ THE RESULT: validated full-range head pose adds nothing. It is redundant with appearance, not absent from it.
+
+45 runs, 3 arms x 5 outer folds x 3 seeds, 0 failures, 86 min on 4 GPUs.
+Inner validation only — **the outer folds have not been opened.**
+Raw: `outputs/branch_c/inner_val_results.json`, `outputs/branch_c/eval/*/metrics.json`.
+Provenance: `outputs/branch_c/RUNS.jsonl`.
+
+Arms 2 and 5 are byte-identical in 553 of 556 columns with `face_found` changed on
+**0.0%** of frames, so the contrast isolates *how head orientation was measured*
+and nothing else.
+
+| arm | features | macro-F1 (15 runs) | sd |
+|---|---|---|---|
+| 1 | base + `face_found` (no angles) | 0.4837 | 0.0270 |
+| 2 | + MediaPipe yaw/pitch/roll | 0.4888 | 0.0334 |
+| 5 | + 6DRepNet360 full-range rotation | 0.4865 | 0.0273 |
+
+Paired over the 15 matched (fold, seed) pairs:
+
+| contrast | mean Δ | 95% CI | p | wins |
+|---|---|---|---|---|
+| arm2 − arm1 | +0.0050 | [−0.0089, +0.0182] | 0.47 | 8/15 |
+| arm5 − arm1 | +0.0028 | [−0.0072, +0.0139] | 0.63 | 8/15 |
+| **arm5 − arm2** | **−0.0022** | **[−0.0119, +0.0085]** | **0.65** | 5/15 |
+
+Per class, every confidence interval includes zero:
+
+| cue | arm1 | arm2 | arm5 | arm5−arm2 | 95% CI |
+|---|---|---|---|---|---|
+| screen_oriented | 0.8482 | 0.8499 | 0.8426 | −0.0073 | [−0.030, +0.013] |
+| looking_away | 0.3020 | 0.3116 | 0.3004 | −0.0112 | [−0.032, +0.014] |
+| head_down | 0.5360 | 0.5385 | 0.5408 | +0.0022 | [−0.020, +0.022] |
+| turned_to_peer | 0.1986 | 0.2047 | 0.2073 | +0.0026 | [−0.029, +0.035] |
+| phone_use | 0.5187 | 0.5324 | 0.5361 | +0.0037 | [−0.013, +0.020] |
+| uncertain | 0.4986 | 0.4956 | 0.4916 | −0.0040 | [−0.019, +0.013] |
+
+Calibration is marginally worse, not better: NLL +0.0210, Brier +0.0134, ECE +0.0031.
+
+**The scientific go gate (protocol §7.1) requires ≥ +0.02 absolute with a CI
+excluding zero. Observed: −0.0022. The gate fails, and it fails by a wide margin.**
+
+#### Why — established directly, not inferred
+
+The obvious objection is that the full-range angles must be weak after all. They
+are not. §12.15 measured a *single scalar* derived from them separating `head_down`
+from `screen_oriented` at AUC 0.830 and `uncertain` at 0.852.
+
+The resolution is redundancy, and it is measurable. Arm 1 contains **no head-pose
+angles whatsoever**, yet:
+
+| cue | arm1 AUROC (no angles) | arm5 AUROC | standalone pose scalar |
+|---|---|---|---|
+| head_down | **0.915** | 0.917 | 0.830 |
+| uncertain | **0.930** | 0.938 | 0.852 |
+| turned_to_peer | **0.825** | 0.826 | 0.625 |
+| phone_use | **0.889** | 0.895 | 0.519 |
+| looking_away | **0.767** | 0.783 | 0.524 |
+
+**The appearance-plus-temporal model already recovers head orientation better than
+the head-pose estimator measures it**, on every class. A 552-dimensional CLIP-based
+representation of a student crop evidently encodes "this head is down" more
+reliably than a dedicated pose network reading the same pixels. Adding the pose
+block therefore contributes nothing it does not already have.
+
+That is the mechanism, and it explains the whole history: §11.10's +0.0058 null,
+§12.14's zero correlation between estimators, and this result are one phenomenon.
+
+#### What this closes
+
+The naive negative — "we added off-the-shelf head pose and it did not help" — is
+weak, because it is always answerable with "your pose estimator was bad". This
+result closes that escape route:
+
+1. The old angles were shown to be near-noise (§12.14, |circ corr| ≤ 0.035 against
+   a validated estimator).
+2. They were replaced with a validated, MIT-licensed, full-range estimator at 100%
+   coverage whose rotation recovery is accurate to ~1° (§12.14a).
+3. The replacement is strongly class-discriminative in isolation (AUC 0.830/0.852).
+4. **It still adds nothing**, on macro-F1, on any per-class F1, or on calibration.
+
+The negative is therefore about the *task and the feature space*, not about the
+instrument. That is a substantially stronger claim than the project could make
+before, and it is the one the thesis should make.
+
+#### Registered outcome
+
+Specification wording case 4, with the mechanism attached:
+
+> Adding off-the-shelf head-pose estimation did not improve grouped visible-cue
+> segmentation beyond the existing MS-TCN, **and this is not attributable to a weak
+> pose estimator**: a validated full-range estimator with complete coverage,
+> strongly discriminative in isolation, is redundant with the appearance
+> representation, which already recovers head orientation more accurately than the
+> pose model measures it.
+
+Arms 6 and 13 dropped by the §12.15 gate. Arm 5 trained and null. **No pose
+contribution is claimed in any form.**
+
+#### On the outer folds
+
+They remain unopened, and the recommendation is to leave them so. The go gate is
+failed on inner validation by an order of magnitude (−0.0022 against a +0.02
+threshold); an outer-fold estimate would produce a generalisation number for a
+model that is not being claimed, and would spend a resource that cannot be
+regenerated. Preserving five untouched outer folds is worth more to future work
+than confirming a null.
+
 ---
 
 ## 10. Changelog
