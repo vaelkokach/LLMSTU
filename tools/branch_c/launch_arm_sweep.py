@@ -59,6 +59,8 @@ ARMS = {
     # obtainable from whether evidence exists rather than what it says.
     "arm0_mstcn_quality": dict(model="mstcn", feature_config="552_base",
                                root="grounding_data/llmstu_sequences_quality"),
+    "arm0b_mstcn_quality5": dict(model="mstcn", feature_config="552_base",
+                                 root="grounding_data/llmstu_sequences_quality5"),
     "arm1_mstcn_553_ff": dict(model="mstcn", feature_config="553_facefound",
                               root="grounding_data/llmstu_sequences_full"),
     "arm2_mstcn_556_mp": dict(model="mstcn", feature_config="556_hp",

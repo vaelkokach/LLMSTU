@@ -63,6 +63,13 @@ def main() -> None:
                     default=REPO / "grounding_data/llmstu_tools/outputs/frame_to_video.json")
     ap.add_argument("--pose-cache", type=Path,
                     default=REPO / "grounding_data/llmstu_tools/outputs/head_pose_cache.npz")
+    ap.add_argument("--pipeline-only", action="store_true",
+                    help="Drop occluded/head_kpts/face_kpts. Those three come from the "
+                         "same annotation record the cue label is derived from, so they "
+                         "are teacher-side rather than measurements available at "
+                         "inference. This flag isolates the five genuinely "
+                         "pipeline-measured signals and is what bounds the shortcut "
+                         "claim (FINDINGS 12.19).")
     args = ap.parse_args()
 
     d = np.load(args.pose_cache, allow_pickle=False)
@@ -96,14 +103,21 @@ def main() -> None:
                 n_missing += 1
                 continue
             bx = r.get("bbox_person") or [0, 0, 0, 0]
-            q[i, 0] = face_found.get(fn, 0.0)
-            q[i, 1] = float(r.get("det_conf", 0.0))
-            q[i, 2] = 1.0 if r.get("occluded") else 0.0
-            q[i, 3] = float(r.get("head_kpts", 0)) / 5.0
-            q[i, 4] = float(r.get("face_kpts", 0)) / 5.0
-            q[i, 5] = float(r.get("head_span_px", 0.0)) / 300.0
-            q[i, 6] = (float(bx[2]) - float(bx[0])) / FRAME_W
-            q[i, 7] = (float(bx[3]) - float(bx[1])) / FRAME_H
+            if args.pipeline_only:
+                q[i, 0] = face_found.get(fn, 0.0)
+                q[i, 1] = float(r.get("det_conf", 0.0))
+                q[i, 2] = float(r.get("head_span_px", 0.0)) / 300.0
+                q[i, 3] = (float(bx[2]) - float(bx[0])) / FRAME_W
+                q[i, 4] = (float(bx[3]) - float(bx[1])) / FRAME_H
+            else:
+                q[i, 0] = face_found.get(fn, 0.0)
+                q[i, 1] = float(r.get("det_conf", 0.0))
+                q[i, 2] = 1.0 if r.get("occluded") else 0.0
+                q[i, 3] = float(r.get("head_kpts", 0)) / 5.0
+                q[i, 4] = float(r.get("face_kpts", 0)) / 5.0
+                q[i, 5] = float(r.get("head_span_px", 0.0)) / 300.0
+                q[i, 6] = (float(bx[2]) - float(bx[0])) / FRAME_W
+                q[i, 7] = (float(bx[3]) - float(bx[1])) / FRAME_H
 
         np.savez_compressed(args.dst / name, x=q, y_frames=z["y_frames"], y=z["y"], t=z["t"])
         n_seq += 1
@@ -114,7 +128,10 @@ def main() -> None:
             (args.dst / f).write_text((args.src / f).read_text())
     print(f"wrote {n_seq:,} sequences / {n_frames:,} frames -> {args.dst}")
     print(f"crops missing from labels: {n_missing}")
-    print(f"informative columns: 0..{N_QUALITY-1}; all others structurally zero")
+    n = 5 if args.pipeline_only else N_QUALITY
+    print(f"informative columns: 0..{n-1}; all others structurally zero")
+    if args.pipeline_only:
+        print("pipeline-measured signals only; occluded/head_kpts/face_kpts excluded")
 
 
 if __name__ == "__main__":

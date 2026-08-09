@@ -32,9 +32,11 @@ shows. It is reported whatever it says.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import sys
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -124,31 +126,62 @@ def score(model, seqs, device, condition, seed) -> dict:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--device", default="cuda:1")
+    ap.add_argument("--gpus", default="auto",
+                    help="'auto' selects idle devices by measured free memory, never "
+                         "more than the project cap and never onto another user's card")
     ap.add_argument("--folds", default="0,1,2,3,4")
     ap.add_argument("--seeds", default="42,43,44")
     args = ap.parse_args()
+
+    if args.gpus == "auto":
+        spec = importlib.util.spec_from_file_location(
+            "prov", REPO / "tools/branch_c/provenance.py")
+        prov = importlib.util.module_from_spec(spec)
+        sys.modules["prov"] = prov
+        spec.loader.exec_module(prov)
+        gpus = prov.select_free_gpus()
+    else:
+        gpus = [int(g) for g in args.gpus.split(",")]
+    print(f"scoring on GPUs {gpus}")
 
     conditions = ["clean", "drop_head", "drop_motion", "drop_all", "corrupt_head",
                   "degrade_quality", "track_gaps", "box_jitter", "permute_alpha"]
     results = defaultdict(lambda: defaultdict(list))
 
-    for fold in [int(f) for f in args.folds.split(",")]:
-        va = load_split(MANIFESTS / f"fold_{fold}.json", SEQ, "val")
+    # Fold data is loaded once and shared; the per-fold val split is ~1000 sequences
+    # and reloading it per checkpoint dominated the single-GPU version's runtime.
+    val_by_fold = {f: load_split(MANIFESTS / f"fold_{f}.json", SEQ, "val")
+                   for f in [int(x) for x in args.folds.split(",")]}
+
+    jobs = []
+    for fold in val_by_fold:
         for arm in FUSION_ARMS:
             for seed in [int(s) for s in args.seeds.split(",")]:
                 ck = RUNS / arm / f"{arm}_f{fold}_s{seed}" / "checkpoints/best.pth"
-                if not ck.exists():
-                    continue
-                blob = torch.load(ck, map_location="cpu", weights_only=False)
-                model = MultiExpertCueModel(fusion=blob["fusion"]).to(args.device)
-                model.load_state_dict(blob["state_dict"], strict=True)
-                for cond in conditions:
-                    if cond == "permute_alpha" and blob["fusion"] == "none":
-                        continue
-                    m = score(model, va, args.device, cond, seed)
-                    results[arm][cond].append(m["macro_f1"])
-                print(f"  {arm} f{fold} s{seed} done", flush=True)
+                if ck.exists():
+                    jobs.append((arm, fold, seed, ck))
+    print(f"{len(jobs)} checkpoints x {len(conditions)} conditions")
+
+    lock = __import__("threading").Lock()
+
+    def run_one(i_job):
+        i, (arm, fold, seed, ck) = i_job
+        device = f"cuda:{gpus[i % len(gpus)]}"
+        blob = torch.load(ck, map_location="cpu", weights_only=False)
+        model = MultiExpertCueModel(fusion=blob["fusion"]).to(device)
+        model.load_state_dict(blob["state_dict"], strict=True)
+        out = {}
+        for cond in conditions:
+            if cond == "permute_alpha" and blob["fusion"] == "none":
+                continue
+            out[cond] = score(model, val_by_fold[fold], device, cond, seed)["macro_f1"]
+        with lock:
+            for cond, v in out.items():
+                results[arm][cond].append(v)
+            print(f"  {arm} f{fold} s{seed} done on {device}", flush=True)
+
+    with ThreadPoolExecutor(max_workers=len(gpus)) as ex:
+        list(ex.map(run_one, enumerate(jobs)))
 
     print(f"\n{'arm':<16}" + "".join(f"{c:>17}" for c in conditions))
     print("-" * (16 + 17 * len(conditions)))
