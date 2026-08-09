@@ -45,10 +45,10 @@
   },
   "card_mismatches": [],
   "replay_seconds": {
-    "arch/asrf_556_hp": 153.86955189704895,
-    "ff_det/mstcn_553_facefound": 35.40717339515686,
-    "arch/mstcn_556_hp": 34.22112274169922,
-    "posefix/asrf_556_hp": 157.01412153244019
+    "arch/asrf_556_hp": 153.06081581115723,
+    "ff_det/mstcn_553_facefound": 39.71342635154724,
+    "arch/mstcn_556_hp": 35.561899185180664,
+    "posefix/asrf_556_hp": 150.87002515792847
   },
   "pairwise_agreement": [
     {

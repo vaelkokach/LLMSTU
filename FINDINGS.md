@@ -2570,6 +2570,85 @@ matching figure), `MODEL_COMPARISON_GUIDE.md` (predates MS-TCN/ASRF entirely), a
 `outputs/FINAL_RESULTS_REGISTER.md`'s runtime rows (3.05 FPS, superseded by 5.77 in
 §11.17). None are Branch-C blockers; all are listed with line citations in the map.
 
+### 12.8 ★ Novelty audit — three of five sub-claims are anticipated. Citations verified.
+
+Full matrix: `docs/branch_c/NOVELTY_AUDIT.md`. Licences: `docs/branch_c/LICENSE_AUDIT.md`.
+
+**Every arXiv identifier below was fetched and checked by the lead before being
+acted on.** An agent recommending that a thesis contribution be dropped is exactly
+the claim that must not be taken on trust, and fabricated identifiers are the
+characteristic failure mode. All five resolve to real papers whose abstracts match
+the descriptions given.
+
+| sub-claim | closest prior work | verified | verdict |
+|---|---|---|---|
+| C1 seat/task-relative pose canonicalisation | 3DPCNet, arXiv:2509.23455 (Sep 2025) — canonicalises pose into a *body-centred* frame via continuous 6D rotation mapped to SO(3) | ✅ title/abstract confirmed | **NARROW** |
+| C2 learned reliability gating from quality signals | Multi-QuAD arXiv:2412.14489 (Dec 2024); PRIME arXiv:2608.03475 (Aug 2026) | ✅ both confirmed | **NARROW** |
+| C3 quality-ordering hinge loss | RAC, arXiv:2605.16999 (May 2026) — "clean-corrupted pairwise loss reducing confidence as visual evidence degrades" | ✅ confirmed | **DROP as a contribution; cite RAC** |
+| C4 stop-gradient clean→corrupt distillation | PRIME arXiv:2608.03475 and related | ⚠️ **weaker than the agent stated** — PRIME's abstract does *not* mention stop-gradient distillation between clean and corrupted paths | **NARROW**, on thinner evidence than C3 |
+| C5 the combination | — | — | **NARROW hard** |
+
+**What survives.** The machinery is not novel — 3DPCNet already does 6D→SO(3)
+canonicalisation to a body-centred frame. The unoccupied space, after direct
+searches found nothing, is the **seat/task-relative reference frame for classroom
+head pose specifically**: canonicalising to the direction the student's own monitor
+faces, in a room where that direction differs per seat. That is precisely what
+BRANCH_C_PROTOCOL.md §5 already nominates as the critical arm, so the audit
+narrows the claim without changing the experiment.
+
+The honest framing is now: *integration plus one falsifiable seat-relative-frame
+claim*, not new modelling machinery. Losses C3/C4 are implemented and ablated
+because the protocol requires the controls, and cited to prior work rather than
+claimed.
+
+**A control this literature forces us to add.** Moon, Pillai & Campbell
+(arXiv:2606.26473, Jun 2026) permute reliability scores while holding model and
+inputs fixed, and find performance *unchanged* on real corpora — the gate is
+trained and decorative. Registered as arm 17 in BRANCH_C_PROTOCOL.md §4.1, before
+any fold was opened: if permuting `r_m` does not degrade pooled macro-F1, no fusion
+contribution is claimed whatever arm 8 shows. The branch can now fail this test
+publicly, which is the point.
+
+### 12.9 Licence audit — nothing in use is a problem; two candidates are traps
+
+Nothing currently imported has a licensing defect: the in-house `IoUTracker`,
+MMDetection/LLMDet, CLIP via `transformers` and MediaPipe are all Apache-2.0 or MIT
+(grep-verified against actual imports, not against the candidate list).
+
+The risk is entirely in what the specification *proposed* adding:
+
+| component | licence | decision |
+|---|---|---|
+| **Ultralytics YOLOv8 / YOLO11** | **AGPL-3.0, weights included** | **Do not vendor.** Would impose network-disclosure obligations on the whole combined work. The specification flagged this and it is real. |
+| **DirectMHP** | **GPL-3.0** (built on YOLOv5) | **Reject** for the same copyleft reason |
+| **6DRepNet360** | MIT | **Adopt** — solves the identical full-range head-pose problem safely |
+| VideoMAE | CC BY-NC 4.0 | non-commercial; flagged, not currently used |
+| WHENet | **no LICENSE file in the official repo** | a third-party mirror's BSD-3 claim is not the owner's grant; treat as unlicensed |
+
+This resolves the Stage-2 head-pose choice on licence grounds before any benchmark
+is run: **6DRepNet360 is the full-range candidate**, not DirectMHP. The comparison
+against WHENet in §5/H1 stands, with WHENet's licence status recorded as a
+redistribution blocker rather than a research one.
+
+The repository has **no top-level LICENSE file**. An administrative blocker for
+release, independent of dependencies, and listed in
+`docs/branch_c/RELEASE_RISK_REGISTER.md`.
+
+### 12.10 The repo launcher's GPU default collides with other users
+
+`attention/thesis_eval/launch_sweep.py:73` defaults to `--gpus 0,1,2,3`, correctly
+capped at four. But GPUs 0 and 4 were carrying other users' processes at audit time
+(4,232 MiB and 690 MiB), so that default lands a job on top of somebody else's work
+— which corrupts this project's own latency measurements as well as theirs.
+
+`tools/branch_c/provenance.py:select_free_gpus` selects by measured free memory
+instead, keeps the hard cap of four, and *raises* rather than sharing a device when
+nothing is idle. On the live host it returns `[1, 2, 3, 5]`, correctly skipping both
+busy cards. Existing Branch-A/B behaviour is untouched; this is additive.
+
+Tests: `LLMDet/attention/tests/test_branch_c_provenance.py` (11) and
+`test_branch_c_splits.py` (8) — **19 passed**.
+
 ---
 
 ## 10. Changelog

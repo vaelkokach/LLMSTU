@@ -192,9 +192,34 @@ under Branch-C folds**; the published Branch-B numbers (MS-TCN-556 test macro-F1
 | 14 | WHENet vs best full-range head model | coverage, stability, runtime, downstream |
 | 15 | ByteTrack vs BoT-SORT vs current tracker, identical detections | tracker choice |
 | 16 | LLMDet vs YOLO, identical tracking and evaluation | detector choice |
+| 17 | **reliability-permutation diagnostic** (see §4.1) | is the gate doing anything at all |
 
 Arms that fail stay in the results table. A registered variant that is dropped
 from the report is a protocol violation.
+
+### 4.1 The reliability-permutation diagnostic (added 2026-08-09, before any fold was opened)
+
+Moon, Pillai & Campbell, *When Does Quality-Aware Multimodal Fusion Matter? A
+Leakage-Safe Diagnostic for Decision-Level Dependence* (arXiv:2606.26473, June
+2026) shows that on real corpora, **permuting the reliability scores while holding
+the model and inputs fixed frequently leaves performance unchanged** — the gate is
+present, trained, and decorative. Gains appeared only where the reliability signal
+genuinely predicted which modality was correct.
+
+This branch would be wide open to exactly that objection, so the diagnostic is
+registered as a first-class arm rather than left for a reviewer to raise:
+
+- Take the trained full model. At inference, randomly permute `r_m` across
+  modalities (and separately, across time within a track), keeping every input and
+  weight fixed. Re-score.
+- **If pooled outer macro-F1 does not drop materially, the reliability head is not
+  influencing decisions**, and no fusion contribution is claimed regardless of what
+  arm 8 shows. Report the permutation delta beside every fusion result.
+- Report the same diagnostic for the uniform-fusion control, where the delta must
+  be ~0 by construction; that is the diagnostic's own sanity check.
+
+This is a pre-registered falsification test that the branch can fail. It is
+recorded here before any Branch-C model has been trained.
 
 ---
 
