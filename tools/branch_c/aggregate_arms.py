@@ -25,6 +25,9 @@ REPO = Path(__file__).resolve().parents[2]
 RUNS = REPO / "outputs/branch_c/runs"
 
 LABELS = {
+    "arm3b_plain_mstcn": "arm 3b plain MS-TCN on appearance (architecture control)",
+    "arm9c_learned_clean": "arm 9c learned fusion, LEAKAGE-FREE",
+    "arm10c_full_clean": "arm 10c learned fusion + losses, LEAKAGE-FREE",
     "arm3_appearance": "arm 3  appearance expert only (fusion off)",
     "arm8_uniform": "arm 8  uniform fusion (equal expert weights)",
     "arm9_learned": "arm 9  learned reliability fusion, base losses",
@@ -106,7 +109,10 @@ def main() -> None:
                  ("arm8_uniform", "arm3_appearance"),
                  ("arm9_learned", "arm8_uniform"),
                  ("arm10_full", "arm9_learned"),
-                 ("arm10_full", "arm3_appearance")]
+                 ("arm10_full", "arm3_appearance"),
+                 ("arm3_appearance", "arm3b_plain_mstcn"),
+                 ("arm9c_learned_clean", "arm8_uniform"),
+                 ("arm10c_full_clean", "arm9c_learned_clean")]
     pairs_out = {}
     for a, b in contrasts:
         if a not in data or b not in data:

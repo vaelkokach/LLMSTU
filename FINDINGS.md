@@ -3329,6 +3329,149 @@ audit exists to catch, and the only reason it was caught is that arm 0b was
 registered out of suspicion about those exact three fields rather than after seeing a
 result that flattered the branch.
 
+### 12.21 ★★★ Fusion arms, leakage-free: the entire "learned fusion" gain was the leak
+
+30 clean reruns, 8 GPUs, 65.6 min, 0 failures. Quality columns 563/564/565
+(`occluded`, `head_kpts`, `face_kpts`) zeroed in the training data, so the
+reliability head sees only the five signals a deployed system actually measures.
+
+| arm | fusion | macro-F1 | sd |
+|---|---|---|---|
+| 3 | none (appearance expert alone) | 0.5317 | 0.0295 |
+| 8 | uniform, equal expert weights | 0.5336 | 0.0247 |
+| **9c** | **learned reliability, leakage-free** | **0.5348** | 0.0243 |
+| 10c | learned + observability losses, leakage-free | 0.5389 | 0.0234 |
+| ~~9~~ | ~~learned, leaky~~ | ~~0.6238~~ | — |
+| ~~10~~ | ~~learned + losses, leaky~~ | ~~0.6263~~ | — |
+
+Paired over 15 matched (fold, seed) pairs:
+
+| contrast | mean Δ | 95% CI | p | wins | verdict |
+|---|---|---|---|---|---|
+| arm8 − arm3 | +0.0019 | [−0.0025, +0.0057] | 0.37 | 11/15 | null |
+| **arm9c − arm8** | **+0.0012** | **[−0.0008, +0.0035]** | **0.27** | 8/15 | **null** |
+| arm10c − arm9c | +0.0041 | [+0.0010, +0.0070] | 0.009 | 11/15 | significant, negligible |
+| ~~arm9 − arm8 (leaky)~~ | ~~+0.0902~~ | ~~[+0.0871, +0.0932]~~ | ~~0.0000~~ | ~~15/15~~ | **artefact** |
+
+**The leak was worth 0.0890 macro-F1.** `arm9 − arm8` was +0.0902; `arm9c − arm8`
+is +0.0012. Essentially the entire apparent contribution of learned reliability
+fusion was the gate reading three annotation fields that encode the label.
+
+**Every fusion claim in BRANCH_C_PROTOCOL.md §4 now fails:**
+
+- **Arm 8** (uniform vs no fusion): +0.0019, null. Fusing head and motion experts
+  at all adds nothing.
+- **Arm 8 vs 9** (learned vs uniform): +0.0012, null. Learning the weights adds
+  nothing over averaging them.
+- **Arm 9 vs 10** (observability losses): +0.0041. Statistically distinguishable
+  from zero, practically negligible, and a fifth of the registered threshold.
+- **Whole stack**: arm10c − arm3 = **+0.0072** against a **+0.02** go gate.
+  **Fails by a factor of three.**
+
+This was predictable from arm 8 and was predicted: if fusing the experts adds
++0.0019, no weighting scheme over those same experts can manufacture +0.02, because
+there is nothing to reweight. The experts are neutral, not harmful, so there is not
+even anything to suppress.
+
+**Scientific go gate (protocol §7.1): FAILED on every clause that can be
+evaluated.** Pose (§12.15, §12.16) null; fusion null; the one significant contrast
+in the whole branch is +0.0041.
+
+The honest summary of Branch C's registered hypotheses is now four nulls: seat-relative
+canonicalisation (gate-dropped), full-range pose (null), uniform fusion (null),
+learned reliability fusion (null once the leak is removed).
+
+**What remains open** is not a registered hypothesis at all but an anomaly worth
+settling: arm 3 scores 0.5317 with *less* information than arm 1's 0.4837 — no
+`face_found` whatsoever — a +0.048 gap larger than any effect this branch set out
+to measure. arm 3b is running to separate architecture from training recipe.
+
+### 12.22 ★★★ The one positive: the training recipe is worth +0.041, and it survives a debiasing check
+
+180 runs, 12 arms x 5 folds x 3 seeds, zero training failures.
+
+#### The selection-rule scare, and why it did not bite
+
+`thesis_eval/train.py:18-20` states that validation macro-F1 "swings ~0.05 between
+adjacent epochs, so taking the argmax over 90 epochs selects partly on noise and
+biases the reported best upward", and selects on a trailing 5-epoch mean instead
+(lines 266-273). **`attention/branch_c/train_fusion.py` uses plain argmax.** That
+splits the arms into two families whose numbers are not directly comparable, and
+the arm-3 anomaly is a cross-family comparison.
+
+Re-scored every one of my runs under the project's exact rule, retroactively from
+the stored per-epoch history:
+
+| trainer | arms | selection bias (argmax − project rule) |
+|---|---|---|
+| project | 0, 0b, 1, 2, 5 | 0.0000 by construction |
+| mine | 3, 3b, 8, 9, 10, 9c, 10c | **+0.0022 to +0.0029** |
+
+The bias is real, consistent, and **an order of magnitude too small** to explain a
+0.045 gap. The anomaly survives:
+
+| contrast | argmax | **project rule** | 95% CI (project rule) | wins |
+|---|---|---|---|---|
+| arm3b − arm1 (recipe alone) | +0.0434 | **+0.0406** | [+0.0289, +0.0521] | 14/15 |
+| arm3 − arm1 (total) | +0.0481 | **+0.0451** | [+0.0338, +0.0561] | 14/15 |
+
+All conclusions below use the **project rule**, so every number in this section is
+comparable to Branch B's.
+
+#### The finding
+
+**arm 3b is a stock 4-stage MS-TCN on the 552-dim appearance block — the same
+architecture as the deployed arm 1, with *less* information (arm 1 also has
+`face_found`). It scores +0.0406 macro-F1 higher.** The only difference is the
+training configuration.
+
+Decomposition, all under the project rule:
+
+| component | Δ macro-F1 | 95% CI | verdict |
+|---|---|---|---|
+| **training recipe** (arm3b − arm1) | **+0.0406** | [+0.0289, +0.0521] | **real, and 2x the go gate** |
+| architecture, deeper stack (arm3 − arm3b) | +0.0046 | [+0.0015, +0.0078] | small but real |
+| whole fusion stack (arm10c − arm3) | +0.0072 | [+0.0026, +0.0116] | below gate |
+
+The recipe differences between the two trainers, none yet isolated:
+
+| | project | Branch C |
+|---|---|---|
+| epochs | 90 | **60** |
+| learning rate | 3e-4 | **5e-4** |
+| schedule | none | **cosine annealing** |
+| dropout | 0.1 | **0.5** |
+| grad clip | 1.0 | **5.0** |
+| AMP | on | **off** |
+
+**What may and may not be claimed.** This is a controlled comparison of two
+*configurations*, not of one variable: six things differ at once, and the
+responsible factor is unidentified. It is enough to say that a different training
+configuration yields +0.041 macro-F1 on the identical architecture with fewer
+inputs, and that the deployed model is therefore leaving roughly that much on the
+table. It is **not** enough to attribute the gain to any single hyper-parameter.
+Isolating it is a bounded follow-up: six one-factor-at-a-time runs, ~15 min each on
+8 GPUs.
+
+Dropout is the most likely candidate on priors — 0.1 to 0.5 is a large change on a
+2.7M-parameter model trained on 4,175 sequences — but that is a hypothesis, not a
+result, and is recorded as such.
+
+#### Branch C's final scorecard, all under the project rule
+
+| registered hypothesis | result |
+|---|---|
+| seat/task-relative canonicalisation (arms 6, 13) | **dropped by its pre-registered gate** (+0.0083 AUC) |
+| full-range head pose (arm 5) | **null**, −0.0022 [−0.0119, +0.0085] |
+| uniform expert fusion (arm 8) | **null**, +0.0019 |
+| learned reliability fusion (arm 9c) | **null**, +0.0015 [−0.0007, +0.0041] |
+| observability losses (arm 10c) | +0.0041, significant, a fifth of the gate |
+| **unregistered: training configuration** | **+0.0406 [+0.0289, +0.0521]** |
+
+**Four registered nulls, and the only thing that moved the metric was not a
+hypothesis at all.** That is the honest shape of Branch C, and the last row is the
+one with practical value for the deployed system.
+
 ---
 
 ## 10. Changelog

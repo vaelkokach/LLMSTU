@@ -77,6 +77,8 @@ ARMS = {
     # reliability head, and three of its columns are teacher-side annotation
     # fields; zeroing them at inference collapsed arm9 from 0.657 to 0.257
     # (FINDINGS 12.20). arm3/arm8 never read quality and are unaffected.
+    "arm3b_plain_mstcn": dict(fusion_arm=True,
+                              root="grounding_data/llmstu_sequences_branch_c"),
     "arm9c_learned_clean": dict(fusion_arm=True, arm_impl="arm9_learned",
                                 root="grounding_data/llmstu_sequences_branch_c_clean"),
     "arm10c_full_clean": dict(fusion_arm=True, arm_impl="arm10_full",

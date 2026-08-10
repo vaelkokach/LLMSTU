@@ -54,6 +54,40 @@ TOTAL_DIM = 575
 EXPERTS = ("head", "motion")          # gated experts; appearance is the residual base
 
 
+class PlainMSTCNBaseline(nn.Module):
+    """Reference MS-TCN over the appearance block alone, in this trainer.
+
+    Exists for exactly one comparison. arm 3 (``MultiExpertCueModel`` with fusion
+    off) scores 0.5317 against arm 1's 0.4837 while holding *less* information -
+    arm 3 has no ``face_found`` at all. A +0.048 gap is larger than any effect this
+    branch set out to measure, and it is confounded four ways: different trainer,
+    60 vs 90 epochs, different learning rate, and a deeper stack.
+
+    This class removes three of those four. Trained by the same script, schedule,
+    optimiser and loss as arm 3, it differs from it in **architecture only**:
+    a stock 4-stage MS-TCN straight off the 552-dim appearance features, versus
+    arm 3's wide first stage feeding a 3-stage refinement.
+
+    If this scores ~0.53, the gain is the training recipe. If it scores ~0.48, the
+    gain is the architecture. Either answer is worth having; neither is available
+    from the numbers already collected.
+    """
+
+    def __init__(self, num_classes: int = 6, channels: int = 128,
+                 num_layers: int = 10, num_stages: int = 4, dropout: float = 0.5):
+        super().__init__()
+        a0, a1 = LAYOUT["appearance"]
+        self.slice = (a0, a1)
+        self.net = MSTCN(a1 - a0, num_classes, channels, num_layers,
+                         num_stages=num_stages, dropout=dropout)
+
+    def forward(self, x, pad_mask=None, **_):
+        a0, a1 = self.slice
+        out = self.net(x[..., a0:a1], pad_mask)
+        return out, {"alpha": torch.zeros(0), "r": torch.zeros(0),
+                     "mask": torch.zeros(0)}
+
+
 class MultiExpertCueModel(nn.Module):
     """Appearance baseline plus reliability-gated head and motion experts."""
 
@@ -150,8 +184,11 @@ class MultiExpertCueModel(nn.Module):
 
         if permute_reliability is not None:
             alpha = diag["alpha"]
-            perm = torch.randperm(alpha.shape[0], generator=permute_reliability,
-                                  device=alpha.device)
+            # Drawn on CPU then moved: a CPU generator cannot seed a CUDA randperm,
+            # and drawing on the device would make the arm-17 diagnostic depend on
+            # which GPU it happened to land on.
+            perm = torch.randperm(alpha.shape[0],
+                                  generator=permute_reliability).to(alpha.device)
             ze_avail = torch.where(mask.unsqueeze(-1), ze, torch.zeros_like(ze))
             z_fused = zb + (alpha[perm].unsqueeze(-1) * ze_avail).sum(0)
             diag = {**diag, "alpha": alpha[perm], "permuted": True}

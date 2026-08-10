@@ -43,7 +43,8 @@ import torch.nn.functional as F
 from sklearn.metrics import f1_score
 
 from attention.branch_c import losses as LO
-from attention.branch_c.model import LAYOUT, TOTAL_DIM, MultiExpertCueModel
+from attention.branch_c.model import (
+    LAYOUT, TOTAL_DIM, MultiExpertCueModel, PlainMSTCNBaseline)
 from attention.thesis_eval.data import sqrt_inverse_frequency_weights
 
 IGNORE = -100
@@ -53,6 +54,9 @@ ARMS = {
     "arm8_uniform": dict(fusion="uniform", full_losses=False),
     "arm9_learned": dict(fusion="learned", full_losses=False),
     "arm10_full": dict(fusion="learned", full_losses=True),
+    # Architecture control for the arm-3 anomaly. Same trainer, schedule, optimiser
+    # and loss as arm 3; only the network differs. See PlainMSTCNBaseline.
+    "arm3b_plain_mstcn": dict(fusion="none", full_losses=False, plain=True),
 }
 
 DEFAULT_COEFFS = {
@@ -184,7 +188,8 @@ def main() -> None:
     # places at once.
     weights = torch.from_numpy(sqrt_inverse_frequency_weights(counts)).to(dev)
 
-    model = MultiExpertCueModel(fusion=cfg["fusion"]).to(dev)
+    model = (PlainMSTCNBaseline() if cfg.get("plain")
+             else MultiExpertCueModel(fusion=cfg["fusion"])).to(dev)
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.01)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.epochs)
 
@@ -233,7 +238,8 @@ def main() -> None:
             best, best_ep = m["macro_f1"], ep
             (args.output_dir / "checkpoints").mkdir(exist_ok=True)
             torch.save({"state_dict": model.state_dict(), "arm": args.arm,
-                        "fusion": cfg["fusion"], "epoch": ep, "input_dim": TOTAL_DIM,
+                        "fusion": cfg["fusion"], "plain": bool(cfg.get("plain")),
+                        "epoch": ep, "input_dim": TOTAL_DIM,
                         "layout": {k: list(v) for k, v in LAYOUT.items()},
                         "val_macro_f1": best},
                        args.output_dir / "checkpoints/best.pth")
