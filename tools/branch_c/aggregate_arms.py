@@ -25,6 +25,10 @@ REPO = Path(__file__).resolve().parents[2]
 RUNS = REPO / "outputs/branch_c/runs"
 
 LABELS = {
+    "arm3_appearance": "arm 3  appearance expert only (fusion off)",
+    "arm8_uniform": "arm 8  uniform fusion (equal expert weights)",
+    "arm9_learned": "arm 9  learned reliability fusion, base losses",
+    "arm10_full": "arm 10 learned fusion + observability losses",
     "arm0_mstcn_quality": "arm 0  quality/missingness only (shortcut audit)",
     "arm0b_mstcn_quality5": "arm 0b pipeline-measured quality only (5 signals)",
     "arm1_mstcn_553_ff": "arm 1  base + face_found (deployment / presence-only control)",
@@ -41,12 +45,16 @@ def collect() -> dict:
         arm = rec.parent.parent.name
         fold = int(eid.split("_f")[-1].split("_s")[0])
         seed = int(eid.split("_s")[-1])
+        # Two trainers write these records - thesis_eval.train (arms 0/0b/1/2/5)
+        # and branch_c.train_fusion (arms 3/8/9/10) - and their schemas differ.
+        # Read the fields both share and tolerate the rest rather than crashing on
+        # a key one of them never wrote.
         out[arm][(fold, seed)] = {
             "macro_f1": d["selected_val_macro_f1"],
-            "epoch": d["selected_epoch"],
-            "wall_s": d["wall_clock_s"],
-            "input_dim": d["input_dim"],
-            "manifest_sha256": d["manifest_sha256"],
+            "epoch": d.get("selected_epoch"),
+            "wall_s": d.get("wall_clock_s"),
+            "input_dim": d.get("input_dim"),
+            "manifest_sha256": d.get("manifest_sha256") or d.get("manifest"),
         }
     return out
 
@@ -94,7 +102,11 @@ def main() -> None:
                  ("arm1_mstcn_553_ff", "arm0_mstcn_quality"),
                  ("arm2_mstcn_556_mp", "arm1_mstcn_553_ff"),
                  ("arm5_mstcn_556_fr", "arm1_mstcn_553_ff"),
-                 ("arm5_mstcn_556_fr", "arm2_mstcn_556_mp")]
+                 ("arm5_mstcn_556_fr", "arm2_mstcn_556_mp"),
+                 ("arm8_uniform", "arm3_appearance"),
+                 ("arm9_learned", "arm8_uniform"),
+                 ("arm10_full", "arm9_learned"),
+                 ("arm10_full", "arm3_appearance")]
     pairs_out = {}
     for a, b in contrasts:
         if a not in data or b not in data:

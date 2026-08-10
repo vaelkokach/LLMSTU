@@ -73,6 +73,14 @@ ARMS = {
     "arm8_uniform": dict(fusion_arm=True, root="grounding_data/llmstu_sequences_branch_c"),
     "arm9_learned": dict(fusion_arm=True, root="grounding_data/llmstu_sequences_branch_c"),
     "arm10_full": dict(fusion_arm=True, root="grounding_data/llmstu_sequences_branch_c"),
+    # Leakage-free reruns. arm9/arm10 read the quality block through the
+    # reliability head, and three of its columns are teacher-side annotation
+    # fields; zeroing them at inference collapsed arm9 from 0.657 to 0.257
+    # (FINDINGS 12.20). arm3/arm8 never read quality and are unaffected.
+    "arm9c_learned_clean": dict(fusion_arm=True, arm_impl="arm9_learned",
+                                root="grounding_data/llmstu_sequences_branch_c_clean"),
+    "arm10c_full_clean": dict(fusion_arm=True, arm_impl="arm10_full",
+                              root="grounding_data/llmstu_sequences_branch_c_clean"),
 }
 SEEDS = (42, 43, 44)
 
@@ -138,7 +146,7 @@ def main() -> None:
                 cfg = ARMS[arm]
                 if cfg.get("fusion_arm"):
                     cmd = [sys.executable, "-m", "attention.branch_c.train_fusion",
-                           "--arm", arm, "--fold", str(k), "--seed", str(seed),
+                           "--arm", cfg.get("arm_impl", arm), "--fold", str(k), "--seed", str(seed),
                            "--epochs", "60", "--batch-size", "32",
                            "--output-dir", str(d), "--manifest", str(manifests[k]),
                            "--sequence-root", str(REPO / cfg["root"])]

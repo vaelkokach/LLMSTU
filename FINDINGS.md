@@ -3252,6 +3252,83 @@ corpus is substantially predictable from whether a student's face and body are
 cleanly observable, and appearance, head pose and action evidence add comparatively
 little on top of that.*
 
+### 12.20 ★★★ CORRECTION to §12.19, and a leakage failure the audit caught
+
+Two results from the same cause. **§12.19's headline claim was wrong and is
+corrected here**; the bound I registered alongside it is what exposed the error.
+
+#### 12.20a The shortcut is less than half what §12.19 reported
+
+§12.19 reported that 8 availability signals reach 0.4602 macro-F1 against 0.4837
+for the full appearance model, and called it "95% of the macro-F1 without looking
+at the student". It flagged that three of the eight — `occluded`, `head_kpts`,
+`face_kpts` — come from the same annotation record the cue label is derived from,
+and registered arm 0b to separate them. **Arm 0b has now run, and the separation is
+enormous:**
+
+| arm | signals | macro-F1 | sd |
+|---|---|---|---|
+| 0 | 8 signals, incl. 3 teacher-side | 0.4602 | 0.0229 |
+| **0b** | **5 pipeline-measured signals only** | **0.3208** | 0.0281 |
+| 1 | + full 552-dim appearance | 0.4837 | 0.0270 |
+
+- arm0 − arm0b = **+0.1395**, CI [+0.1278, +0.1510], **15/15**
+- arm1 − arm0b = **+0.1629**, CI [+0.1531, +0.1724], **15/15**
+
+Those three annotation fields are worth **0.14 macro-F1 on their own**. They are not
+available at inference — they are the teacher's own description of the crop.
+
+**The corrected statement:** the genuine inference-time shortcut reaches **0.3208**,
+which is 66% of the appearance model, and **appearance is worth +0.163 macro-F1, not
++0.023.** The claim that 95% of performance needs no look at the student does not
+survive and must not be cited. §12.19 is left in place with this correction attached,
+because the reasoning that produced it — and the bound that caught it — are both part
+of the record.
+
+I was right to refuse to bank the number and right to register the bound before
+reporting. I was wrong to lead with the unseparated figure.
+
+#### 12.20b The fusion arms leaked the label through the reliability gate
+
+The first fusion results looked like a large win:
+
+| arm | macro-F1 |
+|---|---|
+| 3 appearance expert only | 0.5317 |
+| 8 uniform fusion | 0.5336 |
+| **9 learned reliability fusion** | **0.6238** |
+| 10 learned + observability losses | 0.6259 |
+
+arm9 − arm8 = **+0.0902**, CI [+0.0871, +0.0932], 15/15. A +0.09 jump from replacing
+equal expert weights with a learned two-value gate is not plausible, so it was tested
+before being believed. Zeroing the three teacher-side quality columns **at inference**,
+on the trained checkpoints:
+
+| arm | clean | teacher-side quality zeroed | Δ |
+|---|---|---|---|
+| arm8 uniform | 0.5694 | 0.5694 | **0.000** |
+| arm9 learned | 0.6566 | **0.2567** | **−0.400** |
+
+arm8 is unaffected because it never reads the quality block. arm9 collapses by 0.40 —
+far more than the 0.09 it appeared to gain. **The reliability head was reading
+`occluded`/`head_kpts`/`face_kpts` and recovering the label through them.**
+
+`fusion.py` is structurally correct: the gate cannot see *content* features, and a
+test asserts it. But "not content" is not the same as "not label-bearing", and three
+columns of the quality vector were label-bearing. The API guarantee held; the data
+contract behind it did not.
+
+**Consequence.** Arms 9 and 10 as first measured are **INVALID and not citable**.
+Arms 3 and 8 are unaffected and stand. Reruns (`arm9c_learned_clean`,
+`arm10c_full_clean`) are training on a leakage-free variant with those three columns
+zeroed, and the robustness arms (11/12/17) were stopped before they ran on the
+compromised checkpoints so they will score the clean models instead.
+
+**The audit worked.** This is precisely what BRANCH_C_PROTOCOL.md §5.1's shortcut
+audit exists to catch, and the only reason it was caught is that arm 0b was
+registered out of suspicion about those exact three fields rather than after seeing a
+result that flattered the branch.
+
 ---
 
 ## 10. Changelog
