@@ -40,9 +40,15 @@ from typing import Any, Dict, List, Optional
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_RUNS = REPO / "outputs/branch_c/RUNS.jsonl"
 
-# At most four of the eight A100s may be occupied by this project. The box is
-# shared. Do not widen this, and do not override it from a config file.
-MAX_CONCURRENT_GPUS = 4
+# At most four of the eight A100s may be occupied by this project by default. The
+# box is shared, and that default exists so a routine run cannot starve another
+# user. It is overridable only through an explicit environment variable, never
+# from a config file and never silently: raising it is a decision someone has to
+# take deliberately, per run, having checked the box is actually free.
+#
+# Raised to 8 for the 2026-08-10 Branch-C clean reruns on the researcher's explicit
+# authorisation, with GPUs 4-7 verified idle (21 MiB, 0%) beforehand.
+MAX_CONCURRENT_GPUS = int(os.environ.get("BRANCH_C_MAX_GPUS", "4"))
 
 # A device holding more than this is treated as in use by somebody else.
 # Idle A100s in this cluster report ~21 MiB.
