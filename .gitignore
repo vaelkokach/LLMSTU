@@ -10,10 +10,10 @@ env/
 .ipynb_checkpoints/
 
 # Large ML files
-*.pt
-*.pth
-*.ckpt
-*.onnx
+#*.pt
+#*.pth
+#*.ckpt
+#*.onnx
 
 # Data folders
 grounding_data
@@ -24,9 +24,9 @@ LLMDet/data/
 LLMDet/datasets/
 
 # Logs / outputs
-logs/
-runs/
-outputs/
+#logs/
+#runs/
+#outputs/
 
 # System
 .DS_Store
@@ -34,9 +34,9 @@ outputs/
 
 
 # Run outputs & experiment artifacts (results JSONs force-added selectively)
-LLMDet/work_dirs/
-LLMDet/.dist_test/
-train_debug.log
+#LLMDet/work_dirs/
+#LLMDet/.dist_test/
+#train_debug.log
 
 # Media / test assets
 *.mp4
@@ -47,7 +47,7 @@ test*.jpg
 *.npz
 
 # Archives & bundles
-*.tar.gz
+#*.tar.gz
 gold_annotation_bundle*
 
 # Dashboard session caches: derived from a video + the detector, ~100 MB each,
@@ -55,9 +55,9 @@ gold_annotation_bundle*
 tools/dashboard/sessions/
 
 # Gold annotation outputs stay local until finalized
-tools/gold_annotator/gold_annotations_*.jsonl
-tools/gold_annotator/gold_events_*.jsonl
-.claude/
+#tools/gold_annotator/gold_annotations_*.jsonl
+#tools/gold_annotator/gold_events_*.jsonl
+#.claude/
 
 # External datasets (re-downloadable; CMOSE is 13.6 GB)
 grounding_data/external/
@@ -68,4 +68,4 @@ huggingface/mediapipe/*.tflite
 # Branch-C error-analysis crops: derived identifiable student media. Blurred, but
 # the filenames carry video id + seat + timestamp and the repo is public, so they
 # stay local. See FINDINGS 12.4 and docs/branch_c/RELEASE_RISK_REGISTER.md.
-outputs/branch_c/error_analysis/crops/
+#outputs/branch_c/error_analysis/crops/
