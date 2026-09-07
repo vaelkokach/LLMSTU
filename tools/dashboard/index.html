@@ -173,6 +173,16 @@
 </footer>
 
 <script>
+// Resolve API URLs against the page, not the server root.
+//
+// Absolute "/api/state" only works when the dashboard is served at "/". Behind a
+// path-prefixing reverse proxy — JupyterHub serves it at
+// /user/<name>/proxy/8080/, which is how this runs on the HPC — the browser
+// sends /api/state to the hub rather than to us, so every call 404s while the
+// page itself loads fine. Resolving against document.baseURI works at the root
+// and under any prefix.
+const api = p => new URL(p, document.baseURI).href;
+
 function fmt(s){ s=Math.round(s); return s<60 ? s+"s" : Math.floor(s/60)+"m "+(s%60)+"s"; }
 function f4(x){ return (x==null||isNaN(x)) ? "—" : Number(x).toFixed(4); }
 
@@ -210,7 +220,7 @@ function selectedSource(){
 }
 
 async function loadSources(){
-  const r = await fetch("/api/sources",{cache:"no-store"});
+  const r = await fetch(api("api/sources"),{cache:"no-store"});
   SOURCES = await r.json();
   const sel=$("sourcesel"), keep=sel.value;
   sel.innerHTML="";
@@ -273,7 +283,7 @@ $("btn-play").addEventListener("click", async ()=>{
   if(!s) return;
   sourceBanner("");
   try{
-    const r = await fetch("/api/source",{method:"POST",
+    const r = await fetch(api("api/source"),{method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({source_id:s.id})});
     const j = await r.json();
@@ -286,7 +296,7 @@ $("btn-analyse").addEventListener("click", async ()=>{
   if(!s) return;
   sourceBanner("");
   try{
-    const r = await fetch("/api/analyse",{method:"POST",
+    const r = await fetch(api("api/analyse"),{method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({source_id:s.id})});
     const j = await r.json();
@@ -294,7 +304,7 @@ $("btn-analyse").addEventListener("click", async ()=>{
   }catch(e){ sourceBanner("Could not analyse: "+e.message, true); }
 });
 
-$("btn-cancel").addEventListener("click", ()=>fetch("/api/cancel",{method:"POST"}));
+$("btn-cancel").addEventListener("click", ()=>fetch(api("api/cancel"),{method:"POST"}));
 
 /* upload: the raw file as the request body, no multipart. A lecture recording
    is streamed to disk on the server rather than buffered. */
@@ -354,7 +364,7 @@ function optionLabel(m){
 }
 
 async function loadModels(){
-  const r = await fetch("/api/models",{cache:"no-store"});
+  const r = await fetch(api("api/models"),{cache:"no-store"});
   MODELS = await r.json();
   const sel = document.getElementById("modelsel");
   sel.innerHTML = "";
@@ -408,7 +418,7 @@ document.getElementById("modelsel").addEventListener("change", async (ev)=>{
   document.getElementById("modelcard").classList.add("switching");
   banner("Switching to "+id+"…", false);
   try{
-    const r = await fetch("/api/model",{
+    const r = await fetch(api("api/model"),{
       method:"POST", headers:{"Content-Type":"application/json"},
       body: JSON.stringify({variant_id:id})});
     const j = await r.json();
@@ -465,7 +475,7 @@ function renderModelSpec(m, notice){
 
 async function tick(){
   try{
-    const r = await fetch("/api/state",{cache:"no-store"});
+    const r = await fetch(api("api/state"),{cache:"no-store"});
     const s = await r.json();
 
     document.getElementById("status").textContent = s.running ? "live" : "idle";
