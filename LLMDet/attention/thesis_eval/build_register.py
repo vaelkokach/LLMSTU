@@ -233,15 +233,28 @@ STATIC_ENTRIES: List[Dict] = [
                  "on a split with no test set, (b) single seed, (c) no confidence interval, "
                  "(d) checkpoint selected by argmax over a metric that swings ±0.05 between "
                  "epochs. Use the thesis_eval ladder instead."),
-    entry("DEPLOYED real-scene throughput", 3.05, unit="FPS",
+    entry("DEPLOYED real-scene throughput", 5.77, unit="FPS",
+          split="0325.mp4, 190 frames, 6.0 tracks mean",
+          evidence="work_dirs/profiling/report_stride_3_2.json",
+          evaluator="profiling/profile_pipeline.py", citable=True, branch="runtime",
+          config="configs/attention_runtime.yaml (MS-TCN, 553_facefound) at "
+                 "detector_stride=3, temporal_stride=2",
+          caveat="THIS is the deployed configuration as of 2026-08-03. Single A100. "
+                 "fps_p50 6.35, frame_ms_mean 173.3, p95 291.7. Still NEAR-real-time: "
+                 "91.1% of frames miss a 10 fps budget and 100% miss 25 fps. The speed "
+                 "is bought with striding, and stride_equivalence.json prices it: "
+                 "against a 1:1 reference, 3:2 holds cue agreement at 0.947 but finds "
+                 "13 of 15 episodes (episode agreement 0.80). Quote the throughput and "
+                 "that cost together."),
+    entry("superseded 2026-08-01 deployed throughput", 3.05, unit="FPS",
           split="0325.mp4, 120 frames, ~6 students",
           evidence="work_dirs/profiling/report_deployed_mstcn556.json; FINDINGS.md §11.12",
-          evaluator="profiling/profile_pipeline.py", citable=True, branch="runtime",
+          evaluator="profiling/profile_pipeline.py", citable=False, branch="runtime",
           config="configs/attention_runtime.yaml (MS-TCN, 556-dim, MediaPipe head pose)",
-          caveat="THIS is the deployed configuration. Single A100. Detector ~124-159 ms, "
-                 "features 141.6 ms (head pose is ~100 ms of that), temporal 47.6 ms. "
-                 "p95 367 ms. Describe the system as NEAR-real-time: 100% of frames miss "
-                 "a 10 fps budget."),
+          caveat="DO NOT CITE as the system's speed. This was the deployed figure until "
+                 "2026-08-03, when deployment moved to the 553_facefound model with 3:2 "
+                 "striding; see the 5.77 FPS entry. Retained because the 1 August "
+                 "register reported it and the thesis draft may still quote it."),
     entry("DEPLOYED throughput with 30 students", 0.88, unit="FPS",
           split="0325.mp4 with synthesised detections",
           evidence="work_dirs/profiling/report_deployed_mstcn556.json", citable=True,
@@ -269,13 +282,26 @@ STATIC_ENTRIES: List[Dict] = [
                  "checkpoint; strict=False raises on a size mismatch, a bare except "
                  "swallowed it, and the dashboard served cues from a RANDOMLY "
                  "INITIALISED network. Re-verified 2026-08-01 with MS-TCN-556."),
-    entry("dashboard alert threshold", 0.64, split="fitted on validation, frozen",
-          evidence="work_dirs/thesis/runtime/mstcn_556_thresholds.json", citable=True,
+    entry("dashboard alert threshold", 0.66, split="fitted on validation, frozen",
+          evidence="work_dirs/thesis/runtime/mstcn_553_ff_thresholds.json", citable=True,
           evaluator="thesis_eval/runtime.py", branch="runtime",
-          caveat="Lowest threshold with selective accuracy >= 85%: retains 72.1% of "
-                 "frames at 85.4% accuracy vs 75.6% at full coverage. Display threshold "
-                 "0.48 retains 90.4% at 79.4%. Neither is tuned on test or on the "
-                 "human-gold set."),
+          config="checkpoint.mstcn_553_ff_s42 (the DEPLOYED classifier per "
+                 "artifacts.lock.json)",
+          caveat="Lowest threshold with selective accuracy >= 85%: retains 64.6% of "
+                 "frames at 85.3% accuracy vs 73.2% at full coverage. Display threshold "
+                 "0.46 retains 91.1% at 76.4%. Temperature 0.9236. Neither is tuned on "
+                 "test or on the human-gold set, and temperature scaling moves no "
+                 "argmax, so accuracy at full coverage is unchanged."),
+    entry("superseded 2026-08-01 dashboard alert threshold", 0.64,
+          split="fitted on validation, frozen",
+          evidence="work_dirs/thesis/runtime/mstcn_556_thresholds.json", citable=False,
+          evaluator="thesis_eval/runtime.py", branch="runtime",
+          config="mstcn_556_hp_s42 — NOT the deployed classifier",
+          caveat="DO NOT CITE. These are the thresholds of mstcn_556_hp, which the "
+                 "1 August register cited as the dashboard's calibration. The deployed "
+                 "classifier is mstcn_553_ff_s42, whose frozen thresholds are 0.46/0.66; "
+                 "see the entry above. Citing 0.64 describes a model the dashboard does "
+                 "not run."),
 ]
 
 
