@@ -1,0 +1,26 @@
+# Phase 2 — the `research` extra from pyproject.toml, minus torch (installed
+# first in the Dockerfile against the cu121 index) and minus mmcv (installed
+# after, from OpenMMLab's wheel index).
+#
+# opencv is the headless build: the pinned opencv-python pulls GUI libraries
+# that cannot load in a container without a display.
+numpy==1.26.4
+opencv-python-headless==4.11.0.86
+PyYAML==6.0.1
+Pillow==10.3.0
+transformers==4.44.2
+mediapipe==1.0.0
+mmengine==0.10.7
+
+# Prerequisites of the VENDORED LLMDet/mmdet tree. mmdet itself is never
+# pip-installed — it ships in the repo — but its import chain needs these, and
+# without them `import mmdet` fails with ModuleNotFoundError.
+addict==2.4.0
+matplotlib==3.8.4
+pycocotools==2.0.10
+shapely==2.1.1
+six==1.16.0
+terminaltables==3.1.10
+yapf==0.43.0
+
+huggingface_hub>=0.35.0
