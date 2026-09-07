@@ -35,6 +35,37 @@ from pathlib import Path
 HOME = Path(__file__).resolve().parent
 PORT = int(os.environ.get("PORT", "7860"))
 
+
+def _cache_root() -> Path:
+    """Prefer Spaces persistent storage, fall back to the ephemeral image.
+
+    With a 1-hour sleep timer the Space cold-starts often, and the artifacts are
+    ~5 GB (the detector alone is 4.29 GB). On ephemeral disk that is re-fetched
+    on every wake, which dominates time-to-first-frame. /data survives sleeps, so
+    the download happens once.
+
+    Probed by actually writing, not by os.path.exists: /data is present but
+    read-only when persistent storage is not enabled, and a bare exists() check
+    would route the cache somewhere that fails on first write.
+    """
+    data = Path("/data")
+    try:
+        data.mkdir(parents=True, exist_ok=True)
+        probe = data / ".write_test"
+        probe.write_text("ok")
+        probe.unlink()
+        return data
+    except Exception:
+        return HOME
+
+
+CACHE_ROOT = _cache_root()
+# Set before huggingface_hub is imported anywhere, or it reads the default.
+os.environ.setdefault("HF_HOME", str(CACHE_ROOT / ".cache" / "huggingface"))
+print(f"[app] cache root: {CACHE_ROOT} "
+      f"({'persistent' if CACHE_ROOT != HOME else 'EPHEMERAL — artifacts re-download on every wake'})",
+      flush=True)
+
 # Where server.py expects things, relative to the repo root it is run from.
 SESSIONS_DIR = HOME / "tools" / "dashboard" / "sessions"
 WORKDIRS = HOME / "LLMDet" / "work_dirs"
@@ -61,7 +92,7 @@ def fetch_artifacts() -> bool:
         repo_id=repo,
         repo_type=os.environ.get("ARTIFACT_TYPE", "model"),
         token=token,
-        local_dir=str(HOME / "artifacts"),
+        local_dir=str(CACHE_ROOT / "artifacts"),
     )
     print(f"[app] artifacts at {local}", flush=True)
 
