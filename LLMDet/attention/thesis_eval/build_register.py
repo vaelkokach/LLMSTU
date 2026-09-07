@@ -25,6 +25,21 @@ from attention.thesis_eval import EVALUATOR_VERSION
 REPO = Path(__file__).resolve().parents[3]
 
 
+def ev_path(path: Path) -> str:
+    """Evidence path as a POSIX string.
+
+    ``str(Path)`` uses the OS separator, so building the register on Windows
+    writes backslash paths into a document that is read on the cluster and quoted
+    in the thesis. Forward slashes everywhere keep the register byte-identical
+    regardless of where it was generated.
+
+    Named ``ev_path`` rather than ``ev`` deliberately: ``from_events`` already
+    binds ``ev`` to a per-tIoU results dict, and a shorter name would be shadowed
+    there and fail at call time.
+    """
+    return Path(path).as_posix()
+
+
 def entry(metric: str, value, *, split: str, evidence: str, citable: bool,
           ci: Optional[List[float]] = None, checkpoint: str = "",
           config: str = "", caveat: str = "", evaluator: str = EVALUATOR_VERSION,
@@ -53,7 +68,7 @@ def from_table_a(path: Path) -> List[Dict]:
                     round(s.get("ci_high", float("nan")), 4)],
                 checkpoint=c["runs"][0] + "/checkpoints/best.pth",
                 config=f"feature_config={c['feature_config']}, model={c['model']}",
-                evidence=str(path),
+                evidence=ev_path(path),
                 caveat=(f"mean over {s['n']} seeds (sd {s['std']:.4f}); "
                         f"seed-42 video-bootstrap CI "
                         f"[{b.get('ci_low', float('nan')):.4f}, "
@@ -63,7 +78,7 @@ def from_table_a(path: Path) -> List[Dict]:
         n_sig, n = c["n_seeds_significant_macro_f1"], c["n_seeds"]
         out.append(entry(
             f"Δ macro-F1 · {c['label']}", round(c["delta_macro_f1_seed_means"], 4),
-            split=split, evidence=str(path), citable=True, branch="B (visible cues)",
+            split=split, evidence=ev_path(path), citable=True, branch="B (visible cues)",
             config=f"{c['a']} − {c['b']}",
             caveat=(f"paired video-level bootstrap; significant in {n_sig}/{n} seeds. "
                     + ("Supported." if n and n_sig == n else
@@ -79,14 +94,14 @@ def from_cmose(path: Path) -> List[Dict]:
     out = [entry(
         "CMOSE · subjects appearing in >1 official split",
         f"{a['subjects_in_more_than_one_official_split']}/{a['n_subjects']}",
-        split="CMOSE official release", evidence=str(path), citable=True,
+        split="CMOSE official release", evidence=ev_path(path), citable=True,
         branch="external (CMOSE, separate task)", evaluator="thesis_eval/cmose.py",
         caveat=a["note"])]
     for proto, blk in d["protocols"].items():
         for m, v in blk["test_over_seeds"].items():
             out.append(entry(
                 f"CMOSE · {m} ({proto} split)", round(v["mean"], 4),
-                split=f"CMOSE test ({proto})", evidence=str(path), citable=True,
+                split=f"CMOSE test ({proto})", evidence=ev_path(path), citable=True,
                 branch="external (CMOSE, separate task)",
                 evaluator="thesis_eval/cmose.py",
                 config=f"MLP over 1024-d I3D; {blk['split_sizes']}; "
@@ -116,7 +131,7 @@ def from_events(path: Path) -> List[Dict]:
             ev = r["events"]["by_tiou"][f"{e['primary_iou']:.2f}"]
             seg = r["segmentation"]
             base = dict(split="human-gold diagnostic (984 crops / 10 tracks)",
-                        evidence=str(path), branch="B (events)",
+                        evidence=ev_path(path), branch="B (events)",
                         config=f"tIoU {e['primary_iou']}, {tag}")
             cav = (f"{dedup_note}. Diagnostic set — small and deliberately selected "
                    f"(2 segments, 8 gold tracks); NOT a classroom-wide estimate. "

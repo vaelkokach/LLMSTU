@@ -1,12 +1,12 @@
 {
-  "generated": "2026-08-01",
+  "generated": "2026-09-07",
   "evaluator_version": "thesis_eval/1.0.0",
-  "reading_rule": "Every entry carries `citable`. A false value is not an oversight \u2014 it records a number that exists in the repository or in FINDINGS.md and must NOT enter the thesis, together with the reason. Never mix metrics from different tables into one leaderboard: accuracy, macro-F1, mAP, MSE, retrieval R@1 and event recall answer different questions.",
-  "n_entries": 207,
+  "reading_rule": "Every entry carries `citable`. A false value is not an oversight — it records a number that exists in the repository or in FINDINGS.md and must NOT enter the thesis, together with the reason. Never mix metrics from different tables into one leaderboard: accuracy, macro-F1, mAP, MSE, retrieval R@1 and event recall answer different questions.",
+  "n_entries": 209,
   "n_citable": 134,
   "entries": [
     {
-      "metric": "asrf::556_hp \u00b7 macro_f1",
+      "metric": "asrf::556_hp · macro_f1",
       "value": 0.5063,
       "unit": "",
       "confidence_interval": [
@@ -23,7 +23,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "asrf::556_hp \u00b7 balanced_accuracy",
+      "metric": "asrf::556_hp · balanced_accuracy",
       "value": 0.5319,
       "unit": "",
       "confidence_interval": [
@@ -40,7 +40,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "asrf::556_hp \u00b7 accuracy",
+      "metric": "asrf::556_hp · accuracy",
       "value": 0.7294,
       "unit": "",
       "confidence_interval": [
@@ -57,7 +57,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "asrf::556_hp \u00b7 macro_auprc",
+      "metric": "asrf::556_hp · macro_auprc",
       "value": 0.5155,
       "unit": "",
       "confidence_interval": [
@@ -74,7 +74,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "asrf::556_hp \u00b7 ece",
+      "metric": "asrf::556_hp · ece",
       "value": 0.0399,
       "unit": "",
       "confidence_interval": [
@@ -91,7 +91,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "asrf::570_full \u00b7 macro_f1",
+      "metric": "asrf::570_full · macro_f1",
       "value": 0.5071,
       "unit": "",
       "confidence_interval": [
@@ -108,7 +108,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "asrf::570_full \u00b7 balanced_accuracy",
+      "metric": "asrf::570_full · balanced_accuracy",
       "value": 0.5293,
       "unit": "",
       "confidence_interval": [
@@ -125,7 +125,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "asrf::570_full \u00b7 accuracy",
+      "metric": "asrf::570_full · accuracy",
       "value": 0.7515,
       "unit": "",
       "confidence_interval": [
@@ -142,7 +142,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "asrf::570_full \u00b7 macro_auprc",
+      "metric": "asrf::570_full · macro_auprc",
       "value": 0.5146,
       "unit": "",
       "confidence_interval": [
@@ -159,7 +159,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "asrf::570_full \u00b7 ece",
+      "metric": "asrf::570_full · ece",
       "value": 0.0198,
       "unit": "",
       "confidence_interval": [
@@ -176,7 +176,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "mstcn::556_hp \u00b7 macro_f1",
+      "metric": "mstcn::556_hp · macro_f1",
       "value": 0.5027,
       "unit": "",
       "confidence_interval": [
@@ -193,7 +193,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "mstcn::556_hp \u00b7 balanced_accuracy",
+      "metric": "mstcn::556_hp · balanced_accuracy",
       "value": 0.5218,
       "unit": "",
       "confidence_interval": [
@@ -210,7 +210,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "mstcn::556_hp \u00b7 accuracy",
+      "metric": "mstcn::556_hp · accuracy",
       "value": 0.7575,
       "unit": "",
       "confidence_interval": [
@@ -227,7 +227,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "mstcn::556_hp \u00b7 macro_auprc",
+      "metric": "mstcn::556_hp · macro_auprc",
       "value": 0.5093,
       "unit": "",
       "confidence_interval": [
@@ -244,7 +244,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "mstcn::556_hp \u00b7 ece",
+      "metric": "mstcn::556_hp · ece",
       "value": 0.0262,
       "unit": "",
       "confidence_interval": [
@@ -261,7 +261,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "mstcn::570_full \u00b7 macro_f1",
+      "metric": "mstcn::570_full · macro_f1",
       "value": 0.5038,
       "unit": "",
       "confidence_interval": [
@@ -278,7 +278,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "mstcn::570_full \u00b7 balanced_accuracy",
+      "metric": "mstcn::570_full · balanced_accuracy",
       "value": 0.4891,
       "unit": "",
       "confidence_interval": [
@@ -295,7 +295,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "mstcn::570_full \u00b7 accuracy",
+      "metric": "mstcn::570_full · accuracy",
       "value": 0.7752,
       "unit": "",
       "confidence_interval": [
@@ -312,7 +312,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "mstcn::570_full \u00b7 macro_auprc",
+      "metric": "mstcn::570_full · macro_auprc",
       "value": 0.5048,
       "unit": "",
       "confidence_interval": [
@@ -329,7 +329,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "mstcn::570_full \u00b7 ece",
+      "metric": "mstcn::570_full · ece",
       "value": 0.0211,
       "unit": "",
       "confidence_interval": [
@@ -346,7 +346,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "asrf::556_hp \u00b7 macro_f1",
+      "metric": "asrf::556_hp · macro_f1",
       "value": 0.4771,
       "unit": "",
       "confidence_interval": [
@@ -363,7 +363,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "asrf::556_hp \u00b7 balanced_accuracy",
+      "metric": "asrf::556_hp · balanced_accuracy",
       "value": 0.5127,
       "unit": "",
       "confidence_interval": [
@@ -380,7 +380,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "asrf::556_hp \u00b7 accuracy",
+      "metric": "asrf::556_hp · accuracy",
       "value": 0.7096,
       "unit": "",
       "confidence_interval": [
@@ -397,7 +397,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "asrf::556_hp \u00b7 macro_auprc",
+      "metric": "asrf::556_hp · macro_auprc",
       "value": 0.4734,
       "unit": "",
       "confidence_interval": [
@@ -414,7 +414,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "asrf::556_hp \u00b7 ece",
+      "metric": "asrf::556_hp · ece",
       "value": 0.0333,
       "unit": "",
       "confidence_interval": [
@@ -431,7 +431,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "asrf::570_full \u00b7 macro_f1",
+      "metric": "asrf::570_full · macro_f1",
       "value": 0.4924,
       "unit": "",
       "confidence_interval": [
@@ -448,7 +448,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "asrf::570_full \u00b7 balanced_accuracy",
+      "metric": "asrf::570_full · balanced_accuracy",
       "value": 0.5213,
       "unit": "",
       "confidence_interval": [
@@ -465,7 +465,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "asrf::570_full \u00b7 accuracy",
+      "metric": "asrf::570_full · accuracy",
       "value": 0.7348,
       "unit": "",
       "confidence_interval": [
@@ -482,7 +482,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "asrf::570_full \u00b7 macro_auprc",
+      "metric": "asrf::570_full · macro_auprc",
       "value": 0.4822,
       "unit": "",
       "confidence_interval": [
@@ -499,7 +499,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "asrf::570_full \u00b7 ece",
+      "metric": "asrf::570_full · ece",
       "value": 0.0309,
       "unit": "",
       "confidence_interval": [
@@ -516,7 +516,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "mstcn::556_hp \u00b7 macro_f1",
+      "metric": "mstcn::556_hp · macro_f1",
       "value": 0.4998,
       "unit": "",
       "confidence_interval": [
@@ -533,7 +533,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "mstcn::556_hp \u00b7 balanced_accuracy",
+      "metric": "mstcn::556_hp · balanced_accuracy",
       "value": 0.519,
       "unit": "",
       "confidence_interval": [
@@ -550,7 +550,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "mstcn::556_hp \u00b7 accuracy",
+      "metric": "mstcn::556_hp · accuracy",
       "value": 0.7589,
       "unit": "",
       "confidence_interval": [
@@ -567,7 +567,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "mstcn::556_hp \u00b7 macro_auprc",
+      "metric": "mstcn::556_hp · macro_auprc",
       "value": 0.4888,
       "unit": "",
       "confidence_interval": [
@@ -584,7 +584,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "mstcn::556_hp \u00b7 ece",
+      "metric": "mstcn::556_hp · ece",
       "value": 0.0317,
       "unit": "",
       "confidence_interval": [
@@ -601,7 +601,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "mstcn::570_full \u00b7 macro_f1",
+      "metric": "mstcn::570_full · macro_f1",
       "value": 0.4881,
       "unit": "",
       "confidence_interval": [
@@ -618,7 +618,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "mstcn::570_full \u00b7 balanced_accuracy",
+      "metric": "mstcn::570_full · balanced_accuracy",
       "value": 0.481,
       "unit": "",
       "confidence_interval": [
@@ -635,7 +635,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "mstcn::570_full \u00b7 accuracy",
+      "metric": "mstcn::570_full · accuracy",
       "value": 0.7651,
       "unit": "",
       "confidence_interval": [
@@ -652,7 +652,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "mstcn::570_full \u00b7 macro_auprc",
+      "metric": "mstcn::570_full · macro_auprc",
       "value": 0.4767,
       "unit": "",
       "confidence_interval": [
@@ -669,7 +669,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "mstcn::570_full \u00b7 ece",
+      "metric": "mstcn::570_full · ece",
       "value": 0.0246,
       "unit": "",
       "confidence_interval": [
@@ -686,7 +686,7 @@
       "branch": "B (visible cues)"
     },
     {
-      "metric": "event recall \u00b7 transformer_552 (gold_raw)",
+      "metric": "event recall · transformer_552 (gold_raw)",
       "value": 0.3333,
       "unit": "8/24",
       "confidence_interval": null,
@@ -695,12 +695,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 transformer_552 (gold_raw)",
+      "metric": "event F1 · transformer_552 (gold_raw)",
       "value": 0.4444,
       "unit": "",
       "confidence_interval": null,
@@ -709,12 +709,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 transformer_552 (gold_raw)",
+      "metric": "false alerts/hour · transformer_552 (gold_raw)",
       "value": 10.201,
       "unit": "per hour",
       "confidence_interval": null,
@@ -723,12 +723,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 transformer_552 (gold_raw)",
+      "metric": "segmental F1@25 · transformer_552 (gold_raw)",
       "value": 0.2074,
       "unit": "",
       "confidence_interval": null,
@@ -737,12 +737,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 transformer_552 (gold_raw)",
+      "metric": "segmental edit score · transformer_552 (gold_raw)",
       "value": 26.83,
       "unit": "0-100",
       "confidence_interval": null,
@@ -751,12 +751,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 transformer_552 (gold_raw)",
+      "metric": "frame accuracy vs human · transformer_552 (gold_raw)",
       "value": 0.7175,
       "unit": "",
       "confidence_interval": null,
@@ -765,12 +765,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event recall \u00b7 transformer_556 (gold_raw)",
+      "metric": "event recall · transformer_556 (gold_raw)",
       "value": 0.2083,
       "unit": "5/24",
       "confidence_interval": null,
@@ -779,12 +779,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 transformer_556 (gold_raw)",
+      "metric": "event F1 · transformer_556 (gold_raw)",
       "value": 0.3125,
       "unit": "",
       "confidence_interval": null,
@@ -793,12 +793,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 transformer_556 (gold_raw)",
+      "metric": "false alerts/hour · transformer_556 (gold_raw)",
       "value": 7.65,
       "unit": "per hour",
       "confidence_interval": null,
@@ -807,12 +807,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 transformer_556 (gold_raw)",
+      "metric": "segmental F1@25 · transformer_556 (gold_raw)",
       "value": 0.2906,
       "unit": "",
       "confidence_interval": null,
@@ -821,12 +821,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 transformer_556 (gold_raw)",
+      "metric": "segmental edit score · transformer_556 (gold_raw)",
       "value": 40.02,
       "unit": "0-100",
       "confidence_interval": null,
@@ -835,12 +835,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 transformer_556 (gold_raw)",
+      "metric": "frame accuracy vs human · transformer_556 (gold_raw)",
       "value": 0.809,
       "unit": "",
       "confidence_interval": null,
@@ -849,12 +849,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event recall \u00b7 transformer_563expr (gold_raw)",
+      "metric": "event recall · transformer_563expr (gold_raw)",
       "value": 0.25,
       "unit": "6/24",
       "confidence_interval": null,
@@ -863,12 +863,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 transformer_563expr (gold_raw)",
+      "metric": "event F1 · transformer_563expr (gold_raw)",
       "value": 0.3529,
       "unit": "",
       "confidence_interval": null,
@@ -877,12 +877,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 transformer_563expr (gold_raw)",
+      "metric": "false alerts/hour · transformer_563expr (gold_raw)",
       "value": 10.201,
       "unit": "per hour",
       "confidence_interval": null,
@@ -891,12 +891,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 transformer_563expr (gold_raw)",
+      "metric": "segmental F1@25 · transformer_563expr (gold_raw)",
       "value": 0.3248,
       "unit": "",
       "confidence_interval": null,
@@ -905,12 +905,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 transformer_563expr (gold_raw)",
+      "metric": "segmental edit score · transformer_563expr (gold_raw)",
       "value": 39.48,
       "unit": "0-100",
       "confidence_interval": null,
@@ -919,12 +919,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 transformer_563expr (gold_raw)",
+      "metric": "frame accuracy vs human · transformer_563expr (gold_raw)",
       "value": 0.7905,
       "unit": "",
       "confidence_interval": null,
@@ -933,12 +933,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event recall \u00b7 transformer_563dyn (gold_raw)",
+      "metric": "event recall · transformer_563dyn (gold_raw)",
       "value": 0.25,
       "unit": "6/24",
       "confidence_interval": null,
@@ -947,12 +947,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 transformer_563dyn (gold_raw)",
+      "metric": "event F1 · transformer_563dyn (gold_raw)",
       "value": 0.3243,
       "unit": "",
       "confidence_interval": null,
@@ -961,12 +961,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 transformer_563dyn (gold_raw)",
+      "metric": "false alerts/hour · transformer_563dyn (gold_raw)",
       "value": 17.851,
       "unit": "per hour",
       "confidence_interval": null,
@@ -975,12 +975,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 transformer_563dyn (gold_raw)",
+      "metric": "segmental F1@25 · transformer_563dyn (gold_raw)",
       "value": 0.2764,
       "unit": "",
       "confidence_interval": null,
@@ -989,12 +989,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 transformer_563dyn (gold_raw)",
+      "metric": "segmental edit score · transformer_563dyn (gold_raw)",
       "value": 45.55,
       "unit": "0-100",
       "confidence_interval": null,
@@ -1003,12 +1003,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 transformer_563dyn (gold_raw)",
+      "metric": "frame accuracy vs human · transformer_563dyn (gold_raw)",
       "value": 0.8011,
       "unit": "",
       "confidence_interval": null,
@@ -1017,12 +1017,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event recall \u00b7 transformer_570 (gold_raw)",
+      "metric": "event recall · transformer_570 (gold_raw)",
       "value": 0.1667,
       "unit": "4/24",
       "confidence_interval": null,
@@ -1031,12 +1031,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 transformer_570 (gold_raw)",
+      "metric": "event F1 · transformer_570 (gold_raw)",
       "value": 0.2581,
       "unit": "",
       "confidence_interval": null,
@@ -1045,12 +1045,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 transformer_570 (gold_raw)",
+      "metric": "false alerts/hour · transformer_570 (gold_raw)",
       "value": 7.65,
       "unit": "per hour",
       "confidence_interval": null,
@@ -1059,12 +1059,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 transformer_570 (gold_raw)",
+      "metric": "segmental F1@25 · transformer_570 (gold_raw)",
       "value": 0.2519,
       "unit": "",
       "confidence_interval": null,
@@ -1073,12 +1073,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 transformer_570 (gold_raw)",
+      "metric": "segmental edit score · transformer_570 (gold_raw)",
       "value": 23.83,
       "unit": "0-100",
       "confidence_interval": null,
@@ -1087,12 +1087,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 transformer_570 (gold_raw)",
+      "metric": "frame accuracy vs human · transformer_570 (gold_raw)",
       "value": 0.7759,
       "unit": "",
       "confidence_interval": null,
@@ -1101,12 +1101,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event recall \u00b7 mstcn_556 (gold_raw)",
+      "metric": "event recall · mstcn_556 (gold_raw)",
       "value": 0.2917,
       "unit": "7/24",
       "confidence_interval": null,
@@ -1115,12 +1115,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 mstcn_556 (gold_raw)",
+      "metric": "event F1 · mstcn_556 (gold_raw)",
       "value": 0.3333,
       "unit": "",
       "confidence_interval": null,
@@ -1129,12 +1129,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 mstcn_556 (gold_raw)",
+      "metric": "false alerts/hour · mstcn_556 (gold_raw)",
       "value": 28.052,
       "unit": "per hour",
       "confidence_interval": null,
@@ -1143,12 +1143,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 mstcn_556 (gold_raw)",
+      "metric": "segmental F1@25 · mstcn_556 (gold_raw)",
       "value": 0.3214,
       "unit": "",
       "confidence_interval": null,
@@ -1157,12 +1157,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 mstcn_556 (gold_raw)",
+      "metric": "segmental edit score · mstcn_556 (gold_raw)",
       "value": 47.23,
       "unit": "0-100",
       "confidence_interval": null,
@@ -1171,12 +1171,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 mstcn_556 (gold_raw)",
+      "metric": "frame accuracy vs human · mstcn_556 (gold_raw)",
       "value": 0.7838,
       "unit": "",
       "confidence_interval": null,
@@ -1185,12 +1185,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event recall \u00b7 mstcn_570 (gold_raw)",
+      "metric": "event recall · mstcn_570 (gold_raw)",
       "value": 0.3333,
       "unit": "8/24",
       "confidence_interval": null,
@@ -1199,12 +1199,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 mstcn_570 (gold_raw)",
+      "metric": "event F1 · mstcn_570 (gold_raw)",
       "value": 0.3902,
       "unit": "",
       "confidence_interval": null,
@@ -1213,12 +1213,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 mstcn_570 (gold_raw)",
+      "metric": "false alerts/hour · mstcn_570 (gold_raw)",
       "value": 22.951,
       "unit": "per hour",
       "confidence_interval": null,
@@ -1227,12 +1227,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 mstcn_570 (gold_raw)",
+      "metric": "segmental F1@25 · mstcn_570 (gold_raw)",
       "value": 0.3802,
       "unit": "",
       "confidence_interval": null,
@@ -1241,12 +1241,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 mstcn_570 (gold_raw)",
+      "metric": "segmental edit score · mstcn_570 (gold_raw)",
       "value": 65.03,
       "unit": "0-100",
       "confidence_interval": null,
@@ -1255,12 +1255,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 mstcn_570 (gold_raw)",
+      "metric": "frame accuracy vs human · mstcn_570 (gold_raw)",
       "value": 0.7812,
       "unit": "",
       "confidence_interval": null,
@@ -1269,12 +1269,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event recall \u00b7 asrf_556 (gold_raw)",
+      "metric": "event recall · asrf_556 (gold_raw)",
       "value": 0.1667,
       "unit": "4/24",
       "confidence_interval": null,
@@ -1283,12 +1283,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 asrf_556 (gold_raw)",
+      "metric": "event F1 · asrf_556 (gold_raw)",
       "value": 0.2581,
       "unit": "",
       "confidence_interval": null,
@@ -1297,12 +1297,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 asrf_556 (gold_raw)",
+      "metric": "false alerts/hour · asrf_556 (gold_raw)",
       "value": 7.65,
       "unit": "per hour",
       "confidence_interval": null,
@@ -1311,12 +1311,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 asrf_556 (gold_raw)",
+      "metric": "segmental F1@25 · asrf_556 (gold_raw)",
       "value": 0.2783,
       "unit": "",
       "confidence_interval": null,
@@ -1325,12 +1325,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 asrf_556 (gold_raw)",
+      "metric": "segmental edit score · asrf_556 (gold_raw)",
       "value": 39.72,
       "unit": "0-100",
       "confidence_interval": null,
@@ -1339,12 +1339,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 asrf_556 (gold_raw)",
+      "metric": "frame accuracy vs human · asrf_556 (gold_raw)",
       "value": 0.7878,
       "unit": "",
       "confidence_interval": null,
@@ -1353,12 +1353,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event recall \u00b7 asrf_570 (gold_raw)",
+      "metric": "event recall · asrf_570 (gold_raw)",
       "value": 0.2083,
       "unit": "5/24",
       "confidence_interval": null,
@@ -1367,12 +1367,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 asrf_570 (gold_raw)",
+      "metric": "event F1 · asrf_570 (gold_raw)",
       "value": 0.303,
       "unit": "",
       "confidence_interval": null,
@@ -1381,12 +1381,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 asrf_570 (gold_raw)",
+      "metric": "false alerts/hour · asrf_570 (gold_raw)",
       "value": 10.201,
       "unit": "per hour",
       "confidence_interval": null,
@@ -1395,12 +1395,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 asrf_570 (gold_raw)",
+      "metric": "segmental F1@25 · asrf_570 (gold_raw)",
       "value": 0.3333,
       "unit": "",
       "confidence_interval": null,
@@ -1409,12 +1409,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 asrf_570 (gold_raw)",
+      "metric": "segmental edit score · asrf_570 (gold_raw)",
       "value": 55.37,
       "unit": "0-100",
       "confidence_interval": null,
@@ -1423,12 +1423,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 asrf_570 (gold_raw)",
+      "metric": "frame accuracy vs human · asrf_570 (gold_raw)",
       "value": 0.8355,
       "unit": "",
       "confidence_interval": null,
@@ -1437,12 +1437,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event recall \u00b7 teacher (gold_raw)",
+      "metric": "event recall · teacher (gold_raw)",
       "value": 0.75,
       "unit": "18/24",
       "confidence_interval": null,
@@ -1451,12 +1451,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 teacher (gold_raw)",
+      "metric": "event F1 · teacher (gold_raw)",
       "value": 0.72,
       "unit": "",
       "confidence_interval": null,
@@ -1465,12 +1465,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 teacher (gold_raw)",
+      "metric": "false alerts/hour · teacher (gold_raw)",
       "value": 20.401,
       "unit": "per hour",
       "confidence_interval": null,
@@ -1479,12 +1479,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 teacher (gold_raw)",
+      "metric": "segmental F1@25 · teacher (gold_raw)",
       "value": 0.7,
       "unit": "",
       "confidence_interval": null,
@@ -1493,12 +1493,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 teacher (gold_raw)",
+      "metric": "segmental edit score · teacher (gold_raw)",
       "value": 76.45,
       "unit": "0-100",
       "confidence_interval": null,
@@ -1507,12 +1507,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 teacher (gold_raw)",
+      "metric": "frame accuracy vs human · teacher (gold_raw)",
       "value": 0.874,
       "unit": "",
       "confidence_interval": null,
@@ -1521,12 +1521,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event recall \u00b7 majority (gold_raw)",
+      "metric": "event recall · majority (gold_raw)",
       "value": 0.0,
       "unit": "0/24",
       "confidence_interval": null,
@@ -1535,12 +1535,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 majority (gold_raw)",
+      "metric": "event F1 · majority (gold_raw)",
       "value": 0.0,
       "unit": "",
       "confidence_interval": null,
@@ -1549,12 +1549,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 majority (gold_raw)",
+      "metric": "false alerts/hour · majority (gold_raw)",
       "value": 0.0,
       "unit": "per hour",
       "confidence_interval": null,
@@ -1563,12 +1563,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 majority (gold_raw)",
+      "metric": "segmental F1@25 · majority (gold_raw)",
       "value": 0.0674,
       "unit": "",
       "confidence_interval": null,
@@ -1577,12 +1577,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 majority (gold_raw)",
+      "metric": "segmental edit score · majority (gold_raw)",
       "value": 34.85,
       "unit": "0-100",
       "confidence_interval": null,
@@ -1591,12 +1591,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 majority (gold_raw)",
+      "metric": "frame accuracy vs human · majority (gold_raw)",
       "value": 0.3408,
       "unit": "",
       "confidence_interval": null,
@@ -1605,12 +1605,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_raw",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "historic raw gold \u2014 contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "historic raw gold — contains 7 duplicate `inactivity` episodes and 1 duplicate marker; kept only for continuity with FINDINGS. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": false,
       "branch": "B (events)"
     },
     {
-      "metric": "event recall \u00b7 transformer_552 (gold_dedup)",
+      "metric": "event recall · transformer_552 (gold_dedup)",
       "value": 0.3125,
       "unit": "5/16",
       "confidence_interval": null,
@@ -1619,12 +1619,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 transformer_552 (gold_dedup)",
+      "metric": "event F1 · transformer_552 (gold_dedup)",
       "value": 0.4167,
       "unit": "",
       "confidence_interval": null,
@@ -1633,12 +1633,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 transformer_552 (gold_dedup)",
+      "metric": "false alerts/hour · transformer_552 (gold_dedup)",
       "value": 7.65,
       "unit": "per hour",
       "confidence_interval": null,
@@ -1647,12 +1647,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 transformer_552 (gold_dedup)",
+      "metric": "segmental F1@25 · transformer_552 (gold_dedup)",
       "value": 0.2074,
       "unit": "",
       "confidence_interval": null,
@@ -1661,12 +1661,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 transformer_552 (gold_dedup)",
+      "metric": "segmental edit score · transformer_552 (gold_dedup)",
       "value": 26.83,
       "unit": "0-100",
       "confidence_interval": null,
@@ -1675,12 +1675,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 transformer_552 (gold_dedup)",
+      "metric": "frame accuracy vs human · transformer_552 (gold_dedup)",
       "value": 0.7175,
       "unit": "",
       "confidence_interval": null,
@@ -1689,12 +1689,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "event recall \u00b7 transformer_556 (gold_dedup)",
+      "metric": "event recall · transformer_556 (gold_dedup)",
       "value": 0.25,
       "unit": "4/16",
       "confidence_interval": null,
@@ -1703,12 +1703,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 transformer_556 (gold_dedup)",
+      "metric": "event F1 · transformer_556 (gold_dedup)",
       "value": 0.3636,
       "unit": "",
       "confidence_interval": null,
@@ -1717,12 +1717,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 transformer_556 (gold_dedup)",
+      "metric": "false alerts/hour · transformer_556 (gold_dedup)",
       "value": 5.1,
       "unit": "per hour",
       "confidence_interval": null,
@@ -1731,12 +1731,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 transformer_556 (gold_dedup)",
+      "metric": "segmental F1@25 · transformer_556 (gold_dedup)",
       "value": 0.2906,
       "unit": "",
       "confidence_interval": null,
@@ -1745,12 +1745,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 transformer_556 (gold_dedup)",
+      "metric": "segmental edit score · transformer_556 (gold_dedup)",
       "value": 40.02,
       "unit": "0-100",
       "confidence_interval": null,
@@ -1759,12 +1759,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 transformer_556 (gold_dedup)",
+      "metric": "frame accuracy vs human · transformer_556 (gold_dedup)",
       "value": 0.809,
       "unit": "",
       "confidence_interval": null,
@@ -1773,12 +1773,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "event recall \u00b7 transformer_563expr (gold_dedup)",
+      "metric": "event recall · transformer_563expr (gold_dedup)",
       "value": 0.25,
       "unit": "4/16",
       "confidence_interval": null,
@@ -1787,12 +1787,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 transformer_563expr (gold_dedup)",
+      "metric": "event F1 · transformer_563expr (gold_dedup)",
       "value": 0.3636,
       "unit": "",
       "confidence_interval": null,
@@ -1801,12 +1801,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 transformer_563expr (gold_dedup)",
+      "metric": "false alerts/hour · transformer_563expr (gold_dedup)",
       "value": 5.1,
       "unit": "per hour",
       "confidence_interval": null,
@@ -1815,12 +1815,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 transformer_563expr (gold_dedup)",
+      "metric": "segmental F1@25 · transformer_563expr (gold_dedup)",
       "value": 0.3248,
       "unit": "",
       "confidence_interval": null,
@@ -1829,12 +1829,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 transformer_563expr (gold_dedup)",
+      "metric": "segmental edit score · transformer_563expr (gold_dedup)",
       "value": 39.48,
       "unit": "0-100",
       "confidence_interval": null,
@@ -1843,12 +1843,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 transformer_563expr (gold_dedup)",
+      "metric": "frame accuracy vs human · transformer_563expr (gold_dedup)",
       "value": 0.7905,
       "unit": "",
       "confidence_interval": null,
@@ -1857,12 +1857,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "event recall \u00b7 transformer_563dyn (gold_dedup)",
+      "metric": "event recall · transformer_563dyn (gold_dedup)",
       "value": 0.25,
       "unit": "4/16",
       "confidence_interval": null,
@@ -1871,12 +1871,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 transformer_563dyn (gold_dedup)",
+      "metric": "event F1 · transformer_563dyn (gold_dedup)",
       "value": 0.32,
       "unit": "",
       "confidence_interval": null,
@@ -1885,12 +1885,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 transformer_563dyn (gold_dedup)",
+      "metric": "false alerts/hour · transformer_563dyn (gold_dedup)",
       "value": 12.751,
       "unit": "per hour",
       "confidence_interval": null,
@@ -1899,12 +1899,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 transformer_563dyn (gold_dedup)",
+      "metric": "segmental F1@25 · transformer_563dyn (gold_dedup)",
       "value": 0.2764,
       "unit": "",
       "confidence_interval": null,
@@ -1913,12 +1913,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 transformer_563dyn (gold_dedup)",
+      "metric": "segmental edit score · transformer_563dyn (gold_dedup)",
       "value": 45.55,
       "unit": "0-100",
       "confidence_interval": null,
@@ -1927,12 +1927,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 transformer_563dyn (gold_dedup)",
+      "metric": "frame accuracy vs human · transformer_563dyn (gold_dedup)",
       "value": 0.8011,
       "unit": "",
       "confidence_interval": null,
@@ -1941,12 +1941,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "event recall \u00b7 transformer_570 (gold_dedup)",
+      "metric": "event recall · transformer_570 (gold_dedup)",
       "value": 0.1875,
       "unit": "3/16",
       "confidence_interval": null,
@@ -1955,12 +1955,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 transformer_570 (gold_dedup)",
+      "metric": "event F1 · transformer_570 (gold_dedup)",
       "value": 0.2857,
       "unit": "",
       "confidence_interval": null,
@@ -1969,12 +1969,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 transformer_570 (gold_dedup)",
+      "metric": "false alerts/hour · transformer_570 (gold_dedup)",
       "value": 5.1,
       "unit": "per hour",
       "confidence_interval": null,
@@ -1983,12 +1983,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 transformer_570 (gold_dedup)",
+      "metric": "segmental F1@25 · transformer_570 (gold_dedup)",
       "value": 0.2519,
       "unit": "",
       "confidence_interval": null,
@@ -1997,12 +1997,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 transformer_570 (gold_dedup)",
+      "metric": "segmental edit score · transformer_570 (gold_dedup)",
       "value": 23.83,
       "unit": "0-100",
       "confidence_interval": null,
@@ -2011,12 +2011,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 transformer_570 (gold_dedup)",
+      "metric": "frame accuracy vs human · transformer_570 (gold_dedup)",
       "value": 0.7759,
       "unit": "",
       "confidence_interval": null,
@@ -2025,12 +2025,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "event recall \u00b7 mstcn_556 (gold_dedup)",
+      "metric": "event recall · mstcn_556 (gold_dedup)",
       "value": 0.3125,
       "unit": "5/16",
       "confidence_interval": null,
@@ -2039,12 +2039,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 mstcn_556 (gold_dedup)",
+      "metric": "event F1 · mstcn_556 (gold_dedup)",
       "value": 0.3571,
       "unit": "",
       "confidence_interval": null,
@@ -2053,12 +2053,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 mstcn_556 (gold_dedup)",
+      "metric": "false alerts/hour · mstcn_556 (gold_dedup)",
       "value": 17.851,
       "unit": "per hour",
       "confidence_interval": null,
@@ -2067,12 +2067,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 mstcn_556 (gold_dedup)",
+      "metric": "segmental F1@25 · mstcn_556 (gold_dedup)",
       "value": 0.3214,
       "unit": "",
       "confidence_interval": null,
@@ -2081,12 +2081,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 mstcn_556 (gold_dedup)",
+      "metric": "segmental edit score · mstcn_556 (gold_dedup)",
       "value": 47.23,
       "unit": "0-100",
       "confidence_interval": null,
@@ -2095,12 +2095,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 mstcn_556 (gold_dedup)",
+      "metric": "frame accuracy vs human · mstcn_556 (gold_dedup)",
       "value": 0.7838,
       "unit": "",
       "confidence_interval": null,
@@ -2109,12 +2109,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "event recall \u00b7 mstcn_570 (gold_dedup)",
+      "metric": "event recall · mstcn_570 (gold_dedup)",
       "value": 0.3125,
       "unit": "5/16",
       "confidence_interval": null,
@@ -2123,12 +2123,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 mstcn_570 (gold_dedup)",
+      "metric": "event F1 · mstcn_570 (gold_dedup)",
       "value": 0.3704,
       "unit": "",
       "confidence_interval": null,
@@ -2137,12 +2137,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 mstcn_570 (gold_dedup)",
+      "metric": "false alerts/hour · mstcn_570 (gold_dedup)",
       "value": 15.301,
       "unit": "per hour",
       "confidence_interval": null,
@@ -2151,12 +2151,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 mstcn_570 (gold_dedup)",
+      "metric": "segmental F1@25 · mstcn_570 (gold_dedup)",
       "value": 0.3802,
       "unit": "",
       "confidence_interval": null,
@@ -2165,12 +2165,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 mstcn_570 (gold_dedup)",
+      "metric": "segmental edit score · mstcn_570 (gold_dedup)",
       "value": 65.03,
       "unit": "0-100",
       "confidence_interval": null,
@@ -2179,12 +2179,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 mstcn_570 (gold_dedup)",
+      "metric": "frame accuracy vs human · mstcn_570 (gold_dedup)",
       "value": 0.7812,
       "unit": "",
       "confidence_interval": null,
@@ -2193,12 +2193,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "event recall \u00b7 asrf_556 (gold_dedup)",
+      "metric": "event recall · asrf_556 (gold_dedup)",
       "value": 0.1875,
       "unit": "3/16",
       "confidence_interval": null,
@@ -2207,12 +2207,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 asrf_556 (gold_dedup)",
+      "metric": "event F1 · asrf_556 (gold_dedup)",
       "value": 0.2857,
       "unit": "",
       "confidence_interval": null,
@@ -2221,12 +2221,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 asrf_556 (gold_dedup)",
+      "metric": "false alerts/hour · asrf_556 (gold_dedup)",
       "value": 5.1,
       "unit": "per hour",
       "confidence_interval": null,
@@ -2235,12 +2235,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 asrf_556 (gold_dedup)",
+      "metric": "segmental F1@25 · asrf_556 (gold_dedup)",
       "value": 0.2783,
       "unit": "",
       "confidence_interval": null,
@@ -2249,12 +2249,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 asrf_556 (gold_dedup)",
+      "metric": "segmental edit score · asrf_556 (gold_dedup)",
       "value": 39.72,
       "unit": "0-100",
       "confidence_interval": null,
@@ -2263,12 +2263,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 asrf_556 (gold_dedup)",
+      "metric": "frame accuracy vs human · asrf_556 (gold_dedup)",
       "value": 0.7878,
       "unit": "",
       "confidence_interval": null,
@@ -2277,12 +2277,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "event recall \u00b7 asrf_570 (gold_dedup)",
+      "metric": "event recall · asrf_570 (gold_dedup)",
       "value": 0.25,
       "unit": "4/16",
       "confidence_interval": null,
@@ -2291,12 +2291,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 asrf_570 (gold_dedup)",
+      "metric": "event F1 · asrf_570 (gold_dedup)",
       "value": 0.3478,
       "unit": "",
       "confidence_interval": null,
@@ -2305,12 +2305,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 asrf_570 (gold_dedup)",
+      "metric": "false alerts/hour · asrf_570 (gold_dedup)",
       "value": 7.65,
       "unit": "per hour",
       "confidence_interval": null,
@@ -2319,12 +2319,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 asrf_570 (gold_dedup)",
+      "metric": "segmental F1@25 · asrf_570 (gold_dedup)",
       "value": 0.3333,
       "unit": "",
       "confidence_interval": null,
@@ -2333,12 +2333,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 asrf_570 (gold_dedup)",
+      "metric": "segmental edit score · asrf_570 (gold_dedup)",
       "value": 55.37,
       "unit": "0-100",
       "confidence_interval": null,
@@ -2347,12 +2347,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 asrf_570 (gold_dedup)",
+      "metric": "frame accuracy vs human · asrf_570 (gold_dedup)",
       "value": 0.8355,
       "unit": "",
       "confidence_interval": null,
@@ -2361,12 +2361,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "event recall \u00b7 teacher (gold_dedup)",
+      "metric": "event recall · teacher (gold_dedup)",
       "value": 0.625,
       "unit": "10/16",
       "confidence_interval": null,
@@ -2375,12 +2375,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 teacher (gold_dedup)",
+      "metric": "event F1 · teacher (gold_dedup)",
       "value": 0.6061,
       "unit": "",
       "confidence_interval": null,
@@ -2389,12 +2389,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 teacher (gold_dedup)",
+      "metric": "false alerts/hour · teacher (gold_dedup)",
       "value": 17.851,
       "unit": "per hour",
       "confidence_interval": null,
@@ -2403,12 +2403,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 teacher (gold_dedup)",
+      "metric": "segmental F1@25 · teacher (gold_dedup)",
       "value": 0.7,
       "unit": "",
       "confidence_interval": null,
@@ -2417,12 +2417,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 teacher (gold_dedup)",
+      "metric": "segmental edit score · teacher (gold_dedup)",
       "value": 76.45,
       "unit": "0-100",
       "confidence_interval": null,
@@ -2431,12 +2431,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 teacher (gold_dedup)",
+      "metric": "frame accuracy vs human · teacher (gold_dedup)",
       "value": 0.874,
       "unit": "",
       "confidence_interval": null,
@@ -2445,12 +2445,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "event recall \u00b7 majority (gold_dedup)",
+      "metric": "event recall · majority (gold_dedup)",
       "value": 0.0,
       "unit": "0/16",
       "confidence_interval": null,
@@ -2459,12 +2459,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "event F1 \u00b7 majority (gold_dedup)",
+      "metric": "event F1 · majority (gold_dedup)",
       "value": 0.0,
       "unit": "",
       "confidence_interval": null,
@@ -2473,12 +2473,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "false alerts/hour \u00b7 majority (gold_dedup)",
+      "metric": "false alerts/hour · majority (gold_dedup)",
       "value": 0.0,
       "unit": "per hour",
       "confidence_interval": null,
@@ -2487,12 +2487,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental F1@25 \u00b7 majority (gold_dedup)",
+      "metric": "segmental F1@25 · majority (gold_dedup)",
       "value": 0.0674,
       "unit": "",
       "confidence_interval": null,
@@ -2501,12 +2501,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "segmental edit score \u00b7 majority (gold_dedup)",
+      "metric": "segmental edit score · majority (gold_dedup)",
       "value": 34.85,
       "unit": "0-100",
       "confidence_interval": null,
@@ -2515,12 +2515,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "frame accuracy vs human \u00b7 majority (gold_dedup)",
+      "metric": "frame accuracy vs human · majority (gold_dedup)",
       "value": 0.3408,
       "unit": "",
       "confidence_interval": null,
@@ -2529,12 +2529,12 @@
       "checkpoint": "",
       "config": "tIoU 0.3, gold_dedup",
       "evidence": "work_dirs/thesis/events/summary_s42.json",
-      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set \u2014 small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
+      "caveat": "de-duplicated gold: `inactivity` is an alias of `head_down` in attention/events.py and one return_to_task marker is duplicated. Diagnostic set — small and deliberately selected (2 segments, 8 gold tracks); NOT a classroom-wide estimate. Detector and tracker excluded by design.",
       "citable": true,
       "branch": "B (events)"
     },
     {
-      "metric": "CMOSE \u00b7 subjects appearing in >1 official split",
+      "metric": "CMOSE · subjects appearing in >1 official split",
       "value": "101/103",
       "unit": "",
       "confidence_interval": null,
@@ -2543,12 +2543,12 @@
       "checkpoint": "",
       "config": "",
       "evidence": "work_dirs/thesis/cmose/cmose_results.json",
-      "caveat": "CMOSE's released split assigns clips, not subjects. The same person, webcam and session therefore appear in train and test. This is not a defect of the dataset \u2014 the paper reports a random segment split \u2014 but any number computed under it measures something weaker than subject-level generalisation.",
+      "caveat": "CMOSE's released split assigns clips, not subjects. The same person, webcam and session therefore appear in train and test. This is not a defect of the dataset — the paper reports a random segment split — but any number computed under it measures something weaker than subject-level generalisation.",
       "citable": true,
       "branch": "external (CMOSE, separate task)"
     },
     {
-      "metric": "CMOSE \u00b7 accuracy (official split)",
+      "metric": "CMOSE · accuracy (official split)",
       "value": 0.7179,
       "unit": "",
       "confidence_interval": null,
@@ -2557,12 +2557,12 @@
       "checkpoint": "",
       "config": "MLP over 1024-d I3D; {'train': 8571, 'val': 2140, 'test': 1191}; 100 subjects shared train/test",
       "evidence": "work_dirs/thesis/cmose/cmose_results.json",
-      "caveat": "mean over 3 seeds (sd 0.0030). SEPARATE TASK \u2014 four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
+      "caveat": "mean over 3 seeds (sd 0.0030). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
       "citable": true,
       "branch": "external (CMOSE, separate task)"
     },
     {
-      "metric": "CMOSE \u00b7 average_accuracy (official split)",
+      "metric": "CMOSE · average_accuracy (official split)",
       "value": 0.6007,
       "unit": "",
       "confidence_interval": null,
@@ -2571,12 +2571,12 @@
       "checkpoint": "",
       "config": "MLP over 1024-d I3D; {'train': 8571, 'val': 2140, 'test': 1191}; 100 subjects shared train/test",
       "evidence": "work_dirs/thesis/cmose/cmose_results.json",
-      "caveat": "mean over 3 seeds (sd 0.0086). SEPARATE TASK \u2014 four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
+      "caveat": "mean over 3 seeds (sd 0.0086). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
       "citable": true,
       "branch": "external (CMOSE, separate task)"
     },
     {
-      "metric": "CMOSE \u00b7 macro_f1 (official split)",
+      "metric": "CMOSE · macro_f1 (official split)",
       "value": 0.5733,
       "unit": "",
       "confidence_interval": null,
@@ -2585,12 +2585,12 @@
       "checkpoint": "",
       "config": "MLP over 1024-d I3D; {'train': 8571, 'val': 2140, 'test': 1191}; 100 subjects shared train/test",
       "evidence": "work_dirs/thesis/cmose/cmose_results.json",
-      "caveat": "mean over 3 seeds (sd 0.0027). SEPARATE TASK \u2014 four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
+      "caveat": "mean over 3 seeds (sd 0.0027). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
       "citable": true,
       "branch": "external (CMOSE, separate task)"
     },
     {
-      "metric": "CMOSE \u00b7 mae (official split)",
+      "metric": "CMOSE · mae (official split)",
       "value": 0.3123,
       "unit": "",
       "confidence_interval": null,
@@ -2599,12 +2599,12 @@
       "checkpoint": "",
       "config": "MLP over 1024-d I3D; {'train': 8571, 'val': 2140, 'test': 1191}; 100 subjects shared train/test",
       "evidence": "work_dirs/thesis/cmose/cmose_results.json",
-      "caveat": "mean over 3 seeds (sd 0.0029). SEPARATE TASK \u2014 four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
+      "caveat": "mean over 3 seeds (sd 0.0029). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
       "citable": true,
       "branch": "external (CMOSE, separate task)"
     },
     {
-      "metric": "CMOSE \u00b7 quadratic_weighted_kappa (official split)",
+      "metric": "CMOSE · quadratic_weighted_kappa (official split)",
       "value": 0.5369,
       "unit": "",
       "confidence_interval": null,
@@ -2613,12 +2613,12 @@
       "checkpoint": "",
       "config": "MLP over 1024-d I3D; {'train': 8571, 'val': 2140, 'test': 1191}; 100 subjects shared train/test",
       "evidence": "work_dirs/thesis/cmose/cmose_results.json",
-      "caveat": "mean over 3 seeds (sd 0.0039). SEPARATE TASK \u2014 four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
+      "caveat": "mean over 3 seeds (sd 0.0039). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
       "citable": true,
       "branch": "external (CMOSE, separate task)"
     },
     {
-      "metric": "CMOSE \u00b7 spearman (official split)",
+      "metric": "CMOSE · spearman (official split)",
       "value": 0.5354,
       "unit": "",
       "confidence_interval": null,
@@ -2627,12 +2627,12 @@
       "checkpoint": "",
       "config": "MLP over 1024-d I3D; {'train': 8571, 'val': 2140, 'test': 1191}; 100 subjects shared train/test",
       "evidence": "work_dirs/thesis/cmose/cmose_results.json",
-      "caveat": "mean over 3 seeds (sd 0.0086). SEPARATE TASK \u2014 four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
+      "caveat": "mean over 3 seeds (sd 0.0086). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
       "citable": true,
       "branch": "external (CMOSE, separate task)"
     },
     {
-      "metric": "CMOSE \u00b7 accuracy (subject_disjoint split)",
+      "metric": "CMOSE · accuracy (subject_disjoint split)",
       "value": 0.6006,
       "unit": "",
       "confidence_interval": null,
@@ -2641,12 +2641,12 @@
       "checkpoint": "",
       "config": "MLP over 1024-d I3D; {'train': 8332, 'val': 1784, 'test': 1786}; 0 subjects shared train/test",
       "evidence": "work_dirs/thesis/cmose/cmose_results.json",
-      "caveat": "mean over 3 seeds (sd 0.0058). SEPARATE TASK \u2014 four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
+      "caveat": "mean over 3 seeds (sd 0.0058). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
       "citable": true,
       "branch": "external (CMOSE, separate task)"
     },
     {
-      "metric": "CMOSE \u00b7 average_accuracy (subject_disjoint split)",
+      "metric": "CMOSE · average_accuracy (subject_disjoint split)",
       "value": 0.4347,
       "unit": "",
       "confidence_interval": null,
@@ -2655,12 +2655,12 @@
       "checkpoint": "",
       "config": "MLP over 1024-d I3D; {'train': 8332, 'val': 1784, 'test': 1786}; 0 subjects shared train/test",
       "evidence": "work_dirs/thesis/cmose/cmose_results.json",
-      "caveat": "mean over 3 seeds (sd 0.0084). SEPARATE TASK \u2014 four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
+      "caveat": "mean over 3 seeds (sd 0.0084). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
       "citable": true,
       "branch": "external (CMOSE, separate task)"
     },
     {
-      "metric": "CMOSE \u00b7 macro_f1 (subject_disjoint split)",
+      "metric": "CMOSE · macro_f1 (subject_disjoint split)",
       "value": 0.4111,
       "unit": "",
       "confidence_interval": null,
@@ -2669,12 +2669,12 @@
       "checkpoint": "",
       "config": "MLP over 1024-d I3D; {'train': 8332, 'val': 1784, 'test': 1786}; 0 subjects shared train/test",
       "evidence": "work_dirs/thesis/cmose/cmose_results.json",
-      "caveat": "mean over 3 seeds (sd 0.0051). SEPARATE TASK \u2014 four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
+      "caveat": "mean over 3 seeds (sd 0.0051). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
       "citable": true,
       "branch": "external (CMOSE, separate task)"
     },
     {
-      "metric": "CMOSE \u00b7 mae (subject_disjoint split)",
+      "metric": "CMOSE · mae (subject_disjoint split)",
       "value": 0.4459,
       "unit": "",
       "confidence_interval": null,
@@ -2683,12 +2683,12 @@
       "checkpoint": "",
       "config": "MLP over 1024-d I3D; {'train': 8332, 'val': 1784, 'test': 1786}; 0 subjects shared train/test",
       "evidence": "work_dirs/thesis/cmose/cmose_results.json",
-      "caveat": "mean over 3 seeds (sd 0.0123). SEPARATE TASK \u2014 four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
+      "caveat": "mean over 3 seeds (sd 0.0123). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
       "citable": true,
       "branch": "external (CMOSE, separate task)"
     },
     {
-      "metric": "CMOSE \u00b7 quadratic_weighted_kappa (subject_disjoint split)",
+      "metric": "CMOSE · quadratic_weighted_kappa (subject_disjoint split)",
       "value": 0.3167,
       "unit": "",
       "confidence_interval": null,
@@ -2697,12 +2697,12 @@
       "checkpoint": "",
       "config": "MLP over 1024-d I3D; {'train': 8332, 'val': 1784, 'test': 1786}; 0 subjects shared train/test",
       "evidence": "work_dirs/thesis/cmose/cmose_results.json",
-      "caveat": "mean over 3 seeds (sd 0.0319). SEPARATE TASK \u2014 four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
+      "caveat": "mean over 3 seeds (sd 0.0319). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
       "citable": true,
       "branch": "external (CMOSE, separate task)"
     },
     {
-      "metric": "CMOSE \u00b7 spearman (subject_disjoint split)",
+      "metric": "CMOSE · spearman (subject_disjoint split)",
       "value": 0.3221,
       "unit": "",
       "confidence_interval": null,
@@ -2711,12 +2711,12 @@
       "checkpoint": "",
       "config": "MLP over 1024-d I3D; {'train': 8332, 'val': 1784, 'test': 1786}; 0 subjects shared train/test",
       "evidence": "work_dirs/thesis/cmose/cmose_results.json",
-      "caveat": "mean over 3 seeds (sd 0.0305). SEPARATE TASK \u2014 four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
+      "caveat": "mean over 3 seeds (sd 0.0305). SEPARATE TASK — four-level ordinal engagement. Never place beside the six-class visible-cue macro-F1, the grounding R@1 or SCB mAP.",
       "citable": true,
       "branch": "external (CMOSE, separate task)"
     },
     {
-      "metric": "Branch A \u00b7 R@1 (grounding)",
+      "metric": "Branch A · R@1 (grounding)",
       "value": 0.6462,
       "unit": "",
       "confidence_interval": null,
@@ -2724,13 +2724,13 @@
       "evaluator": "LLMDet eval_test_split.py",
       "checkpoint": "work_dirs/thesis_bundle/checkpoints/main_llmstu_exact_iter25000_final.pth",
       "config": "configs/student_llmstu_exact.py, 25k iters",
-      "evidence": "FINDINGS.md \u00a73.4c; TEST_SPLIT_PROTOCOL.md (pre-registered at commit 87bb2db)",
+      "evidence": "FINDINGS.md §3.4c; TEST_SPLIT_PROTOCOL.md (pre-registered at commit 87bb2db)",
       "caveat": "Single permitted run under a pre-registered protocol; the protocol is now closed. Validation R@1 was 0.6343, so test exceeds validation by 0.0119.",
       "citable": true,
       "branch": "A (grounding)"
     },
     {
-      "metric": "Branch A \u00b7 R@5",
+      "metric": "Branch A · R@5",
       "value": 0.9891,
       "unit": "",
       "confidence_interval": null,
@@ -2738,13 +2738,13 @@
       "evaluator": "LLMDet eval_test_split.py",
       "checkpoint": "",
       "config": "",
-      "evidence": "FINDINGS.md \u00a73.4c",
+      "evidence": "FINDINGS.md §3.4c",
       "caveat": "",
       "citable": true,
       "branch": "A (grounding)"
     },
     {
-      "metric": "Branch A \u00b7 R@10",
+      "metric": "Branch A · R@10",
       "value": 0.9982,
       "unit": "",
       "confidence_interval": null,
@@ -2752,13 +2752,13 @@
       "evaluator": "LLMDet eval_test_split.py",
       "checkpoint": "",
       "config": "",
-      "evidence": "FINDINGS.md \u00a73.4c",
+      "evidence": "FINDINGS.md §3.4c",
       "caveat": "",
       "citable": true,
       "branch": "A (grounding)"
     },
     {
-      "metric": "Branch A \u00b7 ablation \u0394 R@1 (Hungarian \u2212 ordinal)",
+      "metric": "Branch A · ablation Δ R@1 (Hungarian − ordinal)",
       "value": 0.1724,
       "unit": "",
       "confidence_interval": null,
@@ -2766,13 +2766,13 @@
       "evaluator": "LLMDet detector eval",
       "checkpoint": "",
       "config": "",
-      "evidence": "FINDINGS.md \u00a73.5",
-      "caveat": "Identical frames, captions, boxes, schedule, LR and seed; only the unit\u2192box binding differs. R@10 differs by only 0.014, so the gain is attribution, not detection.",
+      "evidence": "FINDINGS.md §3.5",
+      "caveat": "Identical frames, captions, boxes, schedule, LR and seed; only the unit→box binding differs. R@10 differs by only 0.014, so the gain is attribution, not detection.",
       "citable": true,
       "branch": "A (grounding)"
     },
     {
-      "metric": "Branch A \u00b7 ablation \u0394 R@1 (p\u22650.9 filter \u2212 unfiltered Hungarian)",
+      "metric": "Branch A · ablation Δ R@1 (p≥0.9 filter − unfiltered Hungarian)",
       "value": -0.0167,
       "unit": "",
       "confidence_interval": null,
@@ -2780,13 +2780,13 @@
       "evaluator": "LLMDet detector eval",
       "checkpoint": "",
       "config": "",
-      "evidence": "FINDINGS.md \u00a73.5",
+      "evidence": "FINDINGS.md §3.5",
       "caveat": "NEGATIVE result: the confidence filter does not help. Retains 90.3% of the Hungarian gain on 59.7% of the training regions.",
       "citable": true,
       "branch": "A (grounding)"
     },
     {
-      "metric": "caption\u2192box matching accuracy (Hungarian, content-only)",
+      "metric": "caption→box matching accuracy (Hungarian, content-only)",
       "value": 0.7896,
       "unit": "",
       "confidence_interval": null,
@@ -2794,13 +2794,13 @@
       "evaluator": "matching benchmark, spatial_weight=0.0",
       "checkpoint": "",
       "config": "",
-      "evidence": "LLMDet/work_dirs/matching/results_lr_sw0.0.json; FINDINGS.md \u00a73.2",
+      "evidence": "LLMDet/work_dirs/matching/results_lr_sw0.0.json; FINDINGS.md §3.2",
       "caveat": "CITE THIS, NOT 0.9231. The 92.3% figure used spatial_weight=0.5, whose spatial term leaks the ground-truth left-to-right ordering.",
       "citable": true,
       "branch": "A (grounding)"
     },
     {
-      "metric": "caption\u2192box matching accuracy (ordinal baseline)",
+      "metric": "caption→box matching accuracy (ordinal baseline)",
       "value": 0.2607,
       "unit": "",
       "confidence_interval": null,
@@ -2808,21 +2808,21 @@
       "evaluator": "matching benchmark, spatial_weight=0.0",
       "checkpoint": "",
       "config": "",
-      "evidence": "FINDINGS.md \u00a73.2",
+      "evidence": "FINDINGS.md §3.2",
       "caveat": "",
       "citable": true,
       "branch": "A (grounding)"
     },
     {
-      "metric": "caption\u2192box matching accuracy (contaminated)",
+      "metric": "caption→box matching accuracy (contaminated)",
       "value": 0.9231,
       "unit": "",
       "confidence_interval": null,
-      "split": "\u2014",
+      "split": "—",
       "evaluator": "thesis_eval/1.0.0",
       "checkpoint": "",
       "config": "",
-      "evidence": "FINDINGS.md \u00a73.2",
+      "evidence": "FINDINGS.md §3.2",
       "caveat": "DO NOT CITE. spatial_weight=0.5 feeds the ground-truth ordering into the cost matrix.",
       "citable": false,
       "branch": "A (grounding)"
@@ -2836,7 +2836,7 @@
       "evaluator": "gold event evaluator",
       "checkpoint": "",
       "config": "",
-      "evidence": "FINDINGS.md \u00a75.3",
+      "evidence": "FINDINGS.md §5.3",
       "caveat": "Empirical teacher benchmark, NOT a theoretical ceiling. Corroborated by the disjoint scattered sample's 85.9%.",
       "citable": true,
       "branch": "B (label quality)"
@@ -2850,13 +2850,13 @@
       "evaluator": "gold audit",
       "checkpoint": "",
       "config": "",
-      "evidence": "outputs/gold_eval_summary.md; FINDINGS.md \u00a75.1",
+      "evidence": "outputs/gold_eval_summary.md; FINDINGS.md §5.1",
       "caveat": "Weakest field: activity, 78.9%.",
       "citable": true,
       "branch": "B (label quality)"
     },
     {
-      "metric": "facial expression \u2192 expert boredom AUROC",
+      "metric": "facial expression → expert boredom AUROC",
       "value": 0.544,
       "unit": "",
       "confidence_interval": null,
@@ -2864,13 +2864,13 @@
       "evaluator": "validate_boredom.py",
       "checkpoint": "",
       "config": "",
-      "evidence": "LLMDet/work_dirs/boredom_validation.json; FINDINGS.md \u00a76d.1",
+      "evidence": "LLMDet/work_dirs/boredom_validation.json; FINDINGS.md §6d.1",
       "caveat": "Barely above chance (0.5). MEASURED LIMITATION: the 7 basic Ekman expressions do not deliver academic-emotion (Pekrun) recognition. The thesis must not claim boredom detection.",
       "citable": true,
       "branch": "B (external)"
     },
     {
-      "metric": "DIPSER cue\u2194engagement Spearman \u03c1",
+      "metric": "DIPSER cue↔engagement Spearman ρ",
       "value": 0.172,
       "unit": "",
       "confidence_interval": null,
@@ -2878,8 +2878,8 @@
       "evaluator": "dipser_correlation.py",
       "checkpoint": "",
       "config": "",
-      "evidence": "work_dirs/attention_temporal_hp/dipser_correlation_metadata.json; FINDINGS.md \u00a76c",
-      "caveat": "p<0.0001 by 5,000-permutation test, and the sign is REVERSED versus the naive hypothesis. Weak correlation. Evidence that cue meaning is setting-dependent \u2014 the strongest support for the visible-cue framing.",
+      "evidence": "work_dirs/attention_temporal_hp/dipser_correlation_metadata.json; FINDINGS.md §6c",
+      "caveat": "p<0.0001 by 5,000-permutation test, and the sign is REVERSED versus the naive hypothesis. Weak correlation. Evidence that cue meaning is setting-dependent — the strongest support for the visible-cue framing.",
       "citable": true,
       "branch": "B (external)"
     },
@@ -2893,7 +2893,7 @@
       "checkpoint": "",
       "config": "",
       "evidence": "work_dirs/attention_temporal_hp/dipser_correlation_smoke.json",
-      "caveat": "DO NOT CITE as a validation result. p=0.74; the model predicts off-task on 0\u201317% of DIPSER frames because the geometry features are far out of distribution. Measures domain shift, not the cue\u2194engagement link.",
+      "caveat": "DO NOT CITE as a validation result. p=0.74; the model predicts off-task on 0–17% of DIPSER frames because the geometry features are far out of distribution. Measures domain shift, not the cue↔engagement link.",
       "citable": false,
       "branch": "B (external)"
     },
@@ -2906,8 +2906,8 @@
       "evaluator": "eval_scb_zeroshot.py",
       "checkpoint": "",
       "config": "",
-      "evidence": "work_dirs/logs/scb_zeroshot.log; FINDINGS.md \u00a76b",
-      "caveat": "DO NOT CITE as a transfer score. SCB annotates ONLY behaviour-exhibiting students, so correctly detecting an ordinary seated student scores as a false positive; and the label mapping (BowHead\u2192'sleeping head down') is semantically wrong for a lecture hall. Report as a qualitative limitation. The least-confounded number is localisation recall 0.392.",
+      "evidence": "work_dirs/logs/scb_zeroshot.log; FINDINGS.md §6b",
+      "caveat": "DO NOT CITE as a transfer score. SCB annotates ONLY behaviour-exhibiting students, so correctly detecting an ordinary seated student scores as a false positive; and the label mapping (BowHead→'sleeping head down') is semantically wrong for a lecture hall. Report as a qualitative limitation. The least-confounded number is localisation recall 0.392.",
       "citable": false,
       "branch": "A (external)"
     },
@@ -2921,7 +2921,7 @@
       "unit": "",
       "confidence_interval": null,
       "split": "rank-0 validation shard",
-      "evaluator": "train_temporal_ddp.validate() \u2014 NO all-gather",
+      "evaluator": "train_temporal_ddp.validate() — NO all-gather",
       "checkpoint": "",
       "config": "",
       "evidence": "attention_temporal*/train_summary.json",
@@ -2942,13 +2942,27 @@
       "evaluator": "eval_baseline_chain.py",
       "checkpoint": "",
       "config": "",
-      "evidence": "attention_temporal*/single_process_eval.json; FINDINGS.md \u00a76f",
-      "caveat": "Superseded. Correct as far as it goes, but (a) it is a VALIDATION number on a split with no test set, (b) single seed, (c) no confidence interval, (d) checkpoint selected by argmax over a metric that swings \u00b10.05 between epochs. Use the thesis_eval ladder instead.",
+      "evidence": "attention_temporal*/single_process_eval.json; FINDINGS.md §6f",
+      "caveat": "Superseded. Correct as far as it goes, but (a) it is a VALIDATION number on a split with no test set, (b) single seed, (c) no confidence interval, (d) checkpoint selected by argmax over a metric that swings ±0.05 between epochs. Use the thesis_eval ladder instead.",
       "citable": false,
       "branch": "B (visible cues)"
     },
     {
       "metric": "DEPLOYED real-scene throughput",
+      "value": 5.77,
+      "unit": "FPS",
+      "confidence_interval": null,
+      "split": "0325.mp4, 190 frames, 6.0 tracks mean",
+      "evaluator": "profiling/profile_pipeline.py",
+      "checkpoint": "",
+      "config": "configs/attention_runtime.yaml (MS-TCN, 553_facefound) at detector_stride=3, temporal_stride=2",
+      "evidence": "work_dirs/profiling/report_stride_3_2.json",
+      "caveat": "THIS is the deployed configuration as of 2026-08-03. Single A100. fps_p50 6.35, frame_ms_mean 173.3, p95 291.7. Still NEAR-real-time: 91.1% of frames miss a 10 fps budget and 100% miss 25 fps. The speed is bought with striding, and stride_equivalence.json prices it: against a 1:1 reference, 3:2 holds cue agreement at 0.947 but finds 13 of 15 episodes (episode agreement 0.80). Quote the throughput and that cost together.",
+      "citable": true,
+      "branch": "runtime"
+    },
+    {
+      "metric": "superseded 2026-08-01 deployed throughput",
       "value": 3.05,
       "unit": "FPS",
       "confidence_interval": null,
@@ -2956,9 +2970,9 @@
       "evaluator": "profiling/profile_pipeline.py",
       "checkpoint": "",
       "config": "configs/attention_runtime.yaml (MS-TCN, 556-dim, MediaPipe head pose)",
-      "evidence": "work_dirs/profiling/report_deployed_mstcn556.json; FINDINGS.md \u00a711.12",
-      "caveat": "THIS is the deployed configuration. Single A100. Detector ~124-159 ms, features 141.6 ms (head pose is ~100 ms of that), temporal 47.6 ms. p95 367 ms. Describe the system as NEAR-real-time: 100% of frames miss a 10 fps budget.",
-      "citable": true,
+      "evidence": "work_dirs/profiling/report_deployed_mstcn556.json; FINDINGS.md §11.12",
+      "caveat": "DO NOT CITE as the system's speed. This was the deployed figure until 2026-08-03, when deployment moved to the 553_facefound model with 3:2 striding; see the 5.77 FPS entry. Retained because the 1 August register reported it and the thesis draft may still quote it.",
+      "citable": false,
       "branch": "runtime"
     },
     {
@@ -2998,7 +3012,7 @@
       "evaluator": "profiling/profile_pipeline.py",
       "checkpoint": "",
       "config": "",
-      "evidence": "work_dirs/profiling/report_scaling_batched.json; FINDINGS.md \u00a77",
+      "evidence": "work_dirs/profiling/report_scaling_batched.json; FINDINGS.md §7",
       "caveat": "DO NOT CITE as the system's speed. Measured with a 552-dim extractor, i.e. WITHOUT the head-pose block the deployed model requires, so it is not the deployed configuration. It is also not reproducible on this shared machine even for its own config (5.32 in-session).",
       "citable": false,
       "branch": "runtime"
@@ -3012,23 +3026,37 @@
       "evaluator": "tools/dashboard/pipeline_bridge.py",
       "checkpoint": "",
       "config": "",
-      "evidence": "FINDINGS.md \u00a76d.3, \u00a711.12",
+      "evidence": "FINDINGS.md §6d.3, §11.12",
       "caveat": "DO NOT CITE. The config declared input_dim 570 against a 552-dim checkpoint; strict=False raises on a size mismatch, a bare except swallowed it, and the dashboard served cues from a RANDOMLY INITIALISED network. Re-verified 2026-08-01 with MS-TCN-556.",
       "citable": false,
       "branch": "runtime"
     },
     {
       "metric": "dashboard alert threshold",
+      "value": 0.66,
+      "unit": "",
+      "confidence_interval": null,
+      "split": "fitted on validation, frozen",
+      "evaluator": "thesis_eval/runtime.py",
+      "checkpoint": "",
+      "config": "checkpoint.mstcn_553_ff_s42 (the DEPLOYED classifier per artifacts.lock.json)",
+      "evidence": "work_dirs/thesis/runtime/mstcn_553_ff_thresholds.json",
+      "caveat": "Lowest threshold with selective accuracy >= 85%: retains 64.6% of frames at 85.3% accuracy vs 73.2% at full coverage. Display threshold 0.46 retains 91.1% at 76.4%. Temperature 0.9236. Neither is tuned on test or on the human-gold set, and temperature scaling moves no argmax, so accuracy at full coverage is unchanged.",
+      "citable": true,
+      "branch": "runtime"
+    },
+    {
+      "metric": "superseded 2026-08-01 dashboard alert threshold",
       "value": 0.64,
       "unit": "",
       "confidence_interval": null,
       "split": "fitted on validation, frozen",
       "evaluator": "thesis_eval/runtime.py",
       "checkpoint": "",
-      "config": "",
+      "config": "mstcn_556_hp_s42 — NOT the deployed classifier",
       "evidence": "work_dirs/thesis/runtime/mstcn_556_thresholds.json",
-      "caveat": "Lowest threshold with selective accuracy >= 85%: retains 72.1% of frames at 85.4% accuracy vs 75.6% at full coverage. Display threshold 0.48 retains 90.4% at 79.4%. Neither is tuned on test or on the human-gold set.",
-      "citable": true,
+      "caveat": "DO NOT CITE. These are the thresholds of mstcn_556_hp, which the 1 August register cited as the dashboard's calibration. The deployed classifier is mstcn_553_ff_s42, whose frozen thresholds are 0.46/0.66; see the entry above. Citing 0.64 describes a model the dashboard does not run.",
+      "citable": false,
       "branch": "runtime"
     }
   ]

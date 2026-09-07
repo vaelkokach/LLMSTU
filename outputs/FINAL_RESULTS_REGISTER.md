@@ -1,10 +1,10 @@
 # Final results register
 
-**Generated:** 2026-08-01 · **Evaluator:** `thesis_eval/1.0.0`
+**Generated:** 2026-09-07 · **Evaluator:** `thesis_eval/1.0.0`
 
 Every entry carries `citable`. A false value is not an oversight — it records a number that exists in the repository or in FINDINGS.md and must NOT enter the thesis, together with the reason. Never mix metrics from different tables into one leaderboard: accuracy, macro-F1, mAP, MSE, retrieval R@1 and event recall answer different questions.
 
-134 of 207 entries are citable.
+134 of 209 entries are citable.
 
 ## A (external)
 
@@ -246,10 +246,12 @@ Every entry carries `citable`. A false value is not an oversight — it records 
 
 | metric | value | 95% CI | split | citable | caveat |
 |---|---|---|---|:--:|---|
-| DEPLOYED real-scene throughput | 3.05 FPS | — | 0325.mp4, 120 frames, ~6 students | ✅ | THIS is the deployed configuration. Single A100. Detector ~124-159 ms, features 141.6 ms (head pose is ~100 ms of that), temporal 47.6 ms. p95 367 ms. Describe the system as NEAR-real-time: 100% of frames miss a 10 fps budget. |
+| DEPLOYED real-scene throughput | 5.77 FPS | — | 0325.mp4, 190 frames, 6.0 tracks mean | ✅ | THIS is the deployed configuration as of 2026-08-03. Single A100. fps_p50 6.35, frame_ms_mean 173.3, p95 291.7. Still NEAR-real-time: 91.1% of frames miss a 10 fps budget and 100% miss 25 fps. The speed is bought with striding, and stride_equivalence.json prices it: against a 1:1 reference, 3:2 holds cue agreement at 0.947 but finds 13 of 15 episodes (episode agreement 0.80). Quote the throughput and that cost together. |
+| superseded 2026-08-01 deployed throughput | 3.05 FPS | — | 0325.mp4, 120 frames, ~6 students | ⛔ | DO NOT CITE as the system's speed. This was the deployed figure until 2026-08-03, when deployment moved to the 553_facefound model with 3:2 striding; see the 5.77 FPS entry. Retained because the 1 August register reported it and the thesis draft may still quote it. |
 | DEPLOYED throughput with 30 students | 0.88 FPS | — | 0325.mp4 with synthesised detections | ✅ | p99 1557 ms. Per-student feature extraction dominates beyond ~5 students. |
 | same-session throughput WITHOUT head pose | 5.32 FPS | — | 0325.mp4, 120 frames, ~6 students | ✅ | Like-for-like control measured in the same session as the deployed figure. The head-pose block therefore costs ~100 ms/frame at ~6 students - more than the detector. |
 | archived 2026-07-31 throughput | 7.1 FPS | — | 0325.mp4, 110 frames | ⛔ | DO NOT CITE as the system's speed. Measured with a 552-dim extractor, i.e. WITHOUT the head-pose block the deployed model requires, so it is not the deployed configuration. It is also not reproducible on this shared machine even for its own config (5.32 in-session). |
 | dashboard end-to-end verification (2026-08-01, first attempt) | INVALID | — | 0325.mp4 | ⛔ | DO NOT CITE. The config declared input_dim 570 against a 552-dim checkpoint; strict=False raises on a size mismatch, a bare except swallowed it, and the dashboard served cues from a RANDOMLY INITIALISED network. Re-verified 2026-08-01 with MS-TCN-556. |
-| dashboard alert threshold | 0.64 | — | fitted on validation, frozen | ✅ | Lowest threshold with selective accuracy >= 85%: retains 72.1% of frames at 85.4% accuracy vs 75.6% at full coverage. Display threshold 0.48 retains 90.4% at 79.4%. Neither is tuned on test or on the human-gold set. |
+| dashboard alert threshold | 0.66 | — | fitted on validation, frozen | ✅ | Lowest threshold with selective accuracy >= 85%: retains 64.6% of frames at 85.3% accuracy vs 73.2% at full coverage. Display threshold 0.46 retains 91.1% at 76.4%. Temperature 0.9236. Neither is tuned on test or on the human-gold set, and temperature scaling moves no argmax, so accuracy at full coverage is unchanged. |
+| superseded 2026-08-01 dashboard alert threshold | 0.64 | — | fitted on validation, frozen | ⛔ | DO NOT CITE. These are the thresholds of mstcn_556_hp, which the 1 August register cited as the dashboard's calibration. The deployed classifier is mstcn_553_ff_s42, whose frozen thresholds are 0.46/0.66; see the entry above. Citing 0.64 describes a model the dashboard does not run. |
 
