@@ -24,6 +24,7 @@ Environment (set these as Space secrets/variables, not in the Dockerfile):
     SESSION          session dir name under sessions/, default 0325
     RUNTIME_CONFIG   detector+features config for live analysis  (variable)
     DEVICE           cuda:0 (default) or cpu                     (variable)
+    PERSIST_DIR      durable mount path, if not /data            (variable)
 """
 
 from __future__ import annotations
@@ -44,19 +45,31 @@ def _cache_root() -> Path:
     on every wake, which dominates time-to-first-frame. /data survives sleeps, so
     the download happens once.
 
-    Probed by actually writing, not by os.path.exists: /data is present but
-    read-only when persistent storage is not enabled, and a bare exists() check
-    would route the cache somewhere that fails on first write.
+    PERSIST_DIR overrides the location, because Spaces offers more than one kind
+    of durable storage and they do not all mount at the same path — a mounted
+    bucket in particular may appear somewhere else entirely. Set PERSIST_DIR to
+    whatever the Space actually mounts and this follows it.
+
+    Each candidate is probed by actually writing a file, not by os.path.exists:
+    /data is present but read-only when persistent storage is not enabled, so an
+    exists() check would route the cache somewhere that fails on first write.
     """
-    data = Path("/data")
-    try:
-        data.mkdir(parents=True, exist_ok=True)
-        probe = data / ".write_test"
-        probe.write_text("ok")
-        probe.unlink()
-        return data
-    except Exception:
-        return HOME
+    candidates = []
+    override = os.environ.get("PERSIST_DIR", "").strip()
+    if override:
+        candidates.append(Path(override))
+    candidates += [Path("/data"), Path("/mnt/data")]
+
+    for cand in candidates:
+        try:
+            cand.mkdir(parents=True, exist_ok=True)
+            probe = cand / ".write_test"
+            probe.write_text("ok")
+            probe.unlink()
+            return cand
+        except Exception:
+            continue
+    return HOME
 
 
 CACHE_ROOT = _cache_root()
