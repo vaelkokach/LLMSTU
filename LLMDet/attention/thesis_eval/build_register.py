@@ -308,7 +308,8 @@ def main():
         "entries": entries,
     }
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
-    (out / "FINAL_RESULTS_REGISTER.json").write_text(json.dumps(reg, indent=2))
+    (out / "FINAL_RESULTS_REGISTER.json").write_text(
+        json.dumps(reg, indent=2, ensure_ascii=False), encoding="utf-8")
 
     md = [
         "# Final results register", "",
@@ -331,7 +332,11 @@ def main():
             md.append(f"| {e['metric']} | {v} | {ci} | {e['split']} | {mark} | "
                       f"{e['caveat'].replace(chr(10), ' ')} |")
         md.append("")
-    (out / "FINAL_RESULTS_REGISTER.md").write_text("\n".join(md) + "\n")
+    # encoding is explicit: the register emits ✅ / ⛔ markers, and
+    # Path.write_text defaults to the locale codec — under cp1252 this raises
+    # UnicodeEncodeError and leaves a 0-byte register behind.
+    (out / "FINAL_RESULTS_REGISTER.md").write_text(
+        "\n".join(md) + "\n", encoding="utf-8")
     print(f"wrote {out}/FINAL_RESULTS_REGISTER.{{json,md}} "
           f"({reg['n_citable']}/{reg['n_entries']} citable)")
 
