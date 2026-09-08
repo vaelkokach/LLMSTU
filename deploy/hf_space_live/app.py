@@ -107,6 +107,8 @@ print(f"[app] cache root: {CACHE_ROOT} "
 # Where server.py expects things, relative to the repo root it is run from.
 SESSIONS_DIR = HOME / "tools" / "dashboard" / "sessions"
 WORKDIRS = HOME / "LLMDet" / "work_dirs"
+#: '../huggingface/...' in the detector config resolves from cwd (== HOME).
+HF_MODELS = HOME.parent / "huggingface"
 
 
 def fetch_artifacts() -> bool:
@@ -147,10 +149,19 @@ def fetch_artifacts() -> bool:
     weights = pull(["LLMDet/work_dirs/**"], CACHE_ROOT / "artifacts", "weights (durable)")
     session = pull(["tools/dashboard/sessions/**"], HOME / "_artifacts_session",
                    "session cache (ephemeral)")
+    # The detector config addresses its text encoder and LMM by RELATIVE path
+    # (grounding_dino_swin_t.py: lang_model_name = '../huggingface/bert-base-uncased/',
+    # lmm = '../huggingface/my_llava-onevision-qwen2-0.5b-ov-2/'), resolved
+    # against the process cwd, which is HOME. So they belong at HOME.parent,
+    # NOT under the app directory. ~2.1 GB in a handful of large files, so this
+    # goes to durable storage with the weights.
+    models = pull(["huggingface/**"], CACHE_ROOT / "hf_models",
+                  "detector models (durable)")
 
     for src, dest, what in ((session / "tools" / "dashboard" / "sessions", SESSIONS_DIR,
                              "session cache"),
-                            (weights / "LLMDet" / "work_dirs", WORKDIRS, "work_dirs")):
+                            (weights / "LLMDet" / "work_dirs", WORKDIRS, "work_dirs"),
+                            (models / "huggingface", HF_MODELS, "detector models")):
         if not src.exists():
             print(f"[app] note: {what} not present in the artifact repo", flush=True)
             continue
@@ -166,8 +177,32 @@ def fetch_artifacts() -> bool:
     return True
 
 
+#: Files the detector config names directly. Checked at startup because a
+#: missing one otherwise surfaces ~40 s into an analysis job as an opaque
+#: transformers OSError ("Incorrect path_or_model_id"), on the GPU, in a
+#: background thread — about the least useful place to learn it.
+DETECTOR_ASSETS = (
+    "bert-base-uncased/config.json",                    # lang_model_name
+    "my_llava-onevision-qwen2-0.5b-ov-2/config.json",   # lmm=
+    "mediapipe/face_detection_full_range.tflite",       # head_pose_backend
+)
+
+
+def check_detector_assets() -> None:
+    missing = [a for a in DETECTOR_ASSETS if not (HF_MODELS / a).exists()]
+    if missing:
+        print(f"[app] WARNING: {len(missing)} detector asset(s) missing under "
+              f"{HF_MODELS} — replay works, analysing video will not:", flush=True)
+        for a in missing:
+            print(f"[app]   missing: {a}", flush=True)
+    else:
+        print(f"[app] detector assets present under {HF_MODELS}", flush=True)
+
+
 def main() -> int:
     have_artifacts = fetch_artifacts()
+    if have_artifacts:
+        check_detector_assets()
 
     session = os.environ.get("SESSION", "0325")
     session_dir = SESSIONS_DIR / session
