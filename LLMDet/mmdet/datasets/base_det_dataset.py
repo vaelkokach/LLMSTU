@@ -48,6 +48,17 @@ class BaseDetDataset(BaseDataset):
                 'please use `backend_args` instead, please refer to'
                 'https://github.com/open-mmlab/mmdetection/blob/main/configs/_base_/datasets/coco_detection.py'  # noqa: E501
             )
+        # ODVGDataset config keys must not reach mmengine BaseDataset (strict
+        # kwargs on newer MMEngine).
+        for _k in (
+                'label_map_file',
+                'need_text',
+                'actual_dataset_mode',
+                'use_short_cap',
+                'use_uniform_prompt',
+                'clean_caption',
+        ):
+            kwargs.pop(_k, None)
         super().__init__(*args, **kwargs)
 
     def full_init(self) -> None:
