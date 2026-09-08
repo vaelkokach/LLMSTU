@@ -107,8 +107,15 @@ print(f"[app] cache root: {CACHE_ROOT} "
 # Where server.py expects things, relative to the repo root it is run from.
 SESSIONS_DIR = HOME / "tools" / "dashboard" / "sessions"
 WORKDIRS = HOME / "LLMDet" / "work_dirs"
-#: '../huggingface/...' in the detector config resolves from cwd (== HOME).
-HF_MODELS = HOME.parent / "huggingface"
+LLMDET_ROOT = HOME / "LLMDet"
+#: Where '../huggingface/...' in the detector config actually lands.
+#: It is resolved while cwd is LLMDet/, not HOME — precompute_session.py:110
+#: chdirs there so the config's own "configs/..." and "work_dirs/..." paths
+#: work. Derived from that rule rather than written out, because writing out
+#: the guess (HOME.parent) put 2.1 GB of models one directory away from where
+#: the detector looked, and the run still died on the GPU with the startup
+#: check reporting everything present.
+HF_MODELS = (LLMDET_ROOT / ".." / "huggingface").resolve()
 
 
 def fetch_artifacts() -> bool:
@@ -151,10 +158,9 @@ def fetch_artifacts() -> bool:
                    "session cache (ephemeral)")
     # The detector config addresses its text encoder and LMM by RELATIVE path
     # (grounding_dino_swin_t.py: lang_model_name = '../huggingface/bert-base-uncased/',
-    # lmm = '../huggingface/my_llava-onevision-qwen2-0.5b-ov-2/'), resolved
-    # against the process cwd, which is HOME. So they belong at HOME.parent,
-    # NOT under the app directory. ~2.1 GB in a handful of large files, so this
-    # goes to durable storage with the weights.
+    # lmm = '../huggingface/my_llava-onevision-qwen2-0.5b-ov-2/'), resolved from
+    # inside LLMDet/ — see HF_MODELS. ~2.1 GB in a handful of large files, so
+    # this goes to durable storage with the weights.
     models = pull(["huggingface/**"], CACHE_ROOT / "hf_models",
                   "detector models (durable)")
 
