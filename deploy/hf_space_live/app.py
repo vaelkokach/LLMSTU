@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import os
 import sys
+import threading
 from pathlib import Path
 
 HOME = Path(__file__).resolve().parent
@@ -50,9 +51,7 @@ def _cache_root() -> Path:
     bucket in particular may appear somewhere else entirely. Set PERSIST_DIR to
     whatever the Space actually mounts and this follows it.
 
-    Each candidate is probed by actually writing a file, not by os.path.exists:
-    /data is present but read-only when persistent storage is not enabled, so an
-    exists() check would route the cache somewhere that fails on first write.
+    Each candidate is probed by _writable(), which both writes and gives up.
     """
     candidates = []
     override = os.environ.get("PERSIST_DIR", "").strip()
@@ -61,15 +60,41 @@ def _cache_root() -> Path:
     candidates += [Path("/data"), Path("/mnt/data")]
 
     for cand in candidates:
+        if _writable(cand):
+            return cand
+        print(f"[app] {cand} not usable for the cache — skipping", flush=True)
+    return HOME
+
+
+def _writable(cand: Path, timeout_s: float = 20.0) -> bool:
+    """Can we actually write here — answered within a bounded time?
+
+    The probe writes a file rather than calling exists(), because /data is
+    present but read-only when persistent storage is off, and an exists() check
+    would route the cache somewhere that fails on first write.
+
+    The bound matters just as much. A mounted bucket can wedge: the FUSE call
+    blocks and never returns, and because this runs before the first print, the
+    Space dies silently after its startup banner with no clue why. That happened.
+    A daemon thread lets a wedged mount be abandoned instead of waited on, so the
+    app falls back to ephemeral disk and boots.
+    """
+    ok = []
+
+    def probe():
         try:
             cand.mkdir(parents=True, exist_ok=True)
-            probe = cand / ".write_test"
-            probe.write_text("ok")
-            probe.unlink()
-            return cand
+            p = cand / ".write_test"
+            p.write_text("ok")
+            p.unlink()
+            ok.append(True)
         except Exception:
-            continue
-    return HOME
+            pass
+
+    t = threading.Thread(target=probe, daemon=True)
+    t.start()
+    t.join(timeout_s)
+    return bool(ok)
 
 
 CACHE_ROOT = _cache_root()
