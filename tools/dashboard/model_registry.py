@@ -143,10 +143,9 @@ def _max_column(feature_config: str) -> int:
         return int(feature_config.split("_")[0])
 
 
-def scan(thesis_root: Path = THESIS) -> List[ModelEntry]:
-    """One entry per variant, best validation seed, ordered best-first."""
+def _collect(thesis_root: Path) -> Dict[str, List[Dict]]:
+    """Every evaluated run that has a checkpoint, grouped by variant id."""
     by_variant: Dict[str, List[Dict]] = {}
-
     for record in sorted(thesis_root.glob("*/*/run_record.json")):
         exp_dir = record.parent
         sweep = exp_dir.parent.name
@@ -162,53 +161,59 @@ def scan(thesis_root: Path = THESIS) -> List[ModelEntry]:
             "sweep": sweep, "spec": spec, "dir": exp_dir, "ckpt": ckpt,
             "val": val, "test": _metrics(exp_dir / "eval_test" / "metrics.json"),
         })
+    return by_variant
 
-    def seed_mean(seeds: List[Dict], split: str) -> Dict[str, float]:
-        vals = [r[split]["macro_f1"] for r in seeds if r[split]]
-        if not vals:
-            return {}
-        m = sum(vals) / len(vals)
-        sd = (sum((v - m) ** 2 for v in vals) / (len(vals) - 1)) ** 0.5 \
-            if len(vals) > 1 else 0.0
-        return {"macro_f1": m, "macro_f1_sd": sd, "n": len(vals)}
 
-    entries: List[ModelEntry] = []
-    for variant_id, seeds in by_variant.items():
-        best = max(seeds, key=lambda r: r["val"]["macro_f1"])
-        spec = best["spec"]
-        fc = spec["feature_config"]
-        maxcol = _max_column(fc)
-        deployable = maxcol <= LIVE_MAX_COL
-        reason = "" if deployable else (
-            f"needs live column {maxcol} of {LIVE_MAX_COL}: the expression block "
-            f"requires a per-crop FER model and the dynamics block is a "
-            f"whole-track statistic, so neither can be produced by a streaming "
-            f"path")
-        seq_root = spec.get("sequence_root", "")
-        entries.append(ModelEntry(
-            variant_id=variant_id,
-            label=f"{ARCH_LABEL.get(spec['model'], spec['model'])} · {fc}",
-            sweep=best["sweep"],
-            sweep_label=SWEEP_LABEL.get(best["sweep"], best["sweep"]),
-            model=spec["model"],
-            feature_config=fc,
-            input_dim=int(fc.split("_")[0]),
-            experiment_id=spec["experiment_id"],
-            seed=int(spec["seed"]),
-            n_seeds=len(seeds),
-            checkpoint=str(best["ckpt"].relative_to(REPO)),
-            head_pose_backend=_head_pose_backend(seq_root),
-            sequence_root=seq_root,
-            deployable=deployable,
-            blocked_reason=reason,
-            val=best["val"],
-            test=best["test"],
-            val_seed_mean=seed_mean(seeds, "val"),
-            test_seed_mean=seed_mean(seeds, "test"),
-            val_predictions=str((best["dir"] / "eval_val" / "predictions.npz")
-                                .relative_to(REPO)),
-        ))
+def _seed_mean(seeds: List[Dict], split: str) -> Dict[str, float]:
+    vals = [r[split]["macro_f1"] for r in seeds if r[split]]
+    if not vals:
+        return {}
+    m = sum(vals) / len(vals)
+    sd = (sum((v - m) ** 2 for v in vals) / (len(vals) - 1)) ** 0.5         if len(vals) > 1 else 0.0
+    return {"macro_f1": m, "macro_f1_sd": sd, "n": len(vals)}
 
+
+def _make_entry(variant_id: str, seeds: List[Dict], chosen: Dict) -> ModelEntry:
+    """One registry row: `chosen` supplies the checkpoint, `seeds` the spread."""
+    spec = chosen["spec"]
+    fc = spec["feature_config"]
+    maxcol = _max_column(fc)
+    deployable = maxcol <= LIVE_MAX_COL
+    reason = "" if deployable else (
+        f"needs live column {maxcol} of {LIVE_MAX_COL}: the expression block "
+        f"requires a per-crop FER model and the dynamics block is a "
+        f"whole-track statistic, so neither can be produced by a streaming "
+        f"path")
+    seq_root = spec.get("sequence_root", "")
+    return ModelEntry(
+        variant_id=variant_id,
+        label=f"{ARCH_LABEL.get(spec['model'], spec['model'])} · {fc}",
+        sweep=chosen["sweep"],
+        sweep_label=SWEEP_LABEL.get(chosen["sweep"], chosen["sweep"]),
+        model=spec["model"],
+        feature_config=fc,
+        input_dim=int(fc.split("_")[0]),
+        experiment_id=spec["experiment_id"],
+        seed=int(spec["seed"]),
+        n_seeds=len(seeds),
+        checkpoint=str(chosen["ckpt"].relative_to(REPO)),
+        head_pose_backend=_head_pose_backend(seq_root),
+        sequence_root=seq_root,
+        deployable=deployable,
+        blocked_reason=reason,
+        val=chosen["val"],
+        test=chosen["test"],
+        val_seed_mean=_seed_mean(seeds, "val"),
+        test_seed_mean=_seed_mean(seeds, "test"),
+        val_predictions=str((chosen["dir"] / "eval_val" / "predictions.npz")
+                            .relative_to(REPO)),
+    )
+
+
+def scan(thesis_root: Path = THESIS) -> List[ModelEntry]:
+    """One entry per variant, best validation seed, ordered best-first."""
+    entries = [_make_entry(vid, seeds, max(seeds, key=lambda r: r["val"]["macro_f1"]))
+               for vid, seeds in _collect(thesis_root).items()]
     entries.sort(key=lambda e: (not e.deployable, -e.val["macro_f1"]))
     for e in entries:
         if e.deployable:
@@ -224,8 +229,40 @@ def default_entry(entries: List[ModelEntry]) -> ModelEntry:
     raise SystemExit("no deployable model in the registry")
 
 
-def find(entries: List[ModelEntry], variant_id: str) -> Optional[ModelEntry]:
-    return next((e for e in entries if e.variant_id == variant_id), None)
+def find(entries: List[ModelEntry], variant_id: str,
+         thesis_root: Path = THESIS) -> Optional[ModelEntry]:
+    """Look up a variant, optionally pinned to one seed as `variant@sNN`.
+
+    Representing a variant by its best VALIDATION seed is the right rule for a
+    ranked dropdown and the wrong one for a deployment. `attention_runtime.yaml`
+    deploys ff_det/mstcn_553_ff_s42, but the variant id `ff_det/
+    mstcn_553_facefound` resolves here to s43 -- a different checkpoint carrying
+    its own fitted calibration (T 0.9236, alert 0.66 against T 0.9705, alert
+    0.64) and a different alert coverage (64.6% against 69.0%).
+
+    Without a pin the live Space cannot serve the checkpoint the thesis names as
+    deployed, so a demo offered as "the deployed system" quietly is not one.
+    Pinning changes nothing about how the dropdown ranks or defaults.
+    """
+    if "@s" not in variant_id:
+        return next((e for e in entries if e.variant_id == variant_id), None)
+
+    base, _, seed_txt = variant_id.partition("@s")
+    try:
+        seed = int(seed_txt)
+    except ValueError:
+        return None
+    seeds = _collect(thesis_root).get(base)
+    if not seeds:
+        return None
+    chosen = next((r for r in seeds if int(r["spec"]["seed"]) == seed), None)
+    if chosen is None:
+        return None
+    entry = _make_entry(base, seeds, chosen)
+    # Keep the pin visible: it is what the UI shows, what /api/models reports
+    # as active, and what calibration_path() resolves against.
+    entry.variant_id = variant_id
+    return entry
 
 
 def main():

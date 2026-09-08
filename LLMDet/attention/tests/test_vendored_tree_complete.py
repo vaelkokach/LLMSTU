@@ -1,4 +1,4 @@
-"""The vendored trees must be complete in a fresh clone.
+"""The repo must be self-contained and self-consistent in a fresh clone.
 
 These do not test behaviour. They test that files which exist on a working
 machine are actually *tracked*, because the repo has now been bitten twice by
@@ -116,3 +116,42 @@ def test_no_unanchored_pattern_hides_vendored_source():
     assert not offenders, "\n".join(offenders) + (
         "\n\nAnchor it (`/name/`) or spell the data path out in full."
     )
+
+
+# --------------------------------------------------------------------------
+# The deployed calibration is published twice, under two names, for two
+# resolvers. Keep them from drifting apart.
+# --------------------------------------------------------------------------
+
+RUNTIME = REPO / "LLMDet" / "work_dirs" / "thesis" / "runtime"
+DEPLOYED_CAL = RUNTIME / "mstcn_553_ff_thresholds.json"
+PINNED_CAL = RUNTIME / "dashboard" / "ff_det__mstcn_553_facefound@s42.json"
+
+#: Everything except the provenance key this repo adds to the copy.
+_CAL_NUMBERS = ("temperature", "display_threshold", "alert_threshold",
+                "display_coverage", "alert_coverage",
+                "display_selective_accuracy", "alert_selective_accuracy",
+                "fitted_on")
+
+
+@pytest.mark.skipif(not (DEPLOYED_CAL.is_file() and PINNED_CAL.is_file()),
+                    reason="calibration artifacts absent")
+def test_pinned_calibration_matches_the_deployed_one():
+    """The dashboard's pinned s42 entry must carry s42's own thresholds.
+
+    attention_runtime.yaml deploys mstcn_553_ff_s42; the dashboard resolves
+    calibration by variant id, so the same numbers are published under
+    ff_det__mstcn_553_facefound@s42.json. If these two ever disagree, the live
+    Space is abstaining at thresholds nobody fitted for the checkpoint it runs
+    — the exact failure mode load_model() refuses to allow by default.
+    """
+    import json
+    a = json.loads(DEPLOYED_CAL.read_text(encoding="utf-8"))
+    b = json.loads(PINNED_CAL.read_text(encoding="utf-8"))
+    differing = {k: (a.get(k), b.get(k)) for k in _CAL_NUMBERS
+                 if a.get(k) != b.get(k)}
+    assert not differing, (
+        f"{PINNED_CAL.name} has drifted from {DEPLOYED_CAL.name}: {differing}")
+    assert "mstcn_553_ff_s42" in b["fitted_on"], (
+        f"the pinned calibration claims to be s42 but was fitted on "
+        f"{b['fitted_on']}")

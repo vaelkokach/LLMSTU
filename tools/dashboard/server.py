@@ -666,6 +666,11 @@ def main():
                              + ", ".join(e.variant_id for e in entries))
         if not entry.deployable:
             raise SystemExit(f"{entry.variant_id}: {entry.blocked_reason}")
+        # A seed-pinned id (variant@sNN) is not one of the ranked rows, which
+        # carry each variant's best validation seed. Show it anyway, first, or
+        # the dropdown reports no active model while one is plainly running.
+        if all(e.variant_id != entry.variant_id for e in entries):
+            entries = [entry] + entries
         CONTEXT["entries"] = entries
         CONTEXT["entry"] = entry
 
