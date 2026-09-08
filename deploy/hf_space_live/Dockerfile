@@ -61,5 +61,14 @@ COPY --chown=user app.py .
 COPY --chown=user tools/ ./tools/
 COPY --chown=user LLMDet/ ./LLMDet/
 
+# Fail the BUILD if the vendored tree cannot import, for the same reason the
+# mmcv check above exists. register_all_modules() is what the detector calls on
+# first use, and it walks the whole datasets + models registry — which is where
+# a missing scipy or fairscale surfaces. Without this, such a gap appears only
+# when someone uploads a video and gets a ModuleNotFoundError from a background
+# job, one missing package per rebuild. sys.path matches what the dashboard
+# modules do (tools/dashboard/pipeline_bridge.py:17).
+RUN python -c "import sys; sys.path.insert(0, 'LLMDet'); from mmdet.utils import register_all_modules; register_all_modules(); import mmdet.models.detectors.grounding_dino as g; print('mmdet registry imports cleanly:', g.__name__)"
+
 EXPOSE 7860
 CMD ["python", "app.py"]
