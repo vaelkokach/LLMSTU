@@ -23,6 +23,9 @@ Environment (set these as Space secrets/variables, not in the Dockerfile):
     DASHBOARD_MODEL  registry id, default arch/mstcn_556_hp     (variable)
     SESSION          session dir name under sessions/, default 0325
     RUNTIME_CONFIG   detector+features config for live analysis  (variable)
+    DETECTOR_CONFIG  mmdet config to use instead of the one named
+                     inside RUNTIME_CONFIG, e.g.
+                     configs/student_llmstu_exact_deploy.py       (variable)
     DEVICE           cuda:0 (default) or cpu                     (variable)
     PERSIST_DIR      durable mount path, if not /data            (variable)
 """
@@ -234,6 +237,41 @@ def check_detector_assets() -> None:
         print(f"[app] detector assets present under {HF_MODELS}", flush=True)
 
 
+def apply_detector_override(config: str) -> str:
+    """Swap the detector config, without editing the one the thesis cites.
+
+    DETECTOR_CONFIG names an mmdet config (relative to LLMDet/) to use instead
+    of the one in the runtime YAML. It exists so the Space can run
+    student_llmstu_exact_deploy.py — the same detector with `lmm=None`, whose
+    predictions are identical because predict() never reads the LMM — while
+    LLMDet/configs/attention_runtime.yaml stays byte-identical to the recorded
+    deployment configuration.
+
+    The rewritten YAML is a derived runtime artifact written next to the app;
+    the canonical file on disk is never touched.
+    """
+    override = os.environ.get("DETECTOR_CONFIG", "").strip()
+    if not override:
+        return config
+
+    import yaml
+    src = HOME / config
+    try:
+        cfg = yaml.safe_load(src.read_text(encoding="utf-8"))
+        was = cfg["detector"]["config_path"]
+        cfg["detector"]["config_path"] = override
+    except Exception as e:
+        print(f"[app] DETECTOR_CONFIG set but {src} could not be rewritten "
+              f"({type(e).__name__}: {e}); using it unchanged", flush=True)
+        return config
+
+    out = HOME / "_runtime_override.yaml"
+    out.write_text(yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
+    print(f"[app] detector config override: {was} -> {override}", flush=True)
+    print(f"[app] (derived from {config}; that file is unmodified)", flush=True)
+    return str(out.relative_to(HOME))
+
+
 def main() -> int:
     have_artifacts = fetch_artifacts()
     if have_artifacts:
@@ -247,6 +285,7 @@ def main() -> int:
     # Analyse button can only replay; with it, an uploaded video runs the full
     # detector -> tracker -> features -> temporal chain.
     config = os.environ.get("RUNTIME_CONFIG", "LLMDet/configs/attention_runtime.yaml")
+    config = apply_detector_override(config)
     device = os.environ.get("DEVICE", "cuda:0")
 
     try:
