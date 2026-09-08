@@ -135,10 +135,35 @@ def fetch_artifacts() -> bool:
     from huggingface_hub import snapshot_download
 
     def pull(allow, dest, label):
+        """Fetch one slice of the artifact repo, surviving a poisoned sidecar.
+
+        With local_dir=, huggingface_hub keeps bookkeeping in
+        <dest>/.cache/huggingface/download/*.metadata. On a bucket mount an
+        interrupted fetch leaves those half-written, and the next run does not
+        recover: read_download_metadata() raises
+
+            UnboundLocalError: cannot access local variable 'metadata'
+
+        because its parse failure path leaves the name unbound. The sidecars
+        are pure bookkeeping — the payload is content-addressed on the hub — so
+        deleting them and retrying costs one re-download and fixes it, whereas
+        leaving them wedges the Space on every boot.
+        """
+        def go():
+            return Path(snapshot_download(
+                repo_id=repo, repo_type=os.environ.get("ARTIFACT_TYPE", "model"),
+                token=token, allow_patterns=allow, local_dir=str(dest)))
+
         print(f"[app] fetching {label} -> {dest}", flush=True)
-        return Path(snapshot_download(
-            repo_id=repo, repo_type=os.environ.get("ARTIFACT_TYPE", "model"),
-            token=token, allow_patterns=allow, local_dir=str(dest)))
+        try:
+            return go()
+        except Exception as e:
+            sidecar = dest / ".cache" / "huggingface"
+            print(f"[app] {label}: {type(e).__name__}: {str(e)[:160]}", flush=True)
+            print(f"[app] clearing {sidecar} and retrying once", flush=True)
+            import shutil
+            shutil.rmtree(sidecar, ignore_errors=True)
+            return go()
 
     # Two destinations, because the artifacts split cleanly by shape and the
     # durable mount may be a BUCKET, which is good at few large objects and bad
