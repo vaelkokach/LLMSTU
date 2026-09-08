@@ -100,33 +100,44 @@ def fetch_artifacts() -> bool:
 
     from huggingface_hub import snapshot_download
 
-    print(f"[app] fetching artifacts from {repo} ...", flush=True)
-    local = snapshot_download(
-        repo_id=repo,
-        repo_type=os.environ.get("ARTIFACT_TYPE", "model"),
-        token=token,
-        local_dir=str(CACHE_ROOT / "artifacts"),
-    )
-    print(f"[app] artifacts at {local}", flush=True)
+    def pull(allow, dest, label):
+        print(f"[app] fetching {label} -> {dest}", flush=True)
+        return Path(snapshot_download(
+            repo_id=repo, repo_type=os.environ.get("ARTIFACT_TYPE", "model"),
+            token=token, allow_patterns=allow, local_dir=str(dest)))
 
-    # The archive mirrors the repo layout, so link the two trees into place
-    # rather than copying: a Space's disk is small and these are the big files.
-    src = Path(local)
-    for rel, dest in (("tools/dashboard/sessions", SESSIONS_DIR),
-                      ("LLMDet/work_dirs", WORKDIRS)):
-        s = src / rel
-        if not s.exists():
-            print(f"[app] note: {rel} not present in the artifact repo", flush=True)
+    # Two destinations, because the artifacts split cleanly by shape and the
+    # durable mount may be a BUCKET, which is good at few large objects and bad
+    # at many small ones:
+    #
+    #   LLMDet/work_dirs   273 files, 4.94 GB, ~18 MB each  -> durable
+    #   sessions/*/frames  900 files, 0.07 GB, ~78 KB each  -> ephemeral
+    #
+    # The frames are 77% of the files but 1.4% of the bytes. Fetching them onto
+    # a mounted bucket writes 900 cache-metadata sidecars, which is what made a
+    # boot stall at 25% with repeated "[Errno 5] Input/output error". They cost
+    # seconds to re-fetch onto local disk, so persisting them buys nothing and
+    # costs a hang. The 4.94 GB of weights is the part worth keeping across a
+    # sleep, and it is exactly the shape a bucket handles well.
+    weights = pull(["LLMDet/work_dirs/**"], CACHE_ROOT / "artifacts", "weights (durable)")
+    session = pull(["tools/dashboard/sessions/**"], HOME / "_artifacts_session",
+                   "session cache (ephemeral)")
+
+    for src, dest, what in ((session / "tools" / "dashboard" / "sessions", SESSIONS_DIR,
+                             "session cache"),
+                            (weights / "LLMDet" / "work_dirs", WORKDIRS, "work_dirs")):
+        if not src.exists():
+            print(f"[app] note: {what} not present in the artifact repo", flush=True)
             continue
         dest.parent.mkdir(parents=True, exist_ok=True)
         if dest.exists() or dest.is_symlink():
             continue
         try:
-            dest.symlink_to(s, target_is_directory=True)
+            dest.symlink_to(src, target_is_directory=True)
         except OSError:
             import shutil
-            shutil.copytree(s, dest)
-        print(f"[app] {rel} -> {dest}", flush=True)
+            shutil.copytree(src, dest)
+        print(f"[app] {what} -> {dest}", flush=True)
     return True
 
 
