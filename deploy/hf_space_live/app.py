@@ -215,6 +215,10 @@ def fetch_artifacts() -> bool:
 DETECTOR_ASSETS = (
     "bert-base-uncased/config.json",                    # lang_model_name
     "my_llava-onevision-qwen2-0.5b-ov-2/config.json",   # lmm=
+    # The LMM's own config.json carries mm_vision_tower =
+    # '../huggingface/siglip-so400m-patch14-384', so the model directory we
+    # were handed pulls in a third one. Public (google/...), unlike the LMM.
+    "siglip-so400m-patch14-384/config.json",
     "mediapipe/face_detection_full_range.tflite",       # head_pose_backend
 )
 
