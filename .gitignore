@@ -19,7 +19,11 @@ env/
 grounding_data
 huggingface
 data/
-datasets/
+# Anchored: an unanchored `datasets/` matches at ANY depth and silently
+# excluded the vendored source package LLMDet/mmdet/datasets/ (53 files),
+# which made the detector unimportable off this machine. The data dirs it
+# was meant to cover are named explicitly on the next two lines.
+/datasets/
 LLMDet/data/
 LLMDet/datasets/
 
