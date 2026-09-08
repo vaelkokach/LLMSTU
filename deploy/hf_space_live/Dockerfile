@@ -38,7 +38,7 @@ WORKDIR $HOME/app
 # its own.
 RUN pip install --no-cache-dir --upgrade pip \
  && pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cu121 \
-      torch==2.2.2
+      torch==2.2.2 torchvision==0.17.2
 
 COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
