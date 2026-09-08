@@ -101,18 +101,47 @@ the current `index.html`.
 Needs the detector, which means mmcv/mmengine against a CUDA build, and the
 `research` extra from `pyproject.toml`. Changes required:
 
-* base image `nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04` rather than
-  `python:3.11-slim`;
-* a CUDA torch wheel matching that CUDA version, then `mmcv==2.2.0` built or
-  installed against *that exact* torch — this is the step that fails most often,
-  and it fails at import time with a message about a missing symbol rather than
-  anything about versions;
+* `python:3.11-slim` with a cu121 torch wheel, **not** a CUDA base image: the
+  torch wheels bundle the CUDA runtime and the driver comes from the host, so a
+  CUDA base image adds ~2 GB of duplicated runtime. Python 3.11 is forced by the
+  only prebuilt mmcv wheel that exists for this stack (cp311);
+* the version triple `python 3.11 + torch 2.2.x/cu121 + mmcv==2.2.0` — this is
+  the step that fails most often, and it fails at import time with a message
+  about a missing symbol rather than anything about versions;
 * Space hardware with a GPU;
-* `LLMDet/mmdet/` copied in (it is vendored, not pip-installed) plus its
-  prerequisites: addict, matplotlib, pycocotools, shapely, six, terminaltables,
-  yapf;
+* **both** vendored trees copied in, `LLMDet/mmdet/` *and* `LLMDet/llava/`.
+  Copying only mmdet builds fine and then dies with `No module named 'llava'`:
+  `mmdet/models/detectors/grounding_dino.py:26` imports `llava.constants` at
+  module level, so the detector cannot even be imported without it. Only llava's
+  `.py` files are needed — the eval tables and webpage assets are ~9 MB of
+  nothing;
+* its pip prerequisites: addict, matplotlib, pycocotools, shapely, six,
+  terminaltables, yapf, **scipy** (hungarian_assigner) and **fairscale**
+  (grounding_dino), plus tqdm and rich, which arrive transitively today but are
+  imported directly by the tree;
 * the detector checkpoint in the artifact repo — see the visibility note above;
 * a longer startup timeout: the first request loads GroundingDINO.
+
+Put an import check in the Dockerfile:
+
+```dockerfile
+RUN python -c "import sys; sys.path.insert(0, 'LLMDet'); from mmdet.utils import register_all_modules; register_all_modules(); import mmdet.models.detectors.grounding_dino as g; print('ok', g.__name__)"
+```
+
+`register_all_modules()` is what the detector calls on first use and it walks
+the whole datasets and models registry. Without this, every missing package
+costs a full rebuild *plus* a video upload to discover, one package at a time,
+because the failure surfaces inside a background analysis job rather than at
+startup. scipy, fairscale and llava were all found this way.
+
+**Watch the storage shape.** If durable storage is a mounted bucket, do not put
+the session cache on it: `sessions/*/frames/` is ~900 JPEGs averaging 78 KB —
+77% of the artifact files and 1.4% of the bytes — and each costs a cache
+metadata sidecar write. That combination stalled a boot at 25% with repeated
+`[Errno 5] Input/output error`. Weights (273 files, 4.94 GB, ~18 MB each) belong
+on the bucket; the session cache belongs on ephemeral disk, where it re-fetches
+in seconds. Probe the mount with a timeout, too — a wedged FUSE mount makes an
+unbounded write hang the Space before it logs its first line.
 
 Expect ~5.77 FPS at 6 students at the deployed 3:2 striding. Surface that in the
 UI rather than implying real time — at 3:2 the striding also costs cue agreement
