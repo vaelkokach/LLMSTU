@@ -31,7 +31,8 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
-from attention.taxonomy import CUE_CLASSES, map_record, parse_stem_time
+from attention.taxonomy import (CUE_CLASSES, candidate_set, map_record,
+                                parse_stem_time)
 
 # --- legacy 4-class taxonomy (deprecated) ---------------------------------
 LEGACY_CLASS_NAMES = ["attentive", "distracted", "sleeping", "engaged"]
@@ -72,6 +73,10 @@ class CropObs:
     time_s: float
     bbox_xyxy: List[float]
     label_id: int
+    #: Every cue the record supports (taxonomy.candidate_set). label_id is the
+    #: precedence winner and is always a member. Kept so a partial-label
+    #: objective can credit any candidate instead of only the winner.
+    cand_ids: List[int] = field(default_factory=list)
     head_span_px: float = 150.0
     meta: Dict = field(default_factory=dict)
 
@@ -158,6 +163,7 @@ def parse_llmstu_labels(
                         time_s=t,
                         bbox_xyxy=[float(v) for v in rec["bbox_person"]],
                         label_id=map_record(rec),
+                        cand_ids=candidate_set(rec),
                         head_span_px=float(rec.get("head_span_px", 150.0)),
                         meta={"file_name": rec.get("file_name", "")},
                     )
@@ -241,8 +247,12 @@ def build_sequences_llmstu(
 
     Sequences are cut whenever the seat disappears for more than ``max_gap_s``
     or when ``max_track_len`` frames are accumulated. NPZ fields:
-    ``x`` [T, D] features, ``y_frames`` [T] per-frame labels, ``t`` [T]
-    timestamps (s), ``y`` scalar majority label (backward compatibility).
+    ``x`` [T, D] features, ``y_frames`` [T] per-frame labels, ``y_cand`` [T, K]
+    multi-hot candidate sets, ``t`` [T] timestamps (s), ``y`` scalar majority
+    label (backward compatibility).
+
+    ``y_cand`` records every cue the annotation supports, not just the one the
+    precedence rule kept. Loaders that do not know about it are unaffected.
     """
     from attention.features import StudentFeatureExtractor  # deferred: loads CLIP
 
@@ -329,6 +339,7 @@ def build_sequences_llmstu(
                 if len(chunk) < min_track_len:
                     continue
                 feats, labels, times, track_boxes = [], [], [], []
+                cand_masks = []
                 for obs in chunk:
                     img_path = image_root / obs.src_frame
                     if frame_cache[0] == str(img_path):
@@ -355,6 +366,7 @@ def build_sequences_llmstu(
                     feats.append(fv)
                     track_boxes.append(list(obs.bbox_xyxy))
                     labels.append(obs.label_id)
+                    cand_masks.append(obs.cand_ids or [obs.label_id])
                     times.append(obs.time_s)
                 if len(feats) < min_track_len:
                     continue
@@ -375,12 +387,19 @@ def build_sequences_llmstu(
                     dyn = compute_dynamic(track_boxes, pose_cols)
                     x = np.concatenate([x, dyn], axis=1).astype(np.float32)
                 y_frames = np.array(labels, dtype=np.int64)
+                # [T, K] multi-hot: 1 where the record supports that cue. A
+                # frame always has at least its own label set, so a row is
+                # never empty and a partial-label loss never divides by zero.
+                y_cand = np.zeros((len(labels), len(CUE_CLASSES)), dtype=np.uint8)
+                for _i, _ids in enumerate(cand_masks):
+                    y_cand[_i, list(_ids)] = 1
                 y_major = int(np.bincount(y_frames).argmax())
                 out_name = f"sample_{sample_idx:06d}.npz"
                 np.savez_compressed(
                     output_dir / split / out_name,
                     x=x,
                     y_frames=y_frames,
+                    y_cand=y_cand,
                     y=np.array(y_major, dtype=np.int64),
                     t=np.array(times, dtype=np.float64),
                 )

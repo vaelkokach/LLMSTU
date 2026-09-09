@@ -41,7 +41,7 @@ a student who is using_laptop but has a visible phone is phone_use.
 are not verifiable from pixels (see annotation guideline).
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 CUE_CLASSES: List[str] = [
     "screen_oriented",
@@ -78,8 +78,83 @@ _TASK_GAZES = {"laptop", "teacher_or_board", "own_desk", "down"}
 _TASK_TARGETS = {"device", "instruction", "own_work"}
 
 
+def cue_conditions(rec: Dict) -> "List[Tuple[str, bool]]":
+    """Every cue rule and whether it fires, in precedence order.
+
+    The single source of truth for both :func:`map_record` (first match wins)
+    and :func:`candidate_set` (all matches). They must not be written twice: a
+    drift between the label a frame is given and the set it is credited for
+    would be invisible and would silently change what the model is scored on.
+
+    ``("uncertain", True)`` in first position is a GATE, not a candidate among
+    others: a student who cannot be seen supports no cue at all, so both
+    callers stop there.
+    """
+    activity = rec.get("activity", "other")
+    gaze = rec.get("gaze_direction", "unknown")
+    target = rec.get("attention_target", "unknown")
+    posture = rec.get("posture", "unknown")
+    hand = rec.get("hand_state", "unknown")
+    occluded = bool(rec.get("occluded", False))
+    face_kpts = int(rec.get("face_kpts", 3))
+    phone_visible = bool(rec.get("phone_visible", False))
+    talking = bool(rec.get("talking", False))
+    engagement = rec.get("engagement_level", "unknown")
+
+    unverifiable = occluded and face_kpts <= UNCERTAIN_FACE_KPTS
+    no_signal = (gaze == "unknown" and target == "unknown"
+                 and engagement == "unknown" and activity == "other")
+    return [
+        ("uncertain", unverifiable or no_signal),
+        ("phone_use", activity == "using_phone" or phone_visible
+         or gaze == "phone" or hand == "on_phone"),
+        ("head_down", activity == "head_down_sleeping"
+         or posture in ("head_down", "slumped")),
+        ("turned_to_peer", activity == "talking_to_peer" or talking
+         or gaze == "peer" or target == "peer"),
+        ("looking_away", gaze == "away_or_window" or activity == "looking_away"
+         or target == "distracted"),
+        ("screen_oriented", activity in _TASK_ACTIVITIES
+         or (gaze in _TASK_GAZES and target in _TASK_TARGETS)),
+    ]
+
+
+def candidate_set(rec: Dict) -> "List[int]":
+    """Every cue class this record supports -- the PARTIAL label.
+
+    ``map_record`` keeps the highest-precedence firing rule and discards the
+    rest. That is not a tie-break, it is a deletion: measured over the 6,816
+    LLMSTU pseudo-labels, 13.7% of records fire more than one rule, and
+    `looking_away` is true by its own rule 2.74x more often than precedence
+    lets it be the label (1313 against 479). The model is then penalised for
+    predicting a class that was, by the annotation's own fields, correct.
+
+    Returning the set lets a partial-label objective (PRODEN, Lv et al. ICML
+    2020) credit any candidate and let the pixels decide which, instead of a
+    hand-written ordering deciding in advance.
+    """
+    conds = cue_conditions(rec)
+    if conds[0][1]:                      # the unverifiable/no-signal gate
+        return [CUE_TO_ID["uncertain"]]
+    fired = [CUE_TO_ID[name] for name, hit in conds[1:] if hit]
+    return fired or [CUE_TO_ID["uncertain"]]
+
+
 def map_record(rec: Dict) -> int:
-    """Map one LLMSTU label record (parsed jsonl dict) to a cue class id."""
+    """Map one LLMSTU label record (parsed jsonl dict) to a cue class id.
+
+    First firing rule wins. Kept exactly as it was: every published number and
+    every built sequence depends on it. ``candidate_set`` is the partial-label
+    view of the same conditions.
+    """
+    for name, hit in cue_conditions(rec):
+        if hit:
+            return CUE_TO_ID[name]
+    return CUE_TO_ID["uncertain"]
+
+
+def _map_record_legacy(rec: Dict) -> int:
+    """The original inlined implementation, kept only as a test oracle."""
     activity = rec.get("activity", "other")
     gaze = rec.get("gaze_direction", "unknown")
     target = rec.get("attention_target", "unknown")

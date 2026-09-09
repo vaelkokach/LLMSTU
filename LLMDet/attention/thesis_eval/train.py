@@ -66,6 +66,7 @@ class ExperimentSpec:
     model: str = "transformer"
     feature_config: str = "570_full"
     taxonomy: str = "cue6"
+    partial_labels: bool = False
     seed: int = 42
     epochs: int = 90
     batch_size: int = 32
@@ -140,6 +141,41 @@ def _smoothing_loss(logits: torch.Tensor, valid: torch.Tensor,
     return (d * m).sum() / m.sum().clamp(min=1.0) / logits.size(-1)
 
 
+def proden_loss(logits, cand, valid, weight=None):
+    """Partial-label cross-entropy (PRODEN, Lv et al., ICML 2020).
+
+    The labels are not single classes. `map_record` fires several cue rules on
+    13.7% of LLMSTU records and keeps the highest-precedence one; measured over
+    the pseudo-labels, `looking_away` is true by its own rule 2.74x more often
+    than precedence lets it be the label. Standard cross-entropy then actively
+    penalises the model for predicting a class the annotation itself supports.
+
+    PRODEN replaces the one-hot target with the candidate set and lets the
+    model decide which member to commit to:
+
+        L = - sum_{c in S} w_c log p_c ,   w_c = p_c / sum_{c' in S} p_c'
+
+    with ``w`` detached, so it is a target rather than a path for gradients.
+    The weights start uniform over S (the network is near-uniform at init) and
+    sharpen as the model becomes able to tell the candidates apart -- the
+    "progressive identification" of the name. Where |S| = 1 this is exactly
+    cross-entropy, so frames with an unambiguous label are unaffected.
+
+    ``weight`` applies the same per-class weighting as the single-label path,
+    so the two objectives stay comparable.
+    """
+    logp = torch.log_softmax(logits.float(), dim=-1)
+    with torch.no_grad():
+        w = torch.softmax(logits.float(), dim=-1) * cand
+        w = w / w.sum(-1, keepdim=True).clamp_min(1e-12)
+    per_class = -(w * logp)
+    if weight is not None:
+        per_class = per_class * weight.view(1, -1)
+    per_frame = per_class.sum(-1)
+    v = valid.reshape(-1).float()
+    return (per_frame * v).sum() / v.sum().clamp_min(1.0)
+
+
 @torch.no_grad()
 def evaluate_logits(model, X, Y, mask, batch_size: int, num_classes: int):
     """Collect probabilities and targets over a whole split, single process.
@@ -195,6 +231,12 @@ def train(spec: ExperimentSpec, device_str: str = "cuda:0", threads: int = 8) ->
     # slice. See data.to_padded_tensors for why.
     Xtr, Ytr, Mtr = D.to_padded_tensors(train_seqs, device)
     Xva, Yva, Mva = D.to_padded_tensors(val_seqs, device)
+    Ctr = (D.padded_candidates(train_seqs, num_classes, device, Xtr.shape[1])
+           if spec.partial_labels else None)
+    if spec.partial_labels:
+        amb = float((Ctr.sum(-1) > 1).float()[Ytr != IGNORE].mean())
+        print(f"[{spec.experiment_id}] partial labels on: "
+              f"{amb * 100:.1f}% of scored frames carry >1 candidate", flush=True)
     g = torch.Generator(device="cpu"); g.manual_seed(spec.seed)
 
     kw = dict(spec.model_kwargs)
@@ -217,6 +259,7 @@ def train(spec: ExperimentSpec, device_str: str = "cuda:0", threads: int = 8) ->
         for bi in range(0, Xtr.shape[0], spec.batch_size):
             idx = perm[bi:bi + spec.batch_size]
             x, y, mask = Xtr[idx], Ytr[idx], Mtr[idx]
+            cand = Ctr[idx] if Ctr is not None else None
             valid = y != IGNORE
             if not valid.any():
                 continue
@@ -228,9 +271,14 @@ def train(spec: ExperimentSpec, device_str: str = "cuda:0", threads: int = 8) ->
                     stages = out["logits"].unsqueeze(0)
                 loss = 0.0
                 for s in stages:
-                    loss = loss + F.cross_entropy(
-                        s.reshape(-1, num_classes), y.reshape(-1),
-                        weight=weights, ignore_index=IGNORE)
+                    if cand is None:
+                        loss = loss + F.cross_entropy(
+                            s.reshape(-1, num_classes), y.reshape(-1),
+                            weight=weights, ignore_index=IGNORE)
+                    else:
+                        loss = loss + proden_loss(
+                            s.reshape(-1, num_classes),
+                            cand.reshape(-1, num_classes), valid, weights)
                     if spec.smoothing_loss_weight > 0:
                         loss = loss + spec.smoothing_loss_weight * _smoothing_loss(s, valid)
                 if "boundary" in out:
@@ -324,6 +372,11 @@ def main():
     ap.add_argument("--experiment-id", required=True)
     ap.add_argument("--model", default="transformer")
     ap.add_argument("--feature-config", default="570_full", choices=sorted(D.FEATURE_CONFIGS))
+    ap.add_argument("--partial-labels", action="store_true",
+                    help="train with PRODEN over candidate sets instead of the "
+                         "precedence-collapsed single label. Needs sequences "
+                         "built with y_cand; older ones degrade to one-hot, "
+                         "i.e. to plain cross-entropy.")
     ap.add_argument("--taxonomy", default="cue6",
                     help="label set: cue6 (default), onoff, onoff_reliable, "
                          "coarse3_reliable. The _reliable variants abstain on "
@@ -350,6 +403,7 @@ def main():
     spec = ExperimentSpec(
         experiment_id=args.experiment_id, model=args.model,
         feature_config=args.feature_config, taxonomy=args.taxonomy,
+        partial_labels=args.partial_labels,
         seed=args.seed, epochs=args.epochs,
         batch_size=args.batch_size, lr=args.lr, select_window=args.select_window,
         smoothing_loss_weight=smooth, output_dir=args.output_dir,

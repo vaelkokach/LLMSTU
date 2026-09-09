@@ -100,14 +100,20 @@ def column_index(name: str) -> np.ndarray:
 
 @dataclass
 class Sequence_:
-    """One (video, seat) track."""
+    """One (video, seat) track.
+
+    ``y_cand`` [T, K] is the multi-hot partial label: every class the
+    annotation supports. ``y`` is the precedence winner and is always one of
+    them, so a single-label loss can ignore ``y_cand`` entirely.
+    """
     key: str            # manifest-relative npz path, the stable sequence id
     video_id: str
     seat_id: int
     split: str
     x: np.ndarray       # [T, D] float32, already sliced to the feature config
-    y: np.ndarray       # [T]    int64, 6-class ids
+    y: np.ndarray       # [T]    int64 class ids (IGNORE_INDEX where abstained)
     t: np.ndarray       # [T]    float64 seconds within the source video
+    y_cand: Optional[np.ndarray] = None   # [T, K] bool multi-hot candidates
 
     @property
     def track_id(self) -> str:
@@ -142,8 +148,9 @@ def load_split(
         raise KeyError(f"unknown feature config {feature_config!r}; "
                        f"known: {sorted(FEATURE_CONFIGS)}")
     cols = column_index(feature_config)
-    from attention.taxonomy import taxonomy_lut
+    from attention.taxonomy import CUE_CLASSES, taxonomy_classes, taxonomy_lut
     tax_lut = np.array(taxonomy_lut(taxonomy), dtype=np.int64)
+    n_tax_classes = len(taxonomy_classes(taxonomy))
     rows = [r for r in load_manifest(manifest_path) if r["split"] == split]
     rows.sort(key=lambda r: r["file"])
     if limit is not None:
@@ -157,14 +164,34 @@ def load_split(
                 f"{r['file']} has {x.shape[1]} feature columns; the ablation "
                 "ladder requires the 570-dim build (llmstu_sequences_full)")
         y = LEGACY_REMAP_LUT[np.clip(d["y_frames"].astype(np.int64), 0, 6)]
+
+        # Candidate sets, in 6-class space. Sequences built before y_cand
+        # existed fall back to one-hot, which makes a partial-label objective
+        # degrade exactly to the single-label one rather than break.
+        if "y_cand" in getattr(d, "files", []):
+            cand6 = d["y_cand"].astype(bool)
+        else:
+            cand6 = np.zeros((len(y), len(CUE_CLASSES)), dtype=bool)
+            cand6[np.arange(len(y)), y] = True
+
+        # Collapse the candidate columns the same way as the labels, so a
+        # taxonomy that merges two classes merges their candidacy too.
+        cand = np.zeros((len(y), n_tax_classes), dtype=bool)
+        for src_id, new_id in enumerate(tax_lut):
+            if new_id >= 0:
+                cand[:, new_id] |= cand6[:, src_id]
+
         y = tax_lut[y]                      # identity for the default cue6
+        # A frame whose every candidate was dropped by the taxonomy has nothing
+        # left to predict; IGNORE it rather than inventing a target.
+        y = np.where(cand.any(axis=1), y, IGNORE_INDEX)
         # Force C-contiguity once here. Column-sliced views are strided, and
         # copying them per batch inside collate cost 183 ms/batch — 80% of an
         # epoch, with the GPU at 3% utilisation.
         out.append(Sequence_(
             key=r["file"], video_id=r["video_id"], seat_id=int(r["seat_id"]),
             split=split, x=np.ascontiguousarray(x[:, cols]), y=y,
-            t=d["t"].astype(np.float64)))
+            y_cand=cand, t=d["t"].astype(np.float64)))
     return out
 
 
@@ -234,3 +261,32 @@ def collate(batch: List[Tuple[np.ndarray, np.ndarray]]):
         y_out[i, : y.shape[0]] = torch.from_numpy(np.ascontiguousarray(y))
         mask[i, : x.shape[0]] = False
     return x_out, y_out, mask
+
+
+def padded_candidates(seqs: List[Sequence_], num_classes: int,
+                      device=None, max_len: Optional[int] = None):
+    """[N, T, K] float mask of candidate labels, aligned with to_padded_tensors.
+
+    Separate from to_padded_tensors rather than a fourth return value: every
+    existing caller unpacks exactly three, and silently changing that arity is
+    the kind of edit that breaks an evaluator six modules away.
+
+    Padding rows are all-zero. They are never read — the loss masks on
+    ``y != IGNORE_INDEX`` first — but zero is the honest value for "no
+    candidate here" and makes an accidental read produce an obvious NaN rather
+    than a plausible wrong number.
+    """
+    import torch
+
+    n = len(seqs)
+    T = max_len or max(len(s.y) for s in seqs)
+    C = torch.zeros((n, T, num_classes), dtype=torch.float32)
+    for i, s in enumerate(seqs):
+        t = min(len(s.y), T)
+        if s.y_cand is None:
+            valid = s.y[:t] >= 0
+            idx = np.nonzero(valid)[0]
+            C[i, idx, s.y[:t][valid]] = 1.0
+        else:
+            C[i, :t] = torch.from_numpy(s.y_cand[:t].astype(np.float32))
+    return C.to(device) if device is not None else C
