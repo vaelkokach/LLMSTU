@@ -10,6 +10,10 @@ through the full pipeline, which is slow and cannot switch models mid-run.
 video. A session can be replayed instantly and switched between models freely,
 because everything except the temporal head is already computed.
 
+**Streams** — an RTSP/HTTP camera URL. Unlike the other two this is not a
+thing on disk: it has no session, cannot be analysed into one (it has no end),
+and is validated rather than sanitised, because the server will connect to it.
+
 So an uploaded video is *analysed once* into a session, and used from the
 session thereafter. The pairing is by name (``lecture.mp4`` ->
 ``sessions/lecture``) rather than by a database, so the state of the system is
@@ -205,9 +209,66 @@ def list_sources(extra_video: Optional[str] = None,
     return out
 
 
+#: Schemes OpenCV can open that we are willing to connect out to.
+STREAM_SCHEMES = ("rtsp://", "rtsps://", "http://", "https://", "rtmp://")
+
+
+def validate_stream_url(url: str) -> str:
+    """Check a user-supplied camera URL before the server connects to it.
+
+    The server fetches this URL, so it is a request forgery surface: a stream
+    id is the one source kind that makes the process talk to an address the
+    caller chose. Two cheap checks, and one honest limitation.
+
+    Blocked: schemes we do not need, and hosts that are literal loopback,
+    private or link-local addresses — the interesting SSRF targets on a hosted
+    runner are its own metadata endpoint and neighbours on the internal
+    network. Set STREAM_ALLOW_PRIVATE=1 for an on-premises deployment where the
+    classroom camera legitimately sits on a private LAN.
+
+    NOT blocked: a public hostname whose DNS resolves to a private address.
+    Closing that needs resolve-then-pin, which OpenCV's capture API gives no
+    way to express, so it is documented rather than pretended away.
+    """
+    import ipaddress
+    import os
+    from urllib.parse import urlparse
+
+    url = str(url).strip()
+    if not url.lower().startswith(STREAM_SCHEMES):
+        raise ValueError(
+            f"unsupported stream scheme; expected one of "
+            f"{', '.join(s.rstrip(':/') for s in STREAM_SCHEMES)}")
+    host = (urlparse(url).hostname or "").strip("[]")
+    if not host:
+        raise ValueError("stream URL has no host")
+    if os.environ.get("STREAM_ALLOW_PRIVATE", "").strip() in ("1", "true", "yes"):
+        return url
+    if host.lower() in ("localhost", "localhost.localdomain"):
+        raise ValueError(f"refusing to connect to {host} "
+                         f"(set STREAM_ALLOW_PRIVATE=1 for a local camera)")
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return url                      # a name; see the docstring limitation
+    if ip.is_loopback or ip.is_private or ip.is_link_local or ip.is_reserved:
+        raise ValueError(f"refusing to connect to non-public address {host} "
+                         f"(set STREAM_ALLOW_PRIVATE=1 for a local camera)")
+    return url
+
+
 def parse_id(source_id: str):
-    """``"session:/abs/path"`` -> ``("session", Path(...))``."""
+    """``"session:/abs/path"`` -> ``("session", Path(...))``.
+
+    A stream id returns a **str**, not a Path: ``Path("rtsp://cam/stream")``
+    silently becomes ``<cwd>/rtsp:/cam/stream``, which is the failure
+    pipeline_bridge.classify_source already documents. Callers must therefore
+    not assume the second element is a path — the ones that need a file check
+    ``kind`` first.
+    """
     kind, _, path = str(source_id).partition(":")
+    if kind == "stream":
+        return kind, validate_stream_url(path)
     if kind not in ("session", "video") or not path:
         raise ValueError(f"malformed source id {source_id!r}")
     return kind, Path(path)

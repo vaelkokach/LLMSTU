@@ -235,6 +235,8 @@ class Handler(BaseHTTPRequestHandler):
                 "max_upload_mb": round(SRC.MAX_UPLOAD_BYTES / 1e6),
                 "accepts": sorted(SRC.VIDEO_EXTS),
                 "can_analyse": bool(CONTEXT.get("config")),
+                "stream_enabled": bool(CONTEXT.get("config")),
+                "stream_schemes": [x.rstrip(":/") for x in SRC.STREAM_SCHEMES],
             }))
         self._err(404, "not found")
 
@@ -476,12 +478,15 @@ def start(source, entry=None):
             "the temporal head re-runs")
         return RUNNER.start(run_session, entry, source["path"])
 
-    if source["kind"] == "video":
+    if source["kind"] in ("video", "stream"):
         if not CONTEXT.get("config"):
             raise RuntimeError(
                 "no detector config; start the server with --config to run "
                 "the full pipeline")
         CONTEXT["switch_cost"] = (
+            "reconnects to the camera and re-runs the whole pipeline; a live "
+            "stream has no cache to fall back on"
+            if source["kind"] == "stream" else
             "restarts the source and re-runs the whole pipeline; analyse it "
             "into a session to make switching instant")
         return RUNNER.start(run_live_source, entry, source["path"])
@@ -514,6 +519,14 @@ def select_source(source_id, mode=None):
     and speed.
     """
     kind, path = SRC.parse_id(source_id)
+    if kind == "stream":
+        # Typed by the user rather than discovered on disk, so there is nothing
+        # in list_sources to look up. parse_id has already validated the URL.
+        src = {"id": f"stream:{path}", "kind": "stream",
+               "name": path, "path": path, "ready": True}
+        start(src)
+        return src["id"]
+
     listed = {s["id"]: s for s in SRC.list_sources(CONTEXT.get("cli_video"),
                                                    CONTEXT.get("cli_session"))}
     src = listed.get(source_id)
@@ -533,6 +546,11 @@ def select_source(source_id, mode=None):
 def start_analyse(source_id, max_frames=None):
     """Kick off a precompute pass over an uploaded/recorded video."""
     kind, video = SRC.parse_id(source_id)
+    if kind == "stream":
+        raise ValueError(
+            "a live stream cannot be analysed into a session: precompute needs "
+            "a finite source, and a camera has no end. Select it as a source "
+            "to run the pipeline live instead.")
     if kind != "video":
         raise ValueError("only a video can be analysed; a session already is")
     if not video.exists():
