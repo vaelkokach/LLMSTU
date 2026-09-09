@@ -241,6 +241,7 @@ def build_sequences_llmstu(
     head_pose_backend: str = None,
     head_pose_cache: str = None,
     affect_cache: str = None,
+    head_stream: bool = False,
     dynamic_features: bool = False,
 ) -> None:
     """Build per-(video, seat) sequences with per-frame cue labels.
@@ -308,11 +309,30 @@ def build_sequences_llmstu(
     from attention.dynamic_features import compute_dynamic, DYNAMIC_DIM
     extra = (affect[1].shape[1] if affect is not None else 0) + \
             (DYNAMIC_DIM if dynamic_features else 0)
+    # The head stream replaces express/dynamic rather than joining them: those
+    # two are not deployable, and mixing all four would produce a column layout
+    # no feature config names, which is the one failure that stays silent.
+    if head_stream and extra:
+        raise SystemExit(
+            "--head-stream cannot be combined with --affect-cache or "
+            "--dynamic-features: the head block occupies columns 556+, where "
+            "express/dynamic live in the v570 layout. Build them separately.")
+    layout_name = "v1074_head" if head_stream else "v570"
+
     extractor = StudentFeatureExtractor(
         allow_clip_fallback=allow_clip_fallback,
-        head_pose=None if cached_hp is not None else hp)
-    print(f"feature dim: {extractor.output_dim() + (4 if cached_hp is not None else 0) + extra} "
-          f"(head_pose={head_pose_backend or 'off'})")
+        head_pose=None if cached_hp is not None else hp,
+        head_stream=head_stream)
+    total_dim = extractor.output_dim() + (4 if cached_hp is not None else 0) + extra
+    print(f"feature dim: {total_dim} (layout={layout_name}, "
+          f"head_pose={head_pose_backend or 'off'}, "
+          f"head_stream={'on' if head_stream else 'off'})")
+    from attention.thesis_eval.data import LAYOUT_WIDTH
+    if total_dim != LAYOUT_WIDTH[layout_name]:
+        raise SystemExit(
+            f"built width {total_dim} != {LAYOUT_WIDTH[layout_name]} declared "
+            f"for layout {layout_name}. Every feature config slices by absolute "
+            f"column, so writing this would misalign them silently.")
 
     for split in ("train", "val"):
         (output_dir / split).mkdir(parents=True, exist_ok=True)
@@ -398,6 +418,7 @@ def build_sequences_llmstu(
                 np.savez_compressed(
                     output_dir / split / out_name,
                     x=x,
+                    layout=layout_name,
                     y_frames=y_frames,
                     y_cand=y_cand,
                     y=np.array(y_major, dtype=np.int64),
@@ -509,6 +530,12 @@ def parse_args():
     p.add_argument("--val-fraction", type=float, default=0.2)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--allow-filename-video-fallback", action="store_true")
+    p.add_argument("--head-stream", action="store_true",
+                   help="add the 518-dim head stream: a second CLIP pass over "
+                        "the head region cropped from the full frame. A person "
+                        "crop resized to 224x224 puts the head on ~1 of "
+                        "CLIP-B/32's 49 patches; this gives it all 49. Produces "
+                        "the v1074_head layout, which excludes express/dynamic.")
     p.add_argument("--head-pose-backend", type=str, default=None,
                    choices=["mediapipe", "opencv", "cached"],
                    help="enable the 4-dim head-pose block (556-dim features); "
@@ -546,4 +573,5 @@ if __name__ == "__main__":
         head_pose_cache=args.head_pose_cache,
         affect_cache=args.affect_cache,
         dynamic_features=args.dynamic_features,
+        head_stream=args.head_stream,
     )

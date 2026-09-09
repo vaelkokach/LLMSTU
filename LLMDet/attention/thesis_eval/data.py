@@ -41,29 +41,44 @@ from typing import Dict, List, Optional, Sequence, Tuple
 import numpy as np
 
 # Column layout of the 570-dim build. Slices are half-open, in column order.
-# These four tile [0, 570) exactly.
+# A build's column meaning depends on which streams were extracted, so the
+# layout is NAMED and stored in the npz rather than inferred from the width.
+# Getting this wrong is silent: a config would slice real numbers from the
+# wrong columns and train happily on nonsense.
+#
+# v570 tiles [0, 570) exactly and is every sequence built before the head
+# stream existed.
+LAYOUTS: Dict[str, Dict[str, Tuple[int, int]]] = {
+    "v570": {
+        "base": (0, 552),
+        "headpose": (552, 556),
+        "hp_angles": (552, 555),        # yaw, pitch, roll
+        "hp_facefound": (555, 556),     # the detection flag alone
+        "express": (556, 563),
+        "dynamic": (563, 570),
+    },
+    # Head stream instead of express/dynamic: neither of those is deployable
+    # (expression needs a per-crop FER model, dynamics is a whole-track
+    # statistic), so a head build does not carry them and the head block takes
+    # their place. 518 = 512 CLIP over the head crop + 6 head-box geometry.
+    "v1074_head": {
+        "base": (0, 552),
+        "headpose": (552, 556),
+        "hp_angles": (552, 555),
+        "hp_facefound": (555, 556),
+        "head": (556, 1074),
+    },
+}
+
+#: Backwards-compatible aliases; v570 is what every existing caller means.
 FEATURE_BLOCKS: Dict[str, Tuple[int, int]] = {
-    "base": (0, 552),
-    "headpose": (552, 556),
-    "express": (556, 563),
-    "dynamic": (563, 570),
-}
-
-#: Sub-blocks that split ``headpose`` into its two very different signals.
-#: FINDINGS 6.0b argued that ``face_found`` — whether MediaPipe found a face at
-#: all — is the strongest single cue signal in the project (92% detection on
-#: `screen_oriented` vs 8% on `head_down`), and that the metric angles were the
-#: weaker part. That was never tested in isolation, and it decides whether a
-#: stronger head-pose estimator (DirectMHP, 6DRepNet) is worth integrating: if
-#: the gain is all ``face_found``, better angles cannot help much.
+    k: v for k, v in LAYOUTS["v570"].items()
+    if k in ("base", "headpose", "express", "dynamic")}
 SUB_BLOCKS: Dict[str, Tuple[int, int]] = {
-    "hp_angles": (552, 555),      # yaw, pitch, roll
-    "hp_facefound": (555, 556),   # the detection flag alone
-}
-
+    k: v for k, v in LAYOUTS["v570"].items() if k.startswith("hp_")}
 ALL_BLOCKS: Dict[str, Tuple[int, int]] = {**FEATURE_BLOCKS, **SUB_BLOCKS}
 
-#: The controlled ladder. Each entry lists the blocks kept, in column order.
+#: The controlled ladder: config -> (layout, blocks kept in column order).
 #: ``563_expr`` and ``563_dyn`` isolate the two families that the historic
 #: 556->570 comparison added *together* and therefore could not separate.
 FEATURE_CONFIGS: Dict[str, List[str]] = {
@@ -72,10 +87,26 @@ FEATURE_CONFIGS: Dict[str, List[str]] = {
     "563_expr": ["base", "headpose", "express"],
     "563_dyn": ["base", "headpose", "dynamic"],
     "570_full": ["base", "headpose", "express", "dynamic"],
-    # head-pose decomposition (see SUB_BLOCKS)
+    # head-pose decomposition (see LAYOUTS)
     "553_facefound": ["base", "hp_facefound"],
     "555_angles": ["base", "hp_angles"],
+    # head stream (needs a v1074_head build)
+    "1070_head": ["base", "head"],
+    "1074_hp_head": ["base", "headpose", "head"],
 }
+
+#: Which layout each config must be sliced against.
+CONFIG_LAYOUT: Dict[str, str] = {
+    name: ("v1074_head" if "head" in blocks else "v570")
+    for name, blocks in FEATURE_CONFIGS.items()
+}
+
+#: Total width of each layout, for validating an npz before slicing it.
+LAYOUT_WIDTH: Dict[str, int] = {
+    "v570": 570,
+    "v1074_head": 1074,
+}
+
 
 IGNORE_INDEX = -100
 
@@ -85,15 +116,25 @@ IGNORE_INDEX = -100
 LEGACY_REMAP_LUT = np.array([0, 1, 2, 3, 4, 5, 5], dtype=np.int64)
 
 
+def config_layout(name: str) -> str:
+    """Which stored column layout this feature config must be sliced against."""
+    if name not in FEATURE_CONFIGS:
+        raise KeyError(f"unknown feature config {name!r}; "
+                       f"known: {sorted(FEATURE_CONFIGS)}")
+    return CONFIG_LAYOUT[name]
+
+
 def config_dim(name: str) -> int:
-    return sum(ALL_BLOCKS[b][1] - ALL_BLOCKS[b][0] for b in FEATURE_CONFIGS[name])
+    blocks = LAYOUTS[config_layout(name)]
+    return sum(blocks[b][1] - blocks[b][0] for b in FEATURE_CONFIGS[name])
 
 
 def column_index(name: str) -> np.ndarray:
     """Column indices selected by a feature config, in ascending order."""
+    blocks = LAYOUTS[config_layout(name)]
     idx: List[int] = []
     for block in FEATURE_CONFIGS[name]:
-        lo, hi = ALL_BLOCKS[block]
+        lo, hi = blocks[block]
         idx.extend(range(lo, hi))
     return np.asarray(sorted(idx), dtype=np.int64)
 
@@ -148,6 +189,8 @@ def load_split(
         raise KeyError(f"unknown feature config {feature_config!r}; "
                        f"known: {sorted(FEATURE_CONFIGS)}")
     cols = column_index(feature_config)
+    want_layout = config_layout(feature_config)
+    want_width = LAYOUT_WIDTH[want_layout]
     from attention.taxonomy import CUE_CLASSES, taxonomy_classes, taxonomy_lut
     tax_lut = np.array(taxonomy_lut(taxonomy), dtype=np.int64)
     n_tax_classes = len(taxonomy_classes(taxonomy))
@@ -159,10 +202,20 @@ def load_split(
     for r in rows:
         d = np.load(sequence_root / r["file"])
         x = d["x"].astype(np.float32)
-        if x.shape[1] != 570:
+        # Validate against the layout this config is sliced against. A width
+        # mismatch here would not crash later -- it would quietly read the
+        # wrong columns and train on nonsense, so it is fatal.
+        if x.shape[1] != want_width:
             raise RuntimeError(
-                f"{r['file']} has {x.shape[1]} feature columns; the ablation "
-                "ladder requires the 570-dim build (llmstu_sequences_full)")
+                f"{r['file']} has {x.shape[1]} feature columns but config "
+                f"{feature_config!r} needs the {want_layout} build "
+                f"({want_width} columns). Rebuild the sequences with the "
+                f"matching streams, or pick a config for this build.")
+        stored = str(d["layout"]) if "layout" in getattr(d, "files", []) else None
+        if stored is not None and stored != want_layout:
+            raise RuntimeError(
+                f"{r['file']} declares layout {stored!r}, config "
+                f"{feature_config!r} needs {want_layout!r}")
         y = LEGACY_REMAP_LUT[np.clip(d["y_frames"].astype(np.int64), 0, 6)]
 
         # Candidate sets, in 6-class space. Sequences built before y_cand

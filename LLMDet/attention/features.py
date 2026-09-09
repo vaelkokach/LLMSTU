@@ -69,6 +69,7 @@ class StudentFeatureExtractor:
     def __init__(
         self,
         clip_model_name: str = "openai/clip-vit-base-patch32",
+        head_stream: bool = False,
         device: str = "cuda:0",
         allow_clip_fallback: bool = False,
         head_pose: Optional[HeadPoseEstimator] = None,
@@ -78,6 +79,8 @@ class StudentFeatureExtractor:
         self.clip_model: Optional["CLIPModel"] = None
         self.clip_processor: Optional["CLIPProcessor"] = None
         self.head_pose = head_pose
+        #: Encode the head region as its own CLIP image (see _head_box).
+        self.head_stream = bool(head_stream)
         self.clip_enabled = False
 
         if CLIPModel is None or CLIPProcessor is None:
@@ -100,13 +103,62 @@ class StudentFeatureExtractor:
                     ) from e
                 print(f"[warn] CLIP disabled by explicit fallback; using zeros: {e}")
 
+    #: 512 CLIP over the head crop + 6 head-box geometry dims.
+    HEAD_STREAM_DIM = 512 + 6
+
     def output_dim(self) -> int:
         # 512 clip + 8 bbox geom + 24 color stats + 8 posture geom
         # (+4 head pose: yaw, pitch, roll, face_found — if a backend is configured)
+        # (+518 head stream — if enabled)
         d = self.clip_dim + 8 + 24 + 8
         if self.head_pose is not None and self.head_pose.available():
             d += HeadPoseEstimator.OUTPUT_DIM
+        if self.head_stream:
+            d += self.HEAD_STREAM_DIM
         return d
+
+    @staticmethod
+    def _head_box(x1: int, y1: int, x2: int, y2: int, w: int, h: int,
+                  frac: float = 0.30):
+        """Where the head is, as absolute frame coordinates.
+
+        Geometric rather than detected, deliberately. MediaPipe finds a face in
+        60% of these crops overall and in only **8% of head_down** frames
+        (FINDINGS 6.0b) — precisely the class where the head region matters
+        most. A detector-gated crop would therefore be absent exactly where it
+        is needed, and its presence/absence would leak the label. A fixed
+        geometric prior is available on every frame and leaks nothing; the
+        binary detection flag already lives in the head-pose block, where it
+        belongs.
+
+        Square, spanning the top ``frac`` of the person box and centred
+        horizontally. Square because CLIP resizes to a square and a tall thin
+        crop would be squashed; centred because a seated student's head is
+        near the horizontal centre of a torso box.
+        """
+        bw, bh = max(1, x2 - x1), max(1, y2 - y1)
+        side = max(8.0, frac * bh)
+        cx = x1 + bw / 2.0
+        cy = y1 + side / 2.0
+        hx1 = int(round(max(0, cx - side / 2.0)))
+        hy1 = int(round(max(0, cy - side / 2.0)))
+        hx2 = int(round(min(w, cx + side / 2.0)))
+        hy2 = int(round(min(h, cy + side / 2.0)))
+        clipped = float(hx1 == 0 or hy1 == 0 or hx2 == w or hy2 == h)
+        return hx1, hy1, hx2, hy2, clipped
+
+    def _head_geom(self, hb, x1, y1, x2, y2, w, h) -> np.ndarray:
+        """6 dims describing the head box, so the encoder is not the only cue."""
+        hx1, hy1, hx2, hy2, clipped = hb
+        bw, bh = max(1.0, float(x2 - x1)), max(1.0, float(y2 - y1))
+        hw, hh = max(1.0, float(hx2 - hx1)), max(1.0, float(hy2 - hy1))
+        return np.array([
+            ((hx1 + hx2) / 2.0 - x1) / bw,     # head centre x within the person box
+            ((hy1 + hy2) / 2.0 - y1) / bh,     # head centre y within the person box
+            hw / bw, hh / bh,                  # head size relative to the person
+            (hw * hh) / float(max(1, w * h)),  # head size relative to the frame
+            clipped,                           # touched a frame edge
+        ], dtype=np.float32)
 
     def extract(self, frame_bgr: np.ndarray, bbox_xyxy: List[float]) -> np.ndarray:
         return self.extract_batch(frame_bgr, [bbox_xyxy])[0]
@@ -130,6 +182,25 @@ class StudentFeatureExtractor:
             return out
 
         clip_feats = self._clip_batch(crops)
+
+        # Second CLIP pass over head crops taken from the FULL FRAME at native
+        # resolution. This is the point of the stream: a person crop resized to
+        # 224x224 puts the head on ~1 of CLIP-B/32's 49 patches, so gaze is
+        # gone before the temporal model sees anything. Cropping the head and
+        # letting it fill the same 224x224 gives it the whole 7x7 grid.
+        head_feats = head_boxes = None
+        if self.head_stream:
+            head_boxes = [self._head_box(*cl, w, h) for cl in clipped]
+            head_crops = [frame_bgr[b[1]:b[3], b[0]:b[2]] for b in head_boxes]
+            ok = [c is not None and c.size > 0 for c in head_crops]
+            feats = self._clip_batch([c for c, k in zip(head_crops, ok) if k])
+            head_feats = np.zeros((len(head_crops), self.clip_dim), dtype=np.float32)
+            j = 0
+            for r, k in enumerate(ok):
+                if k:
+                    head_feats[r] = feats[j]
+                    j += 1
+
         for row, (crop, (x1, y1, x2, y2), i) in enumerate(zip(crops, clipped, valid_idx)):
             parts = [
                 clip_feats[row],
@@ -143,6 +214,9 @@ class StudentFeatureExtractor:
                 # region only removes context. Measured detection rate on LLMSTU
                 # crops: top 35% -> 38%, top 50% -> 55%, full crop -> 60%.
                 parts.append(self.head_pose.estimate(crop).astype(np.float32))
+            if self.head_stream:
+                parts.append(head_feats[row])
+                parts.append(self._head_geom(head_boxes[row], x1, y1, x2, y2, w, h))
             out[i] = np.concatenate(parts, axis=0).astype(np.float32)
         return out
 
