@@ -130,3 +130,105 @@ def parse_stem_time(stem: str) -> Optional[float]:
         return int(parts[0][1:]) + int(parts[1]) / 1000.0
     except ValueError:
         return None
+
+
+# ---------------------------------------------------------------------------
+# Coarser taxonomies
+# ---------------------------------------------------------------------------
+#
+# The 6 cue classes are a *projection* of the 10-field LLMSTU schema, not the
+# schema itself, and two of them are projections the labels cannot support:
+#
+#   looking_away    fires on gaze == away_or_window OR activity == looking_away
+#                   OR attention_target == distracted
+#   turned_to_peer  fires on activity == talking_to_peer OR talking OR
+#                   gaze == peer OR attention_target == peer
+#
+# Each is a disjunction of semantically different conditions, and both rest on
+# the fine gaze distinctions a VLM pseudo-labeller is worst at. The measured
+# consequences, on ff_det/mstcn_553_ff_s42 validation:
+#
+#   * F1 0.210 and 0.167, against 0.53-0.85 for every other class;
+#   * AUPRC lift over base rate 2.3x and 4.7x, against 11-14x elsewhere;
+#   * adding the causally-correct feature -- head yaw/pitch/roll, 553 -> 556 --
+#     moves them by +0.041 and +0.021, and 14 further dims (570) move them by
+#     -0.002 and -0.010. A causally-correct feature that does not help means the
+#     target is noisy, not that the model lacks information.
+#
+# So `_reliable` taxonomies map those two frames to IGNORE_LABEL rather than
+# forcing them into a class. They then leave the loss AND the metrics, which is
+# the honest accounting: the model is not scored on them because it is not
+# asked to predict them. At runtime the deployed system must abstain on them
+# too -- reporting on 91.0% of frames -- rather than silently dropping them.
+# Coverage is therefore reported alongside every _reliable number.
+
+#: Matches attention.thesis_eval.data.IGNORE_INDEX (torch's default
+#: CrossEntropyLoss ignore_index), so excluded frames vanish from the loss.
+IGNORE_LABEL: int = -100
+
+TAXONOMIES: Dict[str, Dict] = {
+    "cue6": {
+        "classes": CUE_CLASSES,
+        "groups": {c: [c] for c in CUE_CLASSES},
+        "note": "the original 6-class projection",
+    },
+    "onoff": {
+        "classes": ["on_task", "off_task"],
+        "groups": {
+            "on_task": ["screen_oriented"],
+            "off_task": ["looking_away", "head_down", "turned_to_peer",
+                         "phone_use", "uncertain"],
+        },
+        "note": "binary, every frame kept; the on/off boundary IS the "
+                "looking_away boundary, so this inherits its label noise",
+    },
+    "onoff_reliable": {
+        "classes": ["on_task", "off_task"],
+        "groups": {
+            "on_task": ["screen_oriented"],
+            "off_task": ["head_down", "phone_use", "uncertain"],
+        },
+        "note": "binary with abstention on the two unsupported classes",
+    },
+    "coarse3_reliable": {
+        "classes": ["screen_oriented", "down_or_hidden", "phone_use"],
+        "groups": {
+            "screen_oriented": ["screen_oriented"],
+            "down_or_hidden": ["head_down", "uncertain"],
+            "phone_use": ["phone_use"],
+        },
+        "note": "keeps the actionable distinction between a head down and a "
+                "phone, still abstaining on the gaze-ambiguous classes",
+    },
+}
+
+
+def taxonomy_classes(name: str) -> List[str]:
+    if name not in TAXONOMIES:
+        raise KeyError(f"unknown taxonomy {name!r}; "
+                       f"known: {', '.join(sorted(TAXONOMIES))}")
+    return list(TAXONOMIES[name]["classes"])
+
+
+def taxonomy_lut(name: str) -> List[int]:
+    """6-class id -> new id, or IGNORE_LABEL for a class this taxonomy drops.
+
+    Every one of the 6 source classes must be accounted for: mapped into a
+    group, or deliberately excluded. A class that is silently neither would be
+    a relabelling bug that shows up only as a quietly better score.
+    """
+    spec = TAXONOMIES[name] if name in TAXONOMIES else None
+    if spec is None:
+        raise KeyError(f"unknown taxonomy {name!r}; "
+                       f"known: {', '.join(sorted(TAXONOMIES))}")
+    lut = [IGNORE_LABEL] * len(CUE_CLASSES)
+    for new_id, gname in enumerate(spec["classes"]):
+        for src in spec["groups"][gname]:
+            lut[CUE_TO_ID[src]] = new_id
+    return lut
+
+
+def taxonomy_excluded(name: str) -> List[str]:
+    """Source classes this taxonomy abstains on (mapped to IGNORE_LABEL)."""
+    lut = taxonomy_lut(name)
+    return [c for c in CUE_CLASSES if lut[CUE_TO_ID[c]] == IGNORE_LABEL]

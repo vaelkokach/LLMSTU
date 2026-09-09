@@ -91,3 +91,53 @@ def test_parse_stem_time():
     assert parse_stem_time("t000033_856_f000680") == 33.856
     assert parse_stem_time("t000000_000_f000000_video_0005_0_10_x_y") == 0.0
     assert parse_stem_time("garbage") is None
+
+
+# ---------------------------------------------------------------------------
+# Coarser taxonomies (TAXONOMIES / taxonomy_lut)
+# ---------------------------------------------------------------------------
+
+def test_cue6_taxonomy_is_the_identity():
+    """The default must not change behaviour: it is applied to every load."""
+    from attention.taxonomy import taxonomy_lut, taxonomy_classes, CUE_CLASSES
+    assert taxonomy_lut("cue6") == list(range(len(CUE_CLASSES)))
+    assert taxonomy_classes("cue6") == list(CUE_CLASSES)
+
+
+def test_every_source_class_is_mapped_or_deliberately_excluded():
+    """No class may fall through silently.
+
+    A source class that is neither grouped nor listed as excluded would be
+    relabelled to IGNORE by accident, quietly shrinking the evaluation set and
+    improving the score for a reason nobody chose.
+    """
+    from attention.taxonomy import (CUE_CLASSES, IGNORE_LABEL, TAXONOMIES,
+                                    taxonomy_lut, taxonomy_excluded)
+    for name, spec in TAXONOMIES.items():
+        lut = taxonomy_lut(name)
+        assert len(lut) == len(CUE_CLASSES)
+        grouped = {c for g in spec["groups"].values() for c in g}
+        excluded = set(taxonomy_excluded(name))
+        assert grouped | excluded == set(CUE_CLASSES), name
+        assert not (grouped & excluded), f"{name}: class both grouped and excluded"
+        for new_id in lut:
+            assert new_id == IGNORE_LABEL or 0 <= new_id < len(spec["classes"]), name
+
+
+def test_reliable_taxonomies_abstain_on_the_unsupported_classes():
+    """The two classes the labels cannot support must be the excluded ones."""
+    from attention.taxonomy import taxonomy_excluded
+    for name in ("onoff_reliable", "coarse3_reliable"):
+        assert set(taxonomy_excluded(name)) == {"looking_away", "turned_to_peer"}, name
+    # ...and the all-frames variants must abstain on nothing.
+    for name in ("cue6", "onoff"):
+        assert taxonomy_excluded(name) == [], name
+
+
+def test_group_members_land_on_the_same_new_id():
+    from attention.taxonomy import CUE_TO_ID, TAXONOMIES, taxonomy_lut
+    for name, spec in TAXONOMIES.items():
+        lut = taxonomy_lut(name)
+        for gname, members in spec["groups"].items():
+            ids = {lut[CUE_TO_ID[m]] for m in members}
+            assert len(ids) == 1, f"{name}/{gname} split across ids {ids}"

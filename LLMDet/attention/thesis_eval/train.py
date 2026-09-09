@@ -65,6 +65,7 @@ class ExperimentSpec:
     experiment_id: str
     model: str = "transformer"
     feature_config: str = "570_full"
+    taxonomy: str = "cue6"
     seed: int = 42
     epochs: int = 90
     batch_size: int = 32
@@ -167,11 +168,23 @@ def train(spec: ExperimentSpec, device_str: str = "cuda:0", threads: int = 8) ->
     manifest = Path(spec.manifest)
     root = Path(spec.sequence_root)
 
-    train_seqs = D.load_split(manifest, root, "train", spec.feature_config)
-    val_seqs = D.load_split(manifest, root, "val", spec.feature_config)
-    hist = D.class_histogram(train_seqs)
-    val_hist = D.class_histogram(val_seqs)
-    num_classes = len(CUE_CLASSES)
+    from attention.taxonomy import taxonomy_classes, taxonomy_excluded
+    class_names = taxonomy_classes(spec.taxonomy)
+    num_classes = len(class_names)
+    train_seqs = D.load_split(manifest, root, "train", spec.feature_config,
+                              taxonomy=spec.taxonomy)
+    val_seqs = D.load_split(manifest, root, "val", spec.feature_config,
+                            taxonomy=spec.taxonomy)
+    hist = D.class_histogram(train_seqs, num_classes)
+    val_hist = D.class_histogram(val_seqs, num_classes)
+    if spec.taxonomy != "cue6":
+        kept = int(hist.sum()) + int(val_hist.sum())
+        raw = sum(int((s.y != D.IGNORE_INDEX).sum()) + int((s.y == D.IGNORE_INDEX).sum())
+                  for s in train_seqs + val_seqs)
+        print(f"[{spec.experiment_id}] taxonomy {spec.taxonomy}: {class_names}, "
+              f"abstaining on {taxonomy_excluded(spec.taxonomy)} -> "
+              f"{kept}/{raw} frames scored ({kept / max(raw, 1) * 100:.1f}% coverage)",
+              flush=True)
     weights = (torch.from_numpy(D.sqrt_inverse_frequency_weights(hist)).to(device)
                if spec.use_class_weights else None)
 
@@ -256,7 +269,7 @@ def train(spec: ExperimentSpec, device_str: str = "cuda:0", threads: int = 8) ->
             updates += 1
 
         probs, tgts = evaluate_logits(model, Xva, Yva, Mva, spec.batch_size, num_classes)
-        cm = M.confusion_matrix(tgts, probs.argmax(1), num_classes)
+        cm = M.confusion_matrix(tgts, probs.argmax(1), num_classes)  # IGNORE already dropped
         row = {"epoch": epoch, "train_loss": float(np.mean(losses)) if losses else float("nan"),
                "val_accuracy": M.accuracy(cm), "val_macro_f1": M.macro_f1(cm),
                "val_balanced_accuracy": M.balanced_accuracy(cm)}
@@ -311,6 +324,10 @@ def main():
     ap.add_argument("--experiment-id", required=True)
     ap.add_argument("--model", default="transformer")
     ap.add_argument("--feature-config", default="570_full", choices=sorted(D.FEATURE_CONFIGS))
+    ap.add_argument("--taxonomy", default="cue6",
+                    help="label set: cue6 (default), onoff, onoff_reliable, "
+                         "coarse3_reliable. The _reliable variants abstain on "
+                         "looking_away and turned_to_peer; report coverage.")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--epochs", type=int, default=90)
     ap.add_argument("--batch-size", type=int, default=32)
@@ -332,7 +349,8 @@ def main():
 
     spec = ExperimentSpec(
         experiment_id=args.experiment_id, model=args.model,
-        feature_config=args.feature_config, seed=args.seed, epochs=args.epochs,
+        feature_config=args.feature_config, taxonomy=args.taxonomy,
+        seed=args.seed, epochs=args.epochs,
         batch_size=args.batch_size, lr=args.lr, select_window=args.select_window,
         smoothing_loss_weight=smooth, output_dir=args.output_dir,
         manifest=args.manifest, sequence_root=args.sequence_root)

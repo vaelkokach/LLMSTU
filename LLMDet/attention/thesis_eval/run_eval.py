@@ -185,18 +185,28 @@ def main():
 
     ck, spec = load_checkpoint(Path(args.ckpt))
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
+    # The taxonomy comes from the CHECKPOINT's own spec, never from a flag:
+    # evaluating a coarse-trained model against the 6-class labels would score
+    # it on a task it was not trained for and silently report nonsense.
+    from attention.taxonomy import taxonomy_classes
+    taxonomy = spec.get("taxonomy", "cue6")
+    class_names = taxonomy_classes(taxonomy)
     seqs = D.load_split(Path(args.manifest), Path(args.sequence_root),
-                        args.split, spec["feature_config"])
+                        args.split, spec["feature_config"], taxonomy=taxonomy)
     dim = D.config_dim(spec["feature_config"])
     kw = dict(spec.get("model_kwargs") or {})
     if spec["model"] == "transformer":
         kw.setdefault("dropout", spec.get("dropout", 0.1))
-    model = build_model(spec["model"], dim, len(CUE_CLASSES), **kw).to(device)
+    model = build_model(spec["model"], dim, len(class_names), **kw).to(device)
     model.load_state_dict(ck["model"])
 
     arr = predict(model, seqs, device, args.batch_size, use_refine=args.refine)
-    res = M.frame_metrics(arr["probs"], arr["y"], arr["pred"])
+    res = M.frame_metrics(arr["probs"], arr["y"], arr["pred"],
+                          num_classes=len(class_names),
+                          class_names=class_names)
     res.update({
+        "taxonomy": taxonomy,
+        "class_order": class_names,
         "evaluator_version": EVALUATOR_VERSION,
         "checkpoint": str(args.ckpt),
         "checkpoint_epoch": int(ck.get("epoch", -1)),

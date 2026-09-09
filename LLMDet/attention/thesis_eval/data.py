@@ -124,17 +124,26 @@ def load_split(
     split: str,
     feature_config: str = "570_full",
     limit: Optional[int] = None,
+    taxonomy: str = "cue6",
 ) -> List[Sequence_]:
     """Load one split, slicing features to ``feature_config``.
 
     Sequences are returned in deterministic manifest order so that every
     evaluator run over the same split produces byte-identical prediction
     archives.
+
+    ``taxonomy`` relabels the 6 stored cue ids onto a coarser set. Frames whose
+    class the taxonomy abstains on become ``IGNORE_INDEX``, so they leave the
+    loss and the metrics together -- the model is not scored on frames it was
+    never asked to predict. Features are untouched: only ``y`` changes, which
+    is why a taxonomy change needs no sequence rebuild.
     """
     if feature_config not in FEATURE_CONFIGS:
         raise KeyError(f"unknown feature config {feature_config!r}; "
                        f"known: {sorted(FEATURE_CONFIGS)}")
     cols = column_index(feature_config)
+    from attention.taxonomy import taxonomy_lut
+    tax_lut = np.array(taxonomy_lut(taxonomy), dtype=np.int64)
     rows = [r for r in load_manifest(manifest_path) if r["split"] == split]
     rows.sort(key=lambda r: r["file"])
     if limit is not None:
@@ -148,6 +157,7 @@ def load_split(
                 f"{r['file']} has {x.shape[1]} feature columns; the ablation "
                 "ladder requires the 570-dim build (llmstu_sequences_full)")
         y = LEGACY_REMAP_LUT[np.clip(d["y_frames"].astype(np.int64), 0, 6)]
+        y = tax_lut[y]                      # identity for the default cue6
         # Force C-contiguity once here. Column-sliced views are strided, and
         # copying them per batch inside collate cost 183 ms/batch — 80% of an
         # epoch, with the GPU at 3% utilisation.
@@ -159,9 +169,18 @@ def load_split(
 
 
 def class_histogram(seqs: Sequence[Sequence_], num_classes: int = 6) -> np.ndarray:
+    """Frame counts per class, ignoring frames the taxonomy abstains on.
+
+    np.bincount rejects negative values, and IGNORE_INDEX is -100, so the
+    filter is required rather than defensive. It is also correct: class weights
+    derived from this histogram should not count frames the model is never
+    asked to predict.
+    """
     hist = np.zeros(num_classes, dtype=np.int64)
     for s in seqs:
-        hist += np.bincount(s.y, minlength=num_classes)[:num_classes]
+        y = s.y[s.y >= 0]
+        if y.size:
+            hist += np.bincount(y, minlength=num_classes)[:num_classes]
     return hist
 
 

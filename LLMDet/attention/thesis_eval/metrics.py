@@ -142,16 +142,18 @@ def expected_calibration_error(probs: np.ndarray, y_true: np.ndarray,
 
 
 def classwise_ece(probs: np.ndarray, y_true: np.ndarray, n_bins: int = 15,
-                  num_classes: int = NUM_CLASSES) -> Dict[str, float]:
+                  num_classes: int = NUM_CLASSES,
+                  class_names: Optional[List[str]] = None) -> Dict[str, float]:
     """Static-calibration error: ECE of each class's probability channel
     against that class's empirical frequency, then averaged."""
+    names = class_names or CUE_CLASSES
     per = {}
     for c in range(num_classes):
         conf = probs[:, c]
         correct = (y_true == c).astype(np.float64)
         rows = reliability_bins(conf, correct, n_bins)
         n = len(y_true)
-        per[CUE_CLASSES[c]] = float(
+        per[names[c]] = float(
             sum(r["count"] / n * abs(r["accuracy"] - r["mean_confidence"])
                 for r in rows if r["count"] > 0))
     per["macro"] = float(np.mean(list(per.values())))
@@ -179,8 +181,18 @@ def negative_log_likelihood(probs: np.ndarray, y_true: np.ndarray) -> float:
 def frame_metrics(probs: np.ndarray, y_true: np.ndarray,
                   y_pred: Optional[np.ndarray] = None,
                   num_classes: int = NUM_CLASSES,
-                  n_bins: int = 15) -> Dict:
-    """The complete frame-level metric block for one model on one split."""
+                  n_bins: int = 15,
+                  class_names: Optional[List[str]] = None) -> Dict:
+    """The complete frame-level metric block for one model on one split.
+
+    ``class_names`` must match ``num_classes`` and the id order the labels use.
+    It defaults to the 6 cue classes; a coarser taxonomy passes its own, so the
+    per-class block is keyed by names that mean what they say rather than by
+    six labels silently reused for two or three classes.
+    """
+    names = class_names or CUE_CLASSES
+    if len(names) != num_classes:
+        raise ValueError(f"{len(names)} class names for {num_classes} classes")
     if y_pred is None:
         y_pred = probs.argmax(1)
     cm = confusion_matrix(y_true, y_pred, num_classes)
@@ -200,11 +212,11 @@ def frame_metrics(probs: np.ndarray, y_true: np.ndarray,
         "macro_auprc": float(np.mean(finite(rank["auprc"]))) if finite(rank["auprc"]) else float("nan"),
         "macro_auroc": float(np.mean(finite(rank["auroc"]))) if finite(rank["auroc"]) else float("nan"),
         "ece": expected_calibration_error(probs, y_true, n_bins),
-        "classwise_ece": classwise_ece(probs, y_true, n_bins, num_classes),
+        "classwise_ece": classwise_ece(probs, y_true, n_bins, num_classes, names),
         "brier": brier_score(probs, y_true, num_classes),
         "nll": negative_log_likelihood(probs, y_true),
         "per_class": {
-            CUE_CLASSES[c]: {
+            names[c]: {
                 "precision": float(prf["precision"][c]),
                 "recall": float(prf["recall"][c]),
                 "f1": float(prf["f1"][c]),
@@ -214,6 +226,6 @@ def frame_metrics(probs: np.ndarray, y_true: np.ndarray,
             } for c in range(num_classes)
         },
         "confusion_matrix": cm.tolist(),
-        "class_order": list(CUE_CLASSES),
+        "class_order": list(names),
         "reliability": reliability_bins(conf, correct, n_bins),
     }
