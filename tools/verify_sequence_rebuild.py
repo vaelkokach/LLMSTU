@@ -40,6 +40,12 @@ def main() -> int:
     ap.add_argument("new_dir", type=Path)
     ap.add_argument("--old-manifest", type=Path, required=True)
     ap.add_argument("--new-manifest", type=Path, required=True)
+    ap.add_argument("--training-manifest", type=Path, default=None,
+                    help="the leak-free split manifest training actually reads "
+                         "(llmstu_seq_split_manifest.json). Checked separately: "
+                         "it carries the video-wise train/val/TEST split, while "
+                         "a builder meta.json carries the builder's own 80/20, "
+                         "so comparing those two directly gives a false failure.")
     ap.add_argument("--limit", type=int, default=0,
                     help="check only the first N sequences (a smoke test)")
     args = ap.parse_args()
@@ -84,6 +90,21 @@ def main() -> int:
             if not yc[np.arange(len(y)), y].all():
                 bad_y.append(f + " (label outside candidate set)")
         checked += 1
+
+    # What training reads must resolve inside the new build.
+    if args.training_manifest:
+        rows = load(args.training_manifest)
+        missing = [f for f in rows if not (args.new_dir / f).is_file()]
+        if missing:
+            print(f"FAIL: {len(missing)} of {len(rows)} files named by "
+                  f"{args.training_manifest.name} are absent from the new build, "
+                  f"e.g. {missing[:3]}")
+            return 1
+        by_split = {}
+        for f, r in rows.items():
+            by_split[r["split"]] = by_split.get(r["split"], 0) + 1
+        print(f"training manifest: all {len(rows)} files present "
+              f"({', '.join(f'{k}={v}' for k, v in sorted(by_split.items()))})")
 
     ok = True
     for name, bad in (("y_frames differs", bad_y), ("t differs", bad_t),
