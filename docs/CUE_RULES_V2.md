@@ -268,7 +268,8 @@ move, as predicted, because v2 drops only one redundant disjunct from its rule.
 `llmstu_sequences_full_det` is a patched build, so `data.py` falls back to
 one-hot candidates and `--partial-labels` silently degrades to cross-entropy.
 If so, `v1_proden` never ran PRODEN and the arm measured "no candidates vs
-candidates", not "v1 rules vs v2 rules".
+candidates", not "v1 rules vs v2 rules". **This was subsequently confirmed —
+see §4b-i.**
 
 **This is unverified.** Confirm before citing the archived PRODEN number
 anywhere:
@@ -281,11 +282,49 @@ ps = sorted(Path('../grounding_data/llmstu_sequences_full_det').glob('*/sample_*
 print(sum('y_cand' in np.load(p).files for p in ps), '/', len(ps), 'carry y_cand')"
 ```
 
-`0/200` would mean every PRODEN number produced on this build — including
-**FINDINGS.md's 0.378 / `head_down` 0.000** — is a mislabelled cross-entropy
-run. `train.py` should abort when `--partial-labels` is passed and no sequence
-carries a multi-candidate row, rather than degrading silently; that guard is
-**not yet implemented**.
+`0/200` would mean every PRODEN number produced **on this build** is a
+mislabelled cross-entropy run. `train.py` should abort when `--partial-labels`
+is passed and no sequence carries a multi-candidate row, rather than degrading
+silently; that guard is **not yet implemented**.
+
+### 4b-i. VERIFIED, 2026-09-10 — the control is void, the archived number is not
+
+The check above was run. It splits, and the split matters:
+
+| sequence root | sampled sequences carrying `y_cand` |
+|---|---|
+| `llmstu_sequences_full_det` | **0 / 200** |
+| `llmstu_sequences_head` | **200 / 200** |
+
+**The `v1_proden` control is confirmed invalid.** It ran on
+`llmstu_sequences_full_det` with `spec.cue_labels` empty, so `data.py` fell back
+to one-hot candidates. The trainer said so in its own log and was not read:
+
+```
+[v1_proden_s42] partial labels on: 0.0% of scored frames carry >1 candidate
+[v2_proden_s42] partial labels on: 7.6% of scored frames carry >1 candidate
+```
+
+`v1_proden` was cross-entropy wearing a PRODEN label. **P7 measured "one-hot
+candidates vs real candidates", not "v1 rules vs v2 rules", and its numbers must
+not be cited as a rule-set contrast.** That is why `head_down` came back at
+0.6827 instead of 0.000 — nothing recovered it, PRODEN simply never ran.
+
+**The archived FINDINGS.md number is unaffected and stands.** Those runs are
+`work_dirs/thesis/wave2{,b}/mstcn_556_pll_s4{2,3,4}`, and their `run_record.json`
+names `../grounding_data/llmstu_sequences_head` — the root that carries `y_cand`
+on 200/200. Per-run macro-F1 0.3762 / 0.3942 / 0.3639 (wave2b), mean **0.3781**,
+matching the documented 0.378 ± 0.015, with `head_down` F1 **0.0000 in all six
+runs**. That was real PRODEN on real candidate sets, so the identifiability
+result — 772 of 773 `head_down` records also carrying `looking_away`, mass
+draining entirely to `looking_away` — is intact.
+
+Two things follow. The missing `train.py` guard is now a **known-live defect**
+rather than a hypothetical: it has already produced one void arm, and the
+diagnostic print that would have caught it exists but is only advisory. And any
+future partial-label work must run on `llmstu_sequences_head`, or on a
+`full_det` build rebuilt with a `y_cand` sidecar — `patch_pose_columns.py` does
+not write one.
 
 ### 4c. Registered outcome
 

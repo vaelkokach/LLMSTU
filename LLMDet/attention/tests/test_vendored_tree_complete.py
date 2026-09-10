@@ -1,19 +1,25 @@
 """The repo must be self-contained and self-consistent in a fresh clone.
 
 These do not test behaviour. They test that files which exist on a working
-machine are actually *tracked*, because the repo has now been bitten twice by
-the same thing: `.gitignore` carried an unanchored `datasets/`, git patterns
-without a leading slash match at any depth, and two source directories were
+machine are actually *tracked*, because the repo has now been bitten three times
+by the same thing: `.gitignore` carried an unanchored directory rule, git
+patterns without a leading slash match at any depth, and source directories were
 silently excluded from every clone:
 
-    LLMDet/mmdet/datasets/                    (53 files)
+    LLMDet/mmdet/datasets/                    (53 files)     `datasets/`
     LLMDet/configs/_base_/datasets/           (coco_detection.py)
+    LLMDet/ram/data/                          (9 files)      `data/`
 
-Neither was noticeable locally — on a machine that had once run the pipeline the
-directories are simply there, untracked — so both surfaced only when a Hugging
-Face Space built from the repo. The first died at `import mmdet.datasets`, the
-second at a FileNotFoundError for a `_base_` config, inside a background
-analysis job, minutes into a GPU run.
+None was noticeable locally — on a machine that had once run the pipeline the
+directories are simply there, untracked — so the first two surfaced only when a
+Hugging Face Space built from the repo. One died at `import mmdet.datasets`, the
+other at a FileNotFoundError for a `_base_` config, inside a background analysis
+job, minutes into a GPU run.
+
+The third never reached a clone: `test_no_unanchored_pattern_hides_vendored_source`
+caught `data/` first. It would have thrown FileNotFoundError on
+`ram/data/ram_tag_list.txt`, which `ram/models/{ram,ram_plus,tag2text}.py` read
+at construction.
 
 Cheap, offline, no imports of the heavy stack.
 """
@@ -27,6 +33,21 @@ import pytest
 REPO = Path(__file__).resolve().parents[3]
 CONFIGS = REPO / "LLMDet" / "configs"
 MMDET = REPO / "LLMDet" / "mmdet"
+
+#: Directory names that occur inside source trees but never hold source. Editor
+#: and tool droppings, so they are neither policed nor walked. `.ipynb_checkpoints`
+#: matters most here: Jupyter mirrors any config opened in the browser as
+#: `<name>-checkpoint.py`, keeping its `_base_` paths verbatim, so the copies
+#: inherit from siblings that were never mirrored. They are untracked, they are
+#: not what a clone builds from, and left in scope they fail
+#: test_every_config_base_resolves for a reason that has nothing to do with what
+#: it is guarding.
+NEVER_SOURCE = {"__pycache__", ".pytest_cache", ".mypy_cache",
+                ".ipynb_checkpoints", ".venv", "node_modules", ".git"}
+
+
+def _is_source_path(path: Path) -> bool:
+    return not (set(path.parts) & NEVER_SOURCE)
 
 
 def _base_targets(cfg: Path):
@@ -57,6 +78,8 @@ def test_every_config_base_resolves():
     """No config may inherit from a file that is not in the repo."""
     missing = []
     for cfg in sorted(CONFIGS.rglob("*.py")):
+        if not _is_source_path(cfg):
+            continue
         for target in _base_targets(cfg):
             if not target.exists():
                 missing.append(f"{cfg.relative_to(REPO).as_posix()} -> {target}")
@@ -82,6 +105,32 @@ def test_mmdet_subpackage_present(sub):
     )
 
 
+RAM = REPO / "LLMDet" / "ram"
+
+#: Read by `ram/models/{ram,ram_plus,tag2text}.py` as `{CONFIG_PATH}/data/...`
+#: in their constructor defaults, so an absent file is a FileNotFoundError at
+#: model construction rather than at import — later, and further from the cause.
+RAM_DATA_FILES = ["__init__.py", "dataset.py", "randaugment.py", "utils.py",
+                  "ram_tag_list.txt", "ram_tag_list_chinese.txt",
+                  "ram_tag_list_threshold.txt", "tag_list.txt",
+                  "tag2text_ori_tag_list.txt"]
+
+
+@pytest.mark.skipif(not RAM.is_dir(), reason="vendored ram absent")
+@pytest.mark.parametrize("name", RAM_DATA_FILES)
+def test_ram_data_file_present(name):
+    """`ram/data/` is vendored source and tag vocabulary, not a data folder.
+
+    Its name is the entire problem: a `.gitignore` reading `data/` excludes it,
+    and nothing complains until something constructs a RAM tagger.
+    """
+    assert (RAM / "data" / name).is_file(), (
+        f"LLMDet/ram/data/{name} is missing from this clone. "
+        f"ram_plus() opens the tag lists from this directory on construction; "
+        f"check .gitignore for an unanchored `data/`."
+    )
+
+
 @pytest.mark.skipif(not (REPO / ".gitignore").is_file(), reason="no .gitignore")
 def test_no_unanchored_pattern_hides_vendored_source():
     """A bare `foo/` rule matches at any depth — keep it away from source trees.
@@ -90,15 +139,11 @@ def test_no_unanchored_pattern_hides_vendored_source():
     no git available. Only directory names that actually occur inside the
     vendored trees are policed; unanchored rules for build noise are fine.
     """
-    # Directory names that appear inside source trees but are never source.
-    NEVER_SOURCE = {"__pycache__", ".pytest_cache", ".mypy_cache",
-                    ".ipynb_checkpoints", ".venv", "node_modules", ".git"}
-
     vendored_dirnames = set()
     for tree in (MMDET, CONFIGS, REPO / "LLMDet" / "llava", REPO / "LLMDet" / "ram"):
         if tree.is_dir():
             vendored_dirnames |= {d.name for d in tree.rglob("*")
-                                  if d.is_dir() and d.name not in NEVER_SOURCE}
+                                  if d.is_dir() and _is_source_path(d)}
 
     offenders = []
     for i, raw in enumerate((REPO / ".gitignore").read_text(

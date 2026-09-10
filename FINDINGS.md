@@ -3474,6 +3474,81 @@ one with practical value for the deployed system.
 
 ---
 
+## 13. Work done off this log (2026-08-10 → 2026-09-10)
+
+Sessions in this window recorded their results in `docs/EXPERIMENT_STATUS.md` and
+`docs/CUE_RULES_V2.md` rather than here, so §1–§12 above have a month-long gap.
+This section is a pointer, not a replacement — the two docs are the record for the
+head stream (+0.036 macro-F1), the abstaining coarse taxonomies, the cue-rules-v2
+registered failure, and the Hugging Face Space deployment. Only findings that
+change something already written above are restated here.
+
+### 13.1 ★★ One PRODEN arm ran cross-entropy under a PRODEN name. The archived 0.378 survives it.
+
+`docs/CUE_RULES_V2.md` §4b flagged its own `v1_proden` control as probably invalid
+and asked for a check before the archived PRODEN number was cited anywhere. The
+check was run on 2026-09-10 and the result splits:
+
+| sequence root | sampled sequences carrying `y_cand` |
+|---|---|
+| `llmstu_sequences_full_det` | **0 / 200** |
+| `llmstu_sequences_head` | **200 / 200** |
+
+**The `v1_proden` control is void.** It ran on `llmstu_sequences_full_det` with
+`spec.cue_labels` empty, so `data.py` fell back to one-hot candidates and
+`--partial-labels` degraded to plain cross-entropy. `train.py` printed exactly
+that and nobody read it:
+
+```
+[v1_proden_s42] partial labels on: 0.0% of scored frames carry >1 candidate
+[v2_proden_s42] partial labels on: 7.6% of scored frames carry >1 candidate
+```
+
+So `v1_proden`'s `head_down` 0.6827 is not a recovery of the class — PRODEN never
+ran. Its P7 arm measured "one-hot candidates vs real candidates" and must not be
+quoted as a rule-set contrast.
+
+**§11's PRODEN result is unaffected.** `work_dirs/thesis/wave2{,b}/mstcn_556_pll_s4{2,3,4}`
+name `../grounding_data/llmstu_sequences_head` in their `run_record.json` — the
+root that carries `y_cand` on 200/200. wave2b macro-F1 0.3762 / 0.3942 / 0.3639,
+mean **0.3781**, matching the archived 0.378 ± 0.015, with `head_down` F1 **0.0000
+in all six runs**. That was real partial-label learning on real candidate sets, so
+the identifiability finding — 772 of 773 `head_down` records also carrying
+`looking_away`, mass draining entirely to `looking_away` — stands as written.
+
+**The defect is the silent degradation, and it is live.** `train.py` computes the
+multi-candidate rate, prints it, and proceeds at 0.0%. It should refuse. Until it
+does, any `--partial-labels` run must be checked against its own log line, and
+partial-label work belongs on `llmstu_sequences_head` or on a `full_det` build
+rebuilt with a `y_cand` sidecar — `patch_pose_columns.py` does not write one.
+Guard **not yet implemented**; recorded here so the next PRODEN run does not
+repeat this.
+
+### 13.2 ★ The unanchored-gitignore bug, a third time — caught by the guard this time
+
+`.gitignore` carried a bare `data/`, which matches at any depth and was excluding
+`LLMDet/ram/data/` (9 files: `__init__.py`, `dataset.py`, `randaugment.py`,
+`utils.py`, and five RAM tag lists) from every clone. `ram/models/ram.py`,
+`ram_plus.py` and `tag2text.py` all default to `{CONFIG_PATH}/data/ram_tag_list.txt`
+in their constructors, so a fresh clone would have raised FileNotFoundError on
+building any RAM tagger — the same shape as the two `datasets/` incidents, one
+layer later in the call stack.
+
+Unlike those two, this one never reached a clone.
+`test_no_unanchored_pattern_hides_vendored_source` failed on it, which is what the
+test was written for. The rule was redundant anyway: `LLMDet/data/`, three lines
+below, is the path it was meant to cover. Removed, the 9 files are tracked, and
+`test_ram_data_file_present` now pins them by name.
+
+A second failure in the same module was a false positive: `test_every_config_base_resolves`
+walks the filesystem for configs but resolves `_base_` against the repo, so eight
+untracked `configs/.ipynb_checkpoints/*-checkpoint.py` Jupyter autosaves — which
+keep their `_base_` paths verbatim while their siblings are not mirrored — failed
+it for a reason unrelated to what it guards. `.ipynb_checkpoints` and friends are
+now skipped by path in both tests. `attention/tests/` is green at 337 passed.
+
+---
+
 ## 10. Changelog
 
 **2026-08-08**
