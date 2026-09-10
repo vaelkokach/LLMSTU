@@ -188,8 +188,13 @@ def main():
     ap.add_argument("--refine", action="store_true",
                     help="ASRF only: relabel by predicted boundaries")
     ap.add_argument("--no-bootstrap", action="store_true")
-    ap.add_argument("--manifest", default="../grounding_data/llmstu_seq_split_manifest.json")
-    ap.add_argument("--sequence-root", default="../grounding_data/llmstu_sequences_full")
+    # Default to whatever the CHECKPOINT was trained on. Passing the wrong
+    # sequence root is otherwise easy and its symptom is a layout error far
+    # from the cause -- or, for two builds of the same width, no error at all.
+    ap.add_argument("--manifest", default=None,
+                    help="default: the manifest recorded in the checkpoint")
+    ap.add_argument("--sequence-root", default=None,
+                    help="default: the sequence root recorded in the checkpoint")
     args = ap.parse_args()
 
     if args.split == "test":
@@ -204,7 +209,13 @@ def main():
     from attention.taxonomy import taxonomy_classes
     taxonomy = spec.get("taxonomy", "cue6")
     class_names = taxonomy_classes(taxonomy)
-    seqs = D.load_split(Path(args.manifest), Path(args.sequence_root),
+    manifest = args.manifest or spec.get(
+        "manifest", "../grounding_data/llmstu_seq_split_manifest.json")
+    seq_root = args.sequence_root or spec.get(
+        "sequence_root", "../grounding_data/llmstu_sequences_full")
+    print(f"[eval] sequences {seq_root} | manifest {manifest} | "
+          f"config {spec['feature_config']} | taxonomy {taxonomy}", flush=True)
+    seqs = D.load_split(Path(manifest), Path(seq_root),
                         args.split, spec["feature_config"], taxonomy=taxonomy)
     dim = D.config_dim(spec["feature_config"])
     kw = dict(spec.get("model_kwargs") or {})
@@ -248,6 +259,7 @@ def main():
     (out_dir / "command.txt").write_text(
         "python -m attention.thesis_eval.run_eval "
         f"--ckpt {args.ckpt} --split {args.split} --out {args.out} "
+        f"--sequence-root {seq_root} --manifest {manifest} "
         f"--batch-size {args.batch_size} --cluster {args.cluster}"
         + (" --refine" if args.refine else "") + "\n")
 

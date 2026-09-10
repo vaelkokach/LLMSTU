@@ -169,11 +169,25 @@ def proden_loss(logits, cand, valid, weight=None):
         w = torch.softmax(logits.float(), dim=-1) * cand
         w = w / w.sum(-1, keepdim=True).clamp_min(1e-12)
     per_class = -(w * logp)
-    if weight is not None:
-        per_class = per_class * weight.view(1, -1)
-    per_frame = per_class.sum(-1)
     v = valid.reshape(-1).float()
-    return (per_frame * v).sum() / v.sum().clamp_min(1.0)
+
+    if weight is None:
+        denom = v.sum().clamp_min(1.0)
+    else:
+        per_class = per_class * weight.view(1, -1)
+        # Match F.cross_entropy(weight=...)'s reduction exactly. Torch's
+        # weighted mean divides by the SUM OF TARGET WEIGHTS, not by the frame
+        # count. Dividing by N instead made this loss 2.21x smaller than the
+        # single-label path on the real class histogram, so the partial-label
+        # runs trained with a proportionally weaker classification gradient
+        # while the boundary and smoothing terms kept full strength -- and the
+        # comparison measured that, not PRODEN.
+        #
+        # For a singleton candidate set w is one-hot, so this is exactly
+        # sum(weight[y]) and the whole expression collapses to torch's.
+        denom = ((w * weight.view(1, -1)).sum(-1) * v).sum().clamp_min(1e-12)
+
+    return ((per_class.sum(-1)) * v).sum() / denom
 
 
 @torch.no_grad()

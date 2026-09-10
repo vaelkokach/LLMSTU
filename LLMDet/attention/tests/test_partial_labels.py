@@ -90,14 +90,28 @@ def test_singleton_candidates_reduce_to_cross_entropy():
 
 
 def test_singleton_candidates_reduce_to_cross_entropy_with_class_weights():
+    """Compared against F.cross_entropy itself, NOT a hand-rolled formula.
+
+    The first version of this test asserted against sum(w*ce)/N -- my own
+    arithmetic rather than the function PRODEN stands in for. Torch's weighted
+    mean divides by the SUM OF TARGET WEIGHTS, so the loss shipped 2.21x too
+    small on the real class histogram and the partial-label runs trained with
+    a proportionally weaker gradient. Verifying against the reference
+    implementation is the only version of this test worth having.
+    """
     torch.manual_seed(1)
-    logits = torch.randn(256, K) * 2
-    y = torch.randint(0, K, (256,))
-    w = torch.rand(K) + 0.5
+    logits = torch.randn(512, K) * 2
+    # A realistic, heavily imbalanced target distribution: the bug was
+    # invisible at uniform weights and only bit under real class weights.
+    counts = torch.tensor([0.762, 0.068, 0.069, 0.022, 0.031, 0.048])
+    y = torch.multinomial(counts, 512, replacement=True)
+    hist = torch.bincount(y, minlength=K).float()
+    inv = 1.0 / hist.clamp(min=1).sqrt()
+    w = inv / inv.sum() * K                       # as data.py builds them
     got = proden_loss(logits, F.one_hot(y, K).float(),
-                      torch.ones(256, dtype=torch.bool), w)
-    want = (w[y] * F.cross_entropy(logits, y, reduction="none")).sum() / 256
-    assert torch.allclose(got, want, atol=1e-6)
+                      torch.ones(512, dtype=torch.bool), w)
+    want = F.cross_entropy(logits, y, weight=w)
+    assert torch.allclose(got, want, atol=1e-5), (got.item(), want.item())
 
 
 def test_ambiguous_frame_costs_less_than_forcing_the_suppressed_member():
