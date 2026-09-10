@@ -81,6 +81,12 @@ class ExperimentSpec:
     smoothing_loss_weight: float = 0.15
     manifest: str = "../grounding_data/llmstu_seq_split_manifest.json"
     sequence_root: str = "../grounding_data/llmstu_sequences_full"
+    #: npz from build_cue_labels: recomputed 6-class labels under a different
+    #: cue RULE version. Empty means the labels stored in the sequences. Part
+    #: of the spec, so it is written into every checkpoint and run record --
+    #: a model's target set must travel with it, or a later evaluation will
+    #: score it against a target it was never trained on.
+    cue_labels: str = ""
     output_dir: str = ""
     model_kwargs: Dict = field(default_factory=dict)
 
@@ -221,10 +227,16 @@ def train(spec: ExperimentSpec, device_str: str = "cuda:0", threads: int = 8) ->
     from attention.taxonomy import taxonomy_classes, taxonomy_excluded
     class_names = taxonomy_classes(spec.taxonomy)
     num_classes = len(class_names)
+    cue_labels = Path(spec.cue_labels) if spec.cue_labels else None
     train_seqs = D.load_split(manifest, root, "train", spec.feature_config,
-                              taxonomy=spec.taxonomy)
+                              taxonomy=spec.taxonomy, cue_labels=cue_labels)
     val_seqs = D.load_split(manifest, root, "val", spec.feature_config,
-                            taxonomy=spec.taxonomy)
+                            taxonomy=spec.taxonomy, cue_labels=cue_labels)
+    if cue_labels is not None:
+        print(f"[{spec.experiment_id}] cue labels overridden from {cue_labels} "
+              f"(ruleset {D.CueLabels(cue_labels).ruleset!r}) -- macro-F1 from "
+              f"this run is measured against a DIFFERENT target than a run "
+              f"without it, and the two are not directly comparable.", flush=True)
     hist = D.class_histogram(train_seqs, num_classes)
     val_hist = D.class_histogram(val_seqs, num_classes)
     if spec.taxonomy != "cue6":
@@ -358,6 +370,7 @@ def train(spec: ExperimentSpec, device_str: str = "cuda:0", threads: int = 8) ->
         "spec": asdict(spec),
         "git": git_state(),
         "manifest_sha256": file_hash(manifest),
+        "cue_labels_sha256": file_hash(cue_labels) if cue_labels else "",
         "feature_columns": D.column_index(spec.feature_config).tolist(),
         "input_dim": int(dim),
         "n_parameters": int(n_params),
@@ -406,6 +419,10 @@ def main():
     ap.add_argument("--threads", type=int, default=8)
     ap.add_argument("--manifest", default="../grounding_data/llmstu_seq_split_manifest.json")
     ap.add_argument("--sequence-root", default="../grounding_data/llmstu_sequences_full")
+    ap.add_argument("--cue-labels", default="",
+                    help="npz from attention.thesis_eval.build_cue_labels: "
+                         "recomputed cue labels under a different rule version. "
+                         "Features are unchanged; only the target differs.")
     args = ap.parse_args()
 
     # The transformer baseline must stay exactly as it was trained historically,
@@ -421,7 +438,8 @@ def main():
         seed=args.seed, epochs=args.epochs,
         batch_size=args.batch_size, lr=args.lr, select_window=args.select_window,
         smoothing_loss_weight=smooth, output_dir=args.output_dir,
-        manifest=args.manifest, sequence_root=args.sequence_root)
+        manifest=args.manifest, sequence_root=args.sequence_root,
+        cue_labels=args.cue_labels)
     train(spec, args.device, args.threads)
 
 

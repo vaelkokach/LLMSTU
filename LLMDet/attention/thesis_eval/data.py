@@ -180,6 +180,46 @@ class Sequence_:
         return f"{self.video_id}#seat{self.seat_id}"
 
 
+class CueLabels:
+    """A recomputed cue-label set, keyed by the sequence's manifest path.
+
+    Built by ``attention.thesis_eval.build_cue_labels`` when the cue RULES
+    change but the features do not. Overriding labels at load time rather than
+    rebuilding sequences means a v1-vs-v2 comparison reads the identical
+    feature file, so the target is provably the only thing that differs.
+    """
+
+    def __init__(self, path: Path):
+        d = np.load(path, allow_pickle=False)
+        keys = [str(k) for k in d["keys"]]
+        off = d["offsets"].astype(np.int64)
+        self.path = Path(path)
+        self.ruleset = str(d["ruleset"])
+        self._y = d["y"].astype(np.int64)
+        self._cand = d["y_cand"].astype(bool)
+        self._span = {k: (int(off[i]), int(off[i + 1])) for i, k in enumerate(keys)}
+
+    def get(self, key: str, n_frames: int) -> Tuple[np.ndarray, np.ndarray]:
+        """Labels and candidates for one sequence, or a fatal error.
+
+        A missing key means training would silently fall back to the stored
+        (old-ruleset) label for that sequence, mixing two targets in one run.
+        A length mismatch means the override is against different frames.
+        Both are fatal for the same reason a layout mismatch is.
+        """
+        if key not in self._span:
+            raise RuntimeError(
+                f"{key} has no entry in the cue-label set {self.path}. It was "
+                f"built from a different sequence build or an older label file; "
+                f"rebuild it rather than train on a mixture of two targets.")
+        lo, hi = self._span[key]
+        if hi - lo != n_frames:
+            raise RuntimeError(
+                f"{key}: cue-label set has {hi - lo} frames, the sequence has "
+                f"{n_frames}. The override is against different frames.")
+        return self._y[lo:hi], self._cand[lo:hi]
+
+
 def load_manifest(path: Path) -> List[dict]:
     return json.load(open(path))["samples"]
 
@@ -191,12 +231,21 @@ def load_split(
     feature_config: str = "570_full",
     limit: Optional[int] = None,
     taxonomy: str = "cue6",
+    cue_labels: Optional[Path] = None,
 ) -> List[Sequence_]:
     """Load one split, slicing features to ``feature_config``.
 
     Sequences are returned in deterministic manifest order so that every
     evaluator run over the same split produces byte-identical prediction
     archives.
+
+    ``cue_labels`` points at an npz from
+    ``attention.thesis_eval.build_cue_labels`` and REPLACES the stored 6-class
+    labels and candidate sets with ones recomputed under a different cue rule
+    version. Features are not touched, so a run against it differs from the
+    baseline in the target and in nothing else. Applied before ``taxonomy``,
+    because a taxonomy is a regrouping of the 6 classes and must regroup
+    whichever 6-class labels are actually in force.
 
     ``taxonomy`` relabels the 6 stored cue ids onto a coarser set. Frames whose
     class the taxonomy abstains on become ``IGNORE_INDEX``, so they leave the
@@ -208,6 +257,7 @@ def load_split(
         raise KeyError(f"unknown feature config {feature_config!r}; "
                        f"known: {sorted(FEATURE_CONFIGS)}")
     cols = column_index(feature_config)
+    overrides = CueLabels(Path(cue_labels)) if cue_labels else None
     want_layout = config_layout(feature_config)
     want_blocks = FEATURE_CONFIGS[feature_config]
     from attention.taxonomy import CUE_CLASSES, taxonomy_classes, taxonomy_lut
@@ -248,6 +298,11 @@ def load_split(
         else:
             cand6 = np.zeros((len(y), len(CUE_CLASSES)), dtype=bool)
             cand6[np.arange(len(y)), y] = True
+
+        # Override with a recomputed rule version, in 6-class space, before
+        # anything else reads them.
+        if overrides is not None:
+            y, cand6 = overrides.get(r["file"], len(y))
 
         # Collapse the candidate columns the same way as the labels, so a
         # taxonomy that merges two classes merges their candidacy too.

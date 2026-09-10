@@ -193,6 +193,12 @@ def main():
     # from the cause -- or, for two builds of the same width, no error at all.
     ap.add_argument("--manifest", default=None,
                     help="default: the manifest recorded in the checkpoint")
+    ap.add_argument("--cue-labels", default=None,
+                    help="override the cue-label set. Defaults to the one the "
+                         "checkpoint was TRAINED on (spec.cue_labels), so a "
+                         "model is scored against its own target unless you "
+                         "deliberately cross-evaluate. Pass '' to force the "
+                         "labels stored in the sequences.")
     ap.add_argument("--sequence-root", default=None,
                     help="default: the sequence root recorded in the checkpoint")
     args = ap.parse_args()
@@ -215,8 +221,17 @@ def main():
         "sequence_root", "../grounding_data/llmstu_sequences_full")
     print(f"[eval] sequences {seq_root} | manifest {manifest} | "
           f"config {spec['feature_config']} | taxonomy {taxonomy}", flush=True)
+    trained_on = spec.get("cue_labels", "") or ""
+    cue_labels = trained_on if args.cue_labels is None else args.cue_labels
+    if cue_labels != trained_on:
+        print(f"  CROSS-EVALUATION: checkpoint was trained against "
+              f"{trained_on or '<labels stored in the sequences>'} and is being "
+              f"scored against {cue_labels or '<labels stored in the sequences>'}. "
+              f"This is a different target; say so wherever the number is used.",
+              flush=True)
     seqs = D.load_split(Path(manifest), Path(seq_root),
-                        args.split, spec["feature_config"], taxonomy=taxonomy)
+                        args.split, spec["feature_config"], taxonomy=taxonomy,
+                        cue_labels=Path(cue_labels) if cue_labels else None)
     dim = D.config_dim(spec["feature_config"])
     kw = dict(spec.get("model_kwargs") or {})
     if spec["model"] == "transformer":
@@ -236,6 +251,7 @@ def main():
         "checkpoint": str(args.ckpt),
         "checkpoint_epoch": int(ck.get("epoch", -1)),
         "experiment_id": spec.get("experiment_id"),
+        "cue_labels": cue_labels, "cue_labels_trained_on": trained_on,
         "model": spec["model"], "feature_config": spec["feature_config"],
         "input_dim": dim, "seed": spec.get("seed"),
         "split": args.split, "n_sequences": len(seqs),

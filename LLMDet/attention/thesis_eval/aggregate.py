@@ -56,7 +56,14 @@ CONTRASTS: List[Tuple[str, str, str]] = [
 
 
 def discover(root: Path, split: str) -> Dict[str, List[Dict]]:
-    """{config_key: [run dicts]} where config_key is model+feature_config."""
+    """{config_key: [run dicts]} where config_key is model+feature_config.
+
+    The cue-label set is part of the key. Two runs on the same architecture and
+    the same feature config but different label RULE versions are measured
+    against different targets; pooling them into one mean-over-seeds would
+    silently average two numbers that answer different questions. Runs on the
+    stored labels key as before, so existing result trees group unchanged.
+    """
     out: Dict[str, List[Dict]] = defaultdict(list)
     for d in sorted(root.iterdir()):
         m = d / f"eval_{split}" / "metrics.json"
@@ -64,6 +71,9 @@ def discover(root: Path, split: str) -> Dict[str, List[Dict]]:
             continue
         res = json.loads(m.read_text())
         key = f"{res['model']}::{res['feature_config']}"
+        cue = res.get("cue_labels") or ""
+        if cue:
+            key += f"::{Path(cue).stem}"
         out[key].append({"metrics": res, "dir": d,
                          "predictions": d / f"eval_{split}" / "predictions.npz"})
     return out
@@ -120,6 +130,8 @@ def main():
         met = [g["metrics"] for g in group]
         row = {
             "model": met[0]["model"], "feature_config": met[0]["feature_config"],
+            "cue_labels": met[0].get("cue_labels", ""),
+            "cue_labels_trained_on": met[0].get("cue_labels_trained_on", ""),
             "input_dim": met[0]["input_dim"], "seeds": [m["seed"] for m in met],
             "n_frames": met[0]["n_frames"], "n_videos": met[0]["n_videos"],
             "over_seeds": {k: B.seed_summary([m[k] for m in met]) for k in

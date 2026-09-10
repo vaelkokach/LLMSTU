@@ -125,12 +125,29 @@ def _video_id_from_filename(fname: str) -> Optional[str]:
     return m.group(1) if m else None
 
 
+#: The record fields every cue rule reads (attention.taxonomy.cue_conditions).
+#: Carried through into CropObs.meta so a label set can be recomputed under a
+#: different ruleset WITHOUT re-extracting features -- see
+#: attention.thesis_eval.build_cue_labels. Kept as an explicit list rather than
+#: stashing the whole record: the records also carry captions and absolute
+#: image paths, and 284k of those is memory spent on nothing.
+CUE_FIELDS = ("activity", "gaze_direction", "attention_target", "posture",
+              "hand_state", "engagement_level", "occluded", "face_kpts",
+              "phone_visible", "talking")
+
+
 def parse_llmstu_labels(
     label_paths: List[Path],
     frame_to_video: Optional[Dict[str, str]],
     allow_filename_fallback: bool = False,
+    ruleset: str = "v1",
 ) -> Dict[str, List[CropObs]]:
-    """Parse LLMSTU label jsonl shards into per-video observation lists."""
+    """Parse LLMSTU label jsonl shards into per-video observation lists.
+
+    ``ruleset`` picks the cue rule version used for ``label_id``/``cand_ids``.
+    It defaults to ``v1``, so the builder and every existing caller are
+    unchanged; the sequences on disk were all built under v1.
+    """
     by_video: Dict[str, List[CropObs]] = defaultdict(list)
     n_total = 0
     n_unmapped = 0
@@ -162,10 +179,11 @@ def parse_llmstu_labels(
                         src_frame=src,
                         time_s=t,
                         bbox_xyxy=[float(v) for v in rec["bbox_person"]],
-                        label_id=map_record(rec),
-                        cand_ids=candidate_set(rec),
+                        label_id=map_record(rec, ruleset),
+                        cand_ids=candidate_set(rec, ruleset),
                         head_span_px=float(rec.get("head_span_px", 150.0)),
-                        meta={"file_name": rec.get("file_name", "")},
+                        meta={"file_name": rec.get("file_name", ""),
+                              **{k: rec.get(k) for k in CUE_FIELDS}},
                     )
                 )
     if n_unmapped:

@@ -47,7 +47,8 @@ DYN_LO, DYN_HI = 563, 570
 
 def replay_chunks(labels: Path, frame_to_video: Path, min_track_len: int = 8,
                   max_track_len: int = 128, max_gap_s: float = 15.0,
-                  val_fraction: float = 0.2, seed: int = 42):
+                  val_fraction: float = 0.2, seed: int = 42,
+                  ruleset: str = "v1"):
     """Reproduce the builder's emission order without extracting features.
 
     Yields, in the exact order ``build_sequences_llmstu`` assigned
@@ -55,7 +56,8 @@ def replay_chunks(labels: Path, frame_to_video: Path, min_track_len: int = 8,
     """
     f2v = json.load(open(frame_to_video))
     paths = sorted(labels.glob("*.jsonl")) if labels.is_dir() else [labels]
-    by_video = parse_llmstu_labels(paths, f2v, allow_filename_fallback=False)
+    by_video = parse_llmstu_labels(paths, f2v, allow_filename_fallback=False,
+                                   ruleset=ruleset)
     train_vids, _ = split_videos(list(by_video.keys()), val_fraction, seed)
 
     idx = 0
@@ -79,6 +81,10 @@ def replay_chunks(labels: Path, frame_to_video: Path, min_track_len: int = 8,
                     "sample_idx": idx, "split": split, "video_id": video_id,
                     "seat_id": sid,
                     "file_names": [o.meta.get("file_name", "") for o in chunk],
+                    # Full cue-rule fields per frame, so a caller can recompute
+                    # labels under a different ruleset without re-parsing.
+                    # Additive: existing callers read only the keys they know.
+                    "metas": [o.meta for o in chunk],
                     "times": np.array([o.time_s for o in chunk], dtype=np.float64),
                     "boxes": [list(o.bbox_xyxy) for o in chunk],
                 }

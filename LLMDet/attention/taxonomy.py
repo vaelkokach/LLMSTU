@@ -78,7 +78,75 @@ _TASK_GAZES = {"laptop", "teacher_or_board", "own_desk", "down"}
 _TASK_TARGETS = {"device", "instruction", "own_work"}
 
 
-def cue_conditions(rec: Dict) -> "List[Tuple[str, bool]]":
+#: Rule versions. ``v1`` is the rule set every published number and every
+#: built sequence was produced under and MUST NOT change. ``v2`` is the
+#: repaired rule set; see RULESET_V2_RATIONALE.
+RULESETS: Tuple[str, ...] = ("v1", "v2")
+DEFAULT_RULESET: str = "v1"
+
+RULESET_V2_RATIONALE = """
+v2 removes ``attention_target`` from every cue rule.
+
+Measured, on the 1,000-crop stratified sample
+(grounding_data/llmstu_tools/outputs/gold_candidates.jsonl):
+
+  * ``attention_target`` is 96.0% predictable from ``gaze_direction`` alone --
+    laptop->device 100%, own_desk->own_work 100%, peer->peer 100%,
+    phone->device 100%, teacher_or_board->instruction 98.8%,
+    away_or_window->distracted 98.4%. It is a recoding of the gaze field, not
+    an independent observation.
+  * Its ONE non-redundant cell is the defect: ``gaze_direction == "down"``
+    maps to ``attention_target == "distracted"`` on 94.1% of records, and
+    ``distracted`` is a v1 trigger for ``looking_away``. So *looking down*
+    fires *looking away*.
+  * Of the 372 records where the v1 ``looking_away`` rule fires, 359 (96.5%)
+    are driven by ``distracted`` and 181 (48.7%) by ``distracted`` ALONE. Of
+    those 181: gaze is ``down`` on 85.1% and ``away_or_window`` on 0.0%;
+    activity is ``head_down_sleeping`` on 70.7%; and 81.2% are labelled
+    ``head_down`` once precedence is applied.
+
+The same pathology is present in the human labels, so it is a property of the
+annotation vocabulary rather than of the VLM pseudo-labeller. On the 754
+usable human-annotated crops in ``event_gold_bundle/gold_annotations_Admin.jsonl``:
+``gaze == down`` -> ``distracted`` on 231/232 = 99.6%, and 231/232 = 99.6% of
+human ``head_down`` records also carry ``looking_away`` as a candidate --
+reproducing the 772-of-773 co-occurrence that collapsed PRODEN (FINDINGS 12.x)
+in labels the pseudo-labeller never touched.
+
+There is no ``attention_target`` value meaning "looking down at own work", so a
+head-down student can only be called ``distracted``; the cue rule then turns
+that into ``looking_away``, which sits directly below ``head_down`` in
+precedence and therefore inherits exactly the frames it cannot be told apart
+from. ``looking_away`` is, roughly half the time, a synonym for "head is down".
+
+v2 therefore drops the field and keeps only perceptual evidence:
+
+    looking_away     gaze == away_or_window OR activity == looking_away
+    turned_to_peer   activity == talking_to_peer OR talking OR gaze == peer
+    screen_oriented  activity in TASK_ACTIVITIES OR gaze in TASK_GAZES
+    no-signal gate   gaze/engagement/activity unknown-ish (target dropped)
+
+``target == peer`` is dropped as exactly redundant with ``gaze == peer``
+(129/129 co-occurrence). ``screen_oriented`` loses the ``target in
+TASK_TARGETS`` conjunct, which was only ever a restatement of the gaze test.
+Dropping ``target == unknown`` from the no-signal gate makes the gate fire on
+crops with no readable orientation that v1 sent to ``looking_away`` via
+``distracted``; an unreadable crop becomes ``uncertain``, which is what the
+annotation guideline says it is.
+
+Effect on the stratified sample: 26/1000 hard labels change; ``looking_away``
+purity (share of the class whose gaze is actually ``away_or_window``) rises
+74.1% -> 90.6%; ``head_down`` records ambiguous with ``looking_away`` fall
+100% -> 26.1%; the under-crediting ratio falls 2.60x -> 1.63x.
+
+These are SAMPLE numbers, and the sample is stratified (rare activities are
+oversampled), so they are not corpus prevalences. Re-measure corpus-wide with
+``tools/audit_attention_target.py`` before citing any of them.
+"""
+
+
+def cue_conditions(rec: Dict,
+                   ruleset: str = DEFAULT_RULESET) -> "List[Tuple[str, bool]]":
     """Every cue rule and whether it fires, in precedence order.
 
     The single source of truth for both :func:`map_record` (first match wins)
@@ -89,7 +157,14 @@ def cue_conditions(rec: Dict) -> "List[Tuple[str, bool]]":
     ``("uncertain", True)`` in first position is a GATE, not a candidate among
     others: a student who cannot be seen supports no cue at all, so both
     callers stop there.
+
+    ``ruleset`` selects the rule version. The two versions share this one
+    function for the same reason ``map_record`` and ``candidate_set`` do: two
+    copies of a precedence list drift silently. v1 is the default everywhere,
+    so no existing caller changes behaviour.
     """
+    if ruleset not in RULESETS:
+        raise KeyError(f"unknown ruleset {ruleset!r}; known: {RULESETS}")
     activity = rec.get("activity", "other")
     gaze = rec.get("gaze_direction", "unknown")
     target = rec.get("attention_target", "unknown")
@@ -102,24 +177,42 @@ def cue_conditions(rec: Dict) -> "List[Tuple[str, bool]]":
     engagement = rec.get("engagement_level", "unknown")
 
     unverifiable = occluded and face_kpts <= UNCERTAIN_FACE_KPTS
-    no_signal = (gaze == "unknown" and target == "unknown"
-                 and engagement == "unknown" and activity == "other")
+
+    # Rules shared by both versions. phone_use and head_down never referenced
+    # attention_target, so v2 leaves them untouched -- the repair is confined
+    # to the three rules that read it plus the no-signal gate.
+    phone = (activity == "using_phone" or phone_visible
+             or gaze == "phone" or hand == "on_phone")
+    head_down = (activity == "head_down_sleeping"
+                 or posture in ("head_down", "slumped"))
+
+    if ruleset == "v1":
+        no_signal = (gaze == "unknown" and target == "unknown"
+                     and engagement == "unknown" and activity == "other")
+        peer = (activity == "talking_to_peer" or talking
+                or gaze == "peer" or target == "peer")
+        away = (gaze == "away_or_window" or activity == "looking_away"
+                or target == "distracted")
+        screen = (activity in _TASK_ACTIVITIES
+                  or (gaze in _TASK_GAZES and target in _TASK_TARGETS))
+    else:                                            # v2 -- see RULESET_V2_RATIONALE
+        no_signal = (gaze == "unknown" and engagement == "unknown"
+                     and activity == "other")
+        peer = activity == "talking_to_peer" or talking or gaze == "peer"
+        away = gaze == "away_or_window" or activity == "looking_away"
+        screen = activity in _TASK_ACTIVITIES or gaze in _TASK_GAZES
+
     return [
         ("uncertain", unverifiable or no_signal),
-        ("phone_use", activity == "using_phone" or phone_visible
-         or gaze == "phone" or hand == "on_phone"),
-        ("head_down", activity == "head_down_sleeping"
-         or posture in ("head_down", "slumped")),
-        ("turned_to_peer", activity == "talking_to_peer" or talking
-         or gaze == "peer" or target == "peer"),
-        ("looking_away", gaze == "away_or_window" or activity == "looking_away"
-         or target == "distracted"),
-        ("screen_oriented", activity in _TASK_ACTIVITIES
-         or (gaze in _TASK_GAZES and target in _TASK_TARGETS)),
+        ("phone_use", phone),
+        ("head_down", head_down),
+        ("turned_to_peer", peer),
+        ("looking_away", away),
+        ("screen_oriented", screen),
     ]
 
 
-def candidate_set(rec: Dict) -> "List[int]":
+def candidate_set(rec: Dict, ruleset: str = DEFAULT_RULESET) -> "List[int]":
     """Every cue class this record supports -- the PARTIAL label.
 
     ``map_record`` keeps the highest-precedence firing rule and discards the
@@ -133,21 +226,21 @@ def candidate_set(rec: Dict) -> "List[int]":
     2020) credit any candidate and let the pixels decide which, instead of a
     hand-written ordering deciding in advance.
     """
-    conds = cue_conditions(rec)
+    conds = cue_conditions(rec, ruleset)
     if conds[0][1]:                      # the unverifiable/no-signal gate
         return [CUE_TO_ID["uncertain"]]
     fired = [CUE_TO_ID[name] for name, hit in conds[1:] if hit]
     return fired or [CUE_TO_ID["uncertain"]]
 
 
-def map_record(rec: Dict) -> int:
+def map_record(rec: Dict, ruleset: str = DEFAULT_RULESET) -> int:
     """Map one LLMSTU label record (parsed jsonl dict) to a cue class id.
 
     First firing rule wins. Kept exactly as it was: every published number and
     every built sequence depends on it. ``candidate_set`` is the partial-label
     view of the same conditions.
     """
-    for name, hit in cue_conditions(rec):
+    for name, hit in cue_conditions(rec, ruleset):
         if hit:
             return CUE_TO_ID[name]
     return CUE_TO_ID["uncertain"]
