@@ -124,6 +124,25 @@ def config_layout(name: str) -> str:
     return CONFIG_LAYOUT[name]
 
 
+def layout_is_compatible(want: str, stored: str, blocks: List[str]) -> bool:
+    """Can a config written for ``want`` be sliced out of a ``stored`` build?
+
+    Only when every block it actually reads is defined at IDENTICAL columns in
+    both layouts. v570 and v1074_head agree exactly on ``base`` and the
+    head-pose blocks -- columns [0, 556) -- and diverge only after, so 556_hp
+    or 553_facefound read the same numbers from either build. A config touching
+    ``express``/``dynamic`` (v570 only) or ``head`` (v1074_head only) is
+    refused, because there the same column index means different things.
+
+    Checked block by block rather than by trusting a name: the whole point of
+    naming layouts was that a column-meaning mismatch is silent.
+    """
+    a, b = LAYOUTS.get(want), LAYOUTS.get(stored)
+    if a is None or b is None:
+        return False
+    return all(blk in b and a[blk] == b[blk] for blk in blocks)
+
+
 def config_dim(name: str) -> int:
     blocks = LAYOUTS[config_layout(name)]
     return sum(blocks[b][1] - blocks[b][0] for b in FEATURE_CONFIGS[name])
@@ -190,7 +209,7 @@ def load_split(
                        f"known: {sorted(FEATURE_CONFIGS)}")
     cols = column_index(feature_config)
     want_layout = config_layout(feature_config)
-    want_width = LAYOUT_WIDTH[want_layout]
+    want_blocks = FEATURE_CONFIGS[feature_config]
     from attention.taxonomy import CUE_CLASSES, taxonomy_classes, taxonomy_lut
     tax_lut = np.array(taxonomy_lut(taxonomy), dtype=np.int64)
     n_tax_classes = len(taxonomy_classes(taxonomy))
@@ -202,20 +221,23 @@ def load_split(
     for r in rows:
         d = np.load(sequence_root / r["file"])
         x = d["x"].astype(np.float32)
-        # Validate against the layout this config is sliced against. A width
-        # mismatch here would not crash later -- it would quietly read the
+        # Validate against the layout the FILE declares. Sequences built
+        # before layouts were named carry none and are v570 by definition.
+        stored = (str(d["layout"]) if "layout" in getattr(d, "files", [])
+                  else "v570")
+        if stored != want_layout and not layout_is_compatible(
+                want_layout, stored, want_blocks):
+            raise RuntimeError(
+                f"{r['file']} is a {stored!r} build; config "
+                f"{feature_config!r} reads {want_blocks}, which {stored!r} "
+                f"does not define at the same columns. Pick a config for this "
+                f"build, or rebuild with the matching streams.")
+        # A width mismatch would not crash later -- it would quietly read the
         # wrong columns and train on nonsense, so it is fatal.
-        if x.shape[1] != want_width:
+        if x.shape[1] != LAYOUT_WIDTH[stored]:
             raise RuntimeError(
-                f"{r['file']} has {x.shape[1]} feature columns but config "
-                f"{feature_config!r} needs the {want_layout} build "
-                f"({want_width} columns). Rebuild the sequences with the "
-                f"matching streams, or pick a config for this build.")
-        stored = str(d["layout"]) if "layout" in getattr(d, "files", []) else None
-        if stored is not None and stored != want_layout:
-            raise RuntimeError(
-                f"{r['file']} declares layout {stored!r}, config "
-                f"{feature_config!r} needs {want_layout!r}")
+                f"{r['file']} declares layout {stored!r} but has "
+                f"{x.shape[1]} columns, not {LAYOUT_WIDTH[stored]}.")
         y = LEGACY_REMAP_LUT[np.clip(d["y_frames"].astype(np.int64), 0, 6)]
 
         # Candidate sets, in 6-class space. Sequences built before y_cand

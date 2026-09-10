@@ -173,3 +173,45 @@ def test_v570_configs_are_unchanged_by_the_head_layout():
     assert D.column_index("552_base").tolist() == list(range(552))
     assert D.column_index("553_facefound").tolist() == list(range(552)) + [555]
     assert D.column_index("570_full").tolist() == list(range(570))
+
+
+# --------------------------------------------------------------------------
+# cross-layout slicing
+# --------------------------------------------------------------------------
+
+def test_v570_configs_readable_from_a_head_build():
+    """556_hp and friends must slice out of a v1074_head build.
+
+    Both layouts define base and the head-pose blocks at identical columns, so
+    the numbers are the same. This is what lets --partial-labels (which needs
+    y_cand, hence the new build) run WITHOUT the head stream, so the two
+    contributions can be attributed separately.
+    """
+    for name in ("552_base", "553_facefound", "555_angles", "556_hp"):
+        assert D.layout_is_compatible(
+            D.config_layout(name), "v1074_head", D.FEATURE_CONFIGS[name]), name
+
+
+def test_express_and_dynamic_configs_are_refused_by_a_head_build():
+    """Those blocks do not exist in v1074_head; the head block occupies 556+.
+    Allowing them would read head-CLIP dims as facial expression."""
+    for name in ("563_expr", "563_dyn", "570_full"):
+        assert not D.layout_is_compatible(
+            D.config_layout(name), "v1074_head", D.FEATURE_CONFIGS[name]), name
+
+
+def test_head_configs_are_refused_by_a_v570_build():
+    for name in ("1070_head", "1074_hp_head"):
+        assert not D.layout_is_compatible(
+            D.config_layout(name), "v570", D.FEATURE_CONFIGS[name]), name
+
+
+def test_compatibility_compares_columns_not_names():
+    """A block present in both layouts but at different columns must fail."""
+    saved = D.LAYOUTS["v1074_head"]["base"]
+    try:
+        D.LAYOUTS["v1074_head"]["base"] = (8, 560)      # same name, moved
+        assert not D.layout_is_compatible("v570", "v1074_head", ["base"])
+    finally:
+        D.LAYOUTS["v1074_head"]["base"] = saved
+    assert D.layout_is_compatible("v570", "v1074_head", ["base"])
