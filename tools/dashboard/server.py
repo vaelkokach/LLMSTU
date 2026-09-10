@@ -96,6 +96,13 @@ STATE = {
     "notice": "",          # e.g. "alerts disabled for this model"
     "capture": {},         # live-source throughput and drop rate
     "job": {},             # background analyse job
+    # Why the last run's failure is state and not just a log line: the worker
+    # runs in a daemon thread, so an exception there kills the thread and
+    # leaves the page showing "idle" with an empty video panel and no reason.
+    # That is indistinguishable from a source that simply has not been
+    # started, and it is what made a failed session replay look like a
+    # rendering bug for an afternoon.
+    "error": "",           # why the last run stopped, if it stopped badly
 }
 LOCK = threading.Lock()
 
@@ -155,9 +162,26 @@ class Runner:
             self._stop = threading.Event()
             if self.on_start:
                 self.on_start()
-            self.thread = threading.Thread(target=target, args=args,
+            self.thread = threading.Thread(target=self._guard, args=(target,) + args,
                                            kwargs=kwargs, daemon=True)
             self.thread.start()
+
+    @staticmethod
+    def _guard(target, *args, **kwargs):
+        """Run ``target``, and make a crash visible on the page.
+
+        Without this the thread dies, ``running`` stays False and the UI shows
+        an idle dashboard with no video and no explanation -- the same thing it
+        shows before anything has been started. The traceback still goes to the
+        log; this puts the one-line reason where the operator is looking.
+        """
+        try:
+            target(*args, **kwargs)
+        except BaseException as e:                     # noqa: BLE001
+            traceback.print_exc()
+            with LOCK:
+                STATE["running"] = False
+                STATE["error"] = f"{type(e).__name__}: {e}"
 
 
 def reset_state():
@@ -170,6 +194,7 @@ def reset_state():
         STATE["class_summary"] = {}
         STATE["capture"] = {}
         STATE["running"] = False
+        STATE["error"] = ""
 
 
 RUNNER = Runner(on_start=reset_state)    # produces frames
@@ -218,6 +243,7 @@ class Handler(BaseHTTPRequestHandler):
                     "notice": STATE["notice"],
                     "capture": STATE["capture"],
                     "job": STATE["job"],
+                    "error": STATE["error"],
                 }))
         if path == "/api/models":
             return self._send(200, json.dumps({
@@ -375,6 +401,21 @@ def run_session(entry, cache_dir):
         STATE["model"] = model_card(entry, cal)
         STATE["notice"] = "" if cal.get("alerts_enabled", True) else \
             cal.get("alerts_disabled_reason", "")
+        # A frameless cache replays as cue data over a blank panel, which reads
+        # as a broken player rather than as a cache that was built without
+        # frames. Name it instead of leaving the operator to guess.
+        if cache.n_cached_frames == 0:
+            STATE["error"] = (
+                f"this session has no cached frames (no .jpg under "
+                f"{Path(cache_dir).name}/frames), so cues replay over an "
+                f"empty video panel. Delete the session and analyse the "
+                f"recording again.")
+        elif cache.n_cached_frames < int(cache.meta.get("n_frames", 0)):
+            STATE["notice"] = (
+                f"{cache.n_cached_frames} of {cache.meta.get('n_frames')} "
+                f"frames are cached; the rest of the replay shows cues with "
+                f"no image")
+    print(f"[dashboard] {cache.n_cached_frames} cached frames")
     print(f"[dashboard] {entry.variant_id} — {bundle.describe()}")
     SR.replay(cache, entry, bundle, push_frame,
               should_stop=RUNNER.should_stop,

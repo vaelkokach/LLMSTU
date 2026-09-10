@@ -102,6 +102,7 @@
       <h2>Live view</h2>
       <img id="frame" alt="live classroom view">
       <p class="empty" id="noframe">No video frame (cue-log replay shows cue data only).</p>
+      <div id="runerror"></div>
     </div>
 
     <div class="card">
@@ -209,6 +210,14 @@ function drawSpark(hist){
 let SOURCES=null, LAST_JOB="";
 
 const $ = (id)=>document.getElementById(id);
+
+// Error text can carry an uploaded filename, which came from a browser. It is
+// already restricted by sources.safe_name, but escaping at the point of
+// insertion is the check that does not depend on that staying true.
+function esc(t){
+  return String(t).replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+}
 
 function sourceBanner(text, isError){
   $("sourcebanner").innerHTML = text
@@ -486,6 +495,11 @@ async function tick(){
     const img=document.getElementById("frame"), nf=document.getElementById("noframe");
     if(s.frame){ img.src="data:image/jpeg;base64,"+s.frame; img.style.display="block"; nf.style.display="none"; }
     else { img.style.display="none"; nf.style.display="block"; }
+
+    // A run that died leaves running=false and no frame, which looks exactly
+    // like one that was never started. Say which it was.
+    document.getElementById("runerror").innerHTML = s.error
+      ? `<div class="banner err">Playback stopped: ${esc(s.error)}</div>` : "";
 
     const cs=s.class_summary||{};
     document.getElementById("k-students").textContent = cs.n_students ?? "–";

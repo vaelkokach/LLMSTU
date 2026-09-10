@@ -210,8 +210,20 @@ def precompute(config_path: str, video: str, out_dir: str, device: str = "cpu",
 
             small = cv2.resize(
                 frame, (jpeg_width, int(jpeg_width * frame.shape[0] / frame.shape[1])))
-            cv2.imwrite(str(out / "frames" / f"{n:06d}.jpg"), small,
-                        [cv2.IMWRITE_JPEG_QUALITY, 70])
+            # imwrite REPORTS failure, it does not raise: a full disk, a
+            # read-only mount or a bucket that rejects the write all return
+            # False here. Ignoring that builds a cache with features and
+            # meta.json but no frames, which analyses "successfully" and then
+            # replays as cue data over an empty video panel -- a rendering bug
+            # to look at, and nothing in any log. Fail on the first one.
+            fpath = out / "frames" / f"{n:06d}.jpg"
+            if not cv2.imwrite(str(fpath), small,
+                               [cv2.IMWRITE_JPEG_QUALITY, 70]):
+                raise SystemExit(
+                    f"could not write {fpath}. The frame cache is part of the "
+                    f"session, not an extra: without it the replay has no "
+                    f"video. Check free space and that the sessions directory "
+                    f"is writable.")
             frame_index.append(n)
 
             n += 1

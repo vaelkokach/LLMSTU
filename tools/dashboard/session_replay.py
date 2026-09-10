@@ -76,6 +76,14 @@ class SessionCache:
                      "mediapipe_detector": z["head_detector"]}
         self.frame_index = z["frame_index"]
 
+        # How many JPEGs the cache actually has. Replay works without them --
+        # it just pushes cue data and no image -- so a cache whose frame writes
+        # failed looks exactly like a cue log at the UI: an empty video panel
+        # and no error. Counting them here lets the caller say so.
+        fdir = self.dir / "frames"
+        self.n_cached_frames = (sum(1 for _ in fdir.glob("*.jpg"))
+                                if fdir.is_dir() else 0)
+
         # rows grouped by frame, in frame order
         self._by_frame: Dict[int, list] = defaultdict(list)
         for r, f in enumerate(self.frame_idx):
