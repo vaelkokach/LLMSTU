@@ -63,6 +63,12 @@ tools/dashboard/sessions/
 # Gold annotation outputs stay local until finalized
 tools/gold_annotator/gold_annotations_*.jsonl
 tools/gold_annotator/gold_events_*.jsonl
+# serve.py actually writes events_<name>.jsonl, not gold_events_<name>.jsonl.
+# The rule above never matched it. That gap is how event_gold_bundle/ ended
+# up tracked (RELEASE_RISK_REGISTER RISK 2); these files name real students.
+tools/gold_annotator/events_*.jsonl
+# Image bundles built by make_offline_bundle.py, wherever they land.
+gold_annotation_bundle_*/
 .claude/
 
 # External datasets (re-downloadable; CMOSE is 13.6 GB)
@@ -75,3 +81,9 @@ huggingface/mediapipe/*.tflite
 # the filenames carry video id + seat + timestamp and the repo is public, so they
 # stay local. See FINDINGS 12.4 and docs/branch_c/RELEASE_RISK_REGISTER.md.
 outputs/branch_c/error_analysis/crops/
+
+# Transfer staging: multi-GB tarballs and raw session video moved by hand
+# between the HPC and the laptop. 5.9 GB as of 2026-09-10, including a 99 MB
+# classroom recording. Untracked AND unignored is how that gets committed by
+# accident, so it is named explicitly.
+results_v2/
