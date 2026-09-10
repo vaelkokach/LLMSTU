@@ -193,6 +193,16 @@ def frame_metrics(probs: np.ndarray, y_true: np.ndarray,
     names = class_names or CUE_CLASSES
     if len(names) != num_classes:
         raise ValueError(f"{len(names)} class names for {num_classes} classes")
+    if len(y_true) and int(np.min(y_true)) < 0:
+        # IGNORE_INDEX (-100) reaching here means abstained frames were not
+        # filtered. Caught explicitly because the natural symptom is an
+        # IndexError from brier_score's one-hot, which points at the wrong
+        # place -- and a metric that happened not to index by label would have
+        # quietly averaged over frames the model was never asked to predict.
+        raise ValueError(
+            f"{int((np.asarray(y_true) < 0).sum())} of {len(y_true)} labels are "
+            f"negative (IGNORE_INDEX). Filter abstained frames before scoring; "
+            f"run_eval.predict() does this on `y != IGNORE_INDEX`.")
     if y_pred is None:
         y_pred = probs.argmax(1)
     cm = confusion_matrix(y_true, y_pred, num_classes)

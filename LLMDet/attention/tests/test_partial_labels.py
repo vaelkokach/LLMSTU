@@ -131,3 +131,45 @@ def test_invalid_frames_do_not_contribute():
     other[3:] = torch.randn(5, K) * 10
     assert torch.allclose(proden_loss(logits, cand, v),
                           proden_loss(other, cand, v), atol=1e-6)
+
+
+# --------------------------------------------------------------------------
+# abstained frames must never reach the metrics
+# --------------------------------------------------------------------------
+
+def test_metrics_reject_unfiltered_ignore_labels():
+    """The evaluator filters IGNORE; if it ever stops, fail loudly here.
+
+    The natural symptom was an IndexError from brier_score's one-hot indexing
+    by -100, which points at the wrong place. Worse, a metric that did not
+    index by label would have silently averaged over frames the model was
+    never asked to predict.
+    """
+    import numpy as np
+    from attention.thesis_eval import metrics as M
+    from attention.thesis_eval.data import IGNORE_INDEX
+
+    rng = np.random.default_rng(0)
+    y = rng.integers(0, 3, 64)
+    y[:5] = IGNORE_INDEX
+    p = rng.random((64, 3))
+    p /= p.sum(1, keepdims=True)
+    with pytest.raises(ValueError, match="IGNORE_INDEX"):
+        M.frame_metrics(p, y, num_classes=3, class_names=["a", "b", "c"])
+
+
+def test_metrics_work_once_ignore_is_filtered():
+    import numpy as np
+    from attention.thesis_eval import metrics as M
+    from attention.thesis_eval.data import IGNORE_INDEX
+
+    rng = np.random.default_rng(1)
+    y = rng.integers(0, 3, 64)
+    y[:5] = IGNORE_INDEX
+    p = rng.random((64, 3))
+    p /= p.sum(1, keepdims=True)
+    keep = y != IGNORE_INDEX
+    res = M.frame_metrics(p[keep], y[keep], num_classes=3,
+                          class_names=["a", "b", "c"])
+    assert res["n_frames"] == int(keep.sum()) == 59
+    assert list(res["per_class"]) == ["a", "b", "c"]

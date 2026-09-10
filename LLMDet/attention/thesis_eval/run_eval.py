@@ -85,13 +85,26 @@ def predict(model, seqs: List[D.Sequence_], device, batch_size: int = 1,
             seats.extend([s.seat_id] * T)
             times.append(s.t)
             keys.extend([s.key] * T)
-    return {
+    arr = {
         "probs": np.concatenate(probs).astype(np.float32),
         "pred": np.concatenate(preds).astype(np.int64),
         "y": np.concatenate(tgts).astype(np.int64),
         "video_id": np.array(vids), "seat_id": np.array(seats, dtype=np.int64),
         "t": np.concatenate(times), "seq_key": np.array(keys),
     }
+    # Drop the frames the taxonomy abstains on, exactly as the training loop's
+    # evaluate_logits does (`valid = y != IGNORE`). Without this an abstained
+    # label reaches brier_score as index -100 and raises IndexError; worse, a
+    # metric that happened not to index by label would have silently averaged
+    # over frames the model was never asked to predict.
+    #
+    # Filtered here rather than in main() so that metrics, the cluster
+    # bootstrap and the saved predictions.npz all describe the same frames.
+    # For cue6 nothing is dropped and every existing archive is unchanged.
+    keep = arr["y"] != D.IGNORE_INDEX
+    if not keep.all():
+        arr = {k: v[keep] for k, v in arr.items()}
+    return arr
 
 
 def add_bootstrap(res: Dict, arr: Dict, cluster: str = "video",
@@ -200,6 +213,7 @@ def main():
     model = build_model(spec["model"], dim, len(class_names), **kw).to(device)
     model.load_state_dict(ck["model"])
 
+    n_total = int(sum(len(s.y) for s in seqs))
     arr = predict(model, seqs, device, args.batch_size, use_refine=args.refine)
     res = M.frame_metrics(arr["probs"], arr["y"], arr["pred"],
                           num_classes=len(class_names),
@@ -214,6 +228,12 @@ def main():
         "model": spec["model"], "feature_config": spec["feature_config"],
         "input_dim": dim, "seed": spec.get("seed"),
         "split": args.split, "n_sequences": len(seqs),
+        # Coverage travels with the number. An abstaining taxonomy scores a
+        # subset of frames, and a macro-F1 quoted without saying which subset
+        # is not interpretable.
+        "n_frames_total": n_total,
+        "n_frames_abstained": n_total - int(len(arr["y"])),
+        "coverage": float(len(arr["y"]) / max(n_total, 1)),
         "n_videos": int(len(set(arr["video_id"]))),
         "batch_size": args.batch_size, "refined": bool(args.refine),
     })
@@ -237,7 +257,9 @@ def main():
           f"acc {res['accuracy']:.4f}{ci('accuracy')}  "
           f"bal_acc {res['balanced_accuracy']:.4f}{ci('balanced_accuracy')}  "
           f"macroF1 {res['macro_f1']:.4f}{ci('macro_f1')}  "
-          f"mAUPRC {res['macro_auprc']:.4f}  ECE {res['ece']:.4f}")
+          f"mAUPRC {res['macro_auprc']:.4f}  ECE {res['ece']:.4f}  "
+          f"coverage {res['coverage'] * 100:.1f}% "
+          f"({res['n_frames']}/{res['n_frames_total']} frames)")
 
 
 if __name__ == "__main__":
