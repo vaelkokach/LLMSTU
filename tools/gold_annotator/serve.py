@@ -17,6 +17,10 @@ from urllib.parse import urlparse
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(ROOT, "..", ".."))
+#: Defaults assume the tool runs inside the repo on the machine that holds
+#: grounding_data. --crops-root/--frames-root override them so the annotator
+#: can run against a self-contained bundle on a machine that does not (see
+#: make_offline_bundle.py). Module-level because the handler reads them.
 CROPS_ROOT = os.path.join(REPO, "grounding_data", "LLMSTU", "crops")
 FRAMES_ROOT = os.path.join(REPO, "grounding_data", "stu_img", "frames")
 
@@ -169,7 +173,29 @@ def main():
     ap.add_argument("--annotator", required=True)
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--out-dir", default=ROOT)
+    ap.add_argument("--crops-root", default=None,
+                    help="directory holding the crop images, addressed by the "
+                         "manifest's file_name. Defaults to the in-repo "
+                         "grounding_data path.")
+    ap.add_argument("--frames-root", default=None,
+                    help="directory holding the full source frames for the 'f' "
+                         "occlusion view. A missing frame is a 404 and the view "
+                         "is simply unavailable, so a crops-only bundle works.")
     args = ap.parse_args()
+    global CROPS_ROOT, FRAMES_ROOT
+    if args.crops_root:
+        CROPS_ROOT = os.path.abspath(args.crops_root)
+    if args.frames_root:
+        FRAMES_ROOT = os.path.abspath(args.frames_root)
+    if not os.path.isdir(CROPS_ROOT):
+        raise SystemExit(
+            f"crops root does not exist: {CROPS_ROOT}\n"
+            f"Pass --crops-root, or run on the machine that holds "
+            f"grounding_data. Without it every image is a 404 and you would be "
+            f"annotating blind.")
+    print(f"crops:  {CROPS_ROOT}")
+    print(f"frames: {FRAMES_ROOT}"
+          + ("" if os.path.isdir(FRAMES_ROOT) else "   (absent -- 'f' view disabled)"))
     STORE = Store(args.manifest, args.annotator, args.out_dir)
     srv = ThreadingHTTPServer(("0.0.0.0", args.port), Handler)
     st = STORE.state()
