@@ -229,8 +229,20 @@ function selectedSource(){
 }
 
 async function loadSources(){
-  const r = await fetch(api("api/sources"),{cache:"no-store"});
-  SOURCES = await r.json();
+  // Without this the picker keeps its "loading..." placeholder forever when
+  // the call fails, which reads as a slow server rather than a broken one.
+  // /api/sources returned 502 for a whole session that way.
+  let r;
+  try{
+    r = await fetch(api("api/sources"),{cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    SOURCES = await r.json();
+  }catch(e){
+    $("sourcesel").innerHTML = "<option>unavailable</option>";
+    sourceBanner("Could not list recordings: "+esc(e.message)
+      + ". The server logged the reason.", true);
+    return;
+  }
   const sel=$("sourcesel"), keep=sel.value;
   sel.innerHTML="";
 
