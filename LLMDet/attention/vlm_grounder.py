@@ -221,7 +221,24 @@ class AsyncGrounder:
             return self._err
 
     def close(self):
+        """Stop the thread AND drop the model.
+
+        Setting the flag alone leaves `self._g` holding several GB of weights
+        that nothing will collect while this object is referenced. On a Space
+        with a 16 GB system-RAM budget that is the difference between switching
+        models and being killed for it.
+        """
         self._stop = True
+        try:
+            self._thread.join(timeout=2.0)
+        except Exception:                                    # noqa: BLE001
+            pass
+        g, self._g = self._g, None
+        release = getattr(g, "release", None)
+        if callable(release):
+            release()
+        with self._lock:
+            self._pending = self._result = None
 
 
 class LlavaOneVisionGrounder:
@@ -466,8 +483,12 @@ class QwenGrounder:
 
         td = getattr(torch, self.dtype)
         self._proc = AutoProcessor.from_pretrained(self.model_id)
+        # low_cpu_mem_usage streams the weights straight to the target device
+        # instead of materialising a full CPU copy first. On a 16 GB Space that
+        # copy is the peak, not the resident size.
         self._model = Loader.from_pretrained(
-            self.model_id, torch_dtype=td).to(self.device).eval()
+            self.model_id, torch_dtype=td,
+            low_cpu_mem_usage=True).to(self.device).eval()
 
         # Token id of each option letter. Resolved once, and checked: if a
         # letter does not map to a single token the logit read would be
@@ -484,6 +505,12 @@ class QwenGrounder:
             ids.append(enc[0])
         self._letter_ids = ids
 
+    def release(self) -> None:
+        """Drop the weights so the process gets the memory back."""
+        self._model = None
+        self._proc = None
+        self._letter_ids = None
+
     def score_students(self, frame_bgr: np.ndarray,
                        boxes: Sequence[Sequence[float]]) -> np.ndarray:
         import cv2
@@ -491,7 +518,7 @@ class QwenGrounder:
         from PIL import Image
 
         n = len(boxes)
-        scores = uniform_rows(n)
+        scores = uniform_rows(n, len(self.classes))
         if n == 0:
             return scores
         self._ensure()

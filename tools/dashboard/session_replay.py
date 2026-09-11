@@ -101,9 +101,48 @@ def calibration_path(variant_id: str) -> Path:
     return CALIBRATION_DIR / f"{base.replace('/', '__')}.json"
 
 
+#: One loaded VLM at a time, keyed by (model_id, classes). A Space has a system
+#: RAM limit (16 GB on a10g-small) and a VLM is ~4 GB of it, so loading a second
+#: without releasing the first is what killed the app with "Memory limit
+#: exceeded" on the first switch between two `+vlm` entries. Switching is the
+#: dashboard's main interaction, so this is not an edge case.
+_GROUNDER: "Optional[tuple]" = None          # (key, AsyncGrounder)
+
+
+def release_grounder() -> None:
+    """Drop the cached VLM and give the memory back.
+
+    Called before loading a different one and whenever a non-VLM model is
+    selected: the weights are useless then and they are the largest single
+    allocation in the process.
+    """
+    global _GROUNDER
+    if _GROUNDER is None:
+        return
+    key, g = _GROUNDER
+    _GROUNDER = None
+    try:
+        g.close()
+    except Exception:                                        # noqa: BLE001
+        pass
+    del g
+    import gc
+    gc.collect()
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception:                                        # noqa: BLE001
+        pass
+    print(f"[replay] released the VLM for {key[0]}", flush=True)
+
+
 def load_grounder(entry, device: str = "cpu"):
-    """The VLM for a `+vlm` entry, or None. Loaded lazily by the caller."""
+    """The VLM for a `+vlm` entry, or None. Loaded lazily, and at most one."""
     if not getattr(entry, "vlm", False):
+        # A plain model has no use for a loaded VLM, and holding it costs ~4 GB
+        # of a 16 GB budget for nothing.
+        release_grounder()
         return None
     from attention.vlm_grounder import (AsyncGrounder, LlavaOneVisionGrounder,
                                         QwenGrounder)
@@ -127,8 +166,17 @@ def load_grounder(entry, device: str = "cpu"):
     # opinion would not raise -- it would pair every cue with the wrong name.
     from attention.taxonomy import taxonomy_classes
     classes = taxonomy_classes(getattr(entry, "taxonomy", "cue6"))
-    return AsyncGrounder(QwenGrounder(model_id=entry.vlm_model_id,
-                                      device=device, classes=classes))
+
+    global _GROUNDER
+    key = (entry.vlm_model_id, tuple(classes), device)
+    if _GROUNDER is not None and _GROUNDER[0] == key:
+        print("[replay] reusing the loaded VLM", flush=True)
+        return _GROUNDER[1]
+    release_grounder()          # different model or class space: free first
+    g = AsyncGrounder(QwenGrounder(model_id=entry.vlm_model_id,
+                                   device=device, classes=classes))
+    _GROUNDER = (key, g)
+    return g
 
 
 class SessionCache:
