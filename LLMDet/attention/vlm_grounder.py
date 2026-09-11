@@ -226,6 +226,18 @@ class LlavaOneVisionGrounder:
 
     MODEL_DIR = "../huggingface/my_llava-onevision-qwen2-0.5b-ov-2"
 
+    def __init__(self, model_dir: Optional[str] = None,
+                 device: str = "cuda:0", dtype: str = "float16",
+                 max_students: int = 12):
+        self.model_dir = model_dir or self.MODEL_DIR
+        self.device = device
+        self.dtype = dtype
+        self.max_students = int(max_students)
+        self._model = None
+        self._tok = None
+        self._letter_ids: Optional[List[int]] = None
+        self._warned = False
+
     @staticmethod
     def available(model_dir: Optional[str] = None) -> "tuple[bool, str]":
         import os
@@ -238,20 +250,130 @@ class LlavaOneVisionGrounder:
             return False, f"vendored llava package not importable: {e}"
         return True, ""
 
+    def _ensure(self):
+        if self._model is not None:
+            return
+        import torch
+        import transformers
+        from llava.model.language_model.llava_qwen import LlavaQwenForCausalLM
+
+        ok, why = self.available(self.model_dir)
+        if not ok:
+            raise RuntimeError(f"{self.model_dir} is not loadable: {why}")
+
+        td = getattr(torch, self.dtype)
+        self._model = LlavaQwenForCausalLM.from_pretrained(
+            self.model_dir, torch_dtype=td).to(self.device).eval()
+        self._tok = transformers.AutoTokenizer.from_pretrained(self.model_dir)
+
+        # One token per option letter, checked. If a letter tokenises to more
+        # than one token the logit read would be measuring a prefix and every
+        # score after it would be wrong -- silently.
+        ids = []
+        for L in OPTION_LETTERS:
+            enc = self._tok.encode(L, add_special_tokens=False)
+            if len(enc) != 1:
+                raise RuntimeError(
+                    f"option letter {L!r} tokenises to {len(enc)} tokens under "
+                    f"{self.model_dir}; option-likelihood scoring needs one "
+                    f"token per letter.")
+            ids.append(enc[0])
+        self._letter_ids = ids
+
+    def score_students(self, frame_bgr: np.ndarray,
+                       boxes: Sequence[Sequence[float]]) -> np.ndarray:
+        """[n_boxes, NUM_CUES], rows summing to 1, in CUE_CLASSES order.
+
+        Text-only scoring over the crop is NOT what this does: the crop is
+        encoded by the SigLip tower and projected into the LM's embedding space
+        exactly as the model was trained to consume it, then the six option
+        letters are read off the logits at the answer position -- one forward
+        pass per student, no generation.
+
+        A student that cannot be scored gets a uniform row, so the fusion layer
+        sees "no opinion" rather than a confident wrong one.
+        """
+        import torch
+        n = len(boxes)
+        out = uniform_rows(n)
+        if n == 0:
+            return out
+        self._ensure()
+
+        crops = crop_students(frame_bgr, boxes)
+        # The prompt MUST carry the <image> token, and it must be tokenised by
+        # llava's own helper, which replaces it with IMAGE_TOKEN_INDEX (-200).
+        # A plain tokenizer call produces ids with no image slot, the `images`
+        # argument is then never spliced in, and the model answers from the text
+        # alone -- which returns the SAME distribution for every student. That
+        # identical-rows symptom is the only thing that distinguishes it from
+        # working, since the output is otherwise perfectly well-formed.
+        from llava.constants import DEFAULT_IMAGE_TOKEN
+        from llava.mm_utils import tokenizer_image_token
+        prompt = DEFAULT_IMAGE_TOKEN + "\n" + build_prompt()
+        ids = tokenizer_image_token(prompt, self._tok,
+                                    return_tensors="pt").unsqueeze(0).to(self.device)
+
+        with torch.no_grad():
+            for i, crop in enumerate(crops[:self.max_students]):
+                if crop is None or crop.size == 0:
+                    continue
+                try:
+                    px = self._pixels(crop)
+                    logits = self._model(input_ids=ids, images=px).logits
+                    last = logits[0, -1].float()
+                    sel = last[self._letter_ids]
+                    out[i] = torch.softmax(sel, dim=-1).cpu().numpy()
+                except Exception as e:                   # noqa: BLE001
+                    # One unscorable student must not cost the whole frame its
+                    # opinion; the row stays uniform. But a failure that hits
+                    # EVERY student is a broken backend, not a hard crop, and
+                    # swallowing it silently returns six uniform rows that look
+                    # like considered "no opinion" -- so the first one is
+                    # reported, once.
+                    if not self._warned:
+                        self._warned = True
+                        print(f"[vlm] scoring failed, rows stay uniform: "
+                              f"{type(e).__name__}: {e}", flush=True)
+                    continue
+        return out
+
+    def _pixels(self, crop_bgr: np.ndarray):
+        """Crop -> the vision tower's expected tensor."""
+        import torch
+        from PIL import Image
+        vt = self._model.get_model().get_vision_tower()
+        proc = vt.image_processor
+        img = Image.fromarray(crop_bgr[:, :, ::-1])
+        # `.preprocess`, not `__call__`: the vendored SigLipImageProcessor is
+        # not a transformers ImageProcessingMixin and defines only the former.
+        # Calling it raises "'SigLipImageProcessor' object is not callable".
+        px = (proc.preprocess(images=img, return_tensors="pt")["pixel_values"]
+              if hasattr(proc, "preprocess")
+              else proc(images=img, return_tensors="pt")["pixel_values"])
+        return px.to(self.device, dtype=getattr(torch, self.dtype))
+
 
 class QwenGrounder:
-    """Qwen3-VL scoring the six options in one forward pass per student.
+    """A Qwen VLM scoring the six options in one forward pass per student.
 
-    Defaults to Qwen3-VL-4B-Instruct: about 8 GB in fp16, which fits a T4
-    alongside the detector, and it is NOT the model that produced the training
-    labels (that was Qwen3.5-27B) -- which is the point.
+    Defaults to **Qwen2-VL-2B-Instruct**, not the 4B Qwen3-VL it was written
+    for. Qwen3-VL needs transformers >= 4.57; Qwen2-VL needs >= 4.45, and 4.45
+    is a far smaller step from the pinned 4.44.2 than 4.57 is. The pin exists to
+    protect mmcv's compiled `_ext` against torch 2.2.2, so the smallest bump
+    that unblocks the feature is the right one.
 
-    fp16 rather than bf16 because a T4 is Turing and has no bf16 units; asking
-    for bf16 there is silently emulated and slow.
+    2B rather than 4B is also the right size here: at ~4 GB in fp16 it leaves
+    room for the detector on a 24 GB card, and the cost of this call is
+    dominated by the vision tower and the prefill rather than by LM width.
+
+    Independence caveat, unchanged: the labels came from Qwen3.5-27B, so a Qwen
+    backbone is a cheaper opinion rather than an independent one. Report it as
+    an ensemble member.
     """
 
     def __init__(self,
-                 model_id: str = "Qwen/Qwen3-VL-4B-Instruct",
+                 model_id: str = "Qwen/Qwen2-VL-2B-Instruct",
                  device: str = "cuda:0",
                  dtype: str = "float16",
                  max_students: int = 12):
@@ -283,12 +405,24 @@ class QwenGrounder:
             import transformers
         except Exception as e:                               # noqa: BLE001
             return False, f"transformers not importable: {e}"
-        if not hasattr(transformers, "AutoModelForImageTextToText"):
+        v = transformers.__version__
+        # Two things are needed and they arrived in DIFFERENT releases, which is
+        # the trap: a loader class, and the Qwen2-VL architecture itself.
+        #
+        # `AutoModelForVision2Seq` has existed since long before 4.44, so its
+        # presence proves nothing. `AutoModelForImageTextToText` is NOT the test
+        # either -- it landed well after 4.45, and checking for it reported
+        # "unavailable" on a 4.45.2 install that could in fact load Qwen2-VL.
+        # The architecture class is the thing that actually gates this.
+        if not hasattr(transformers, "Qwen2VLForConditionalGeneration"):
             return False, (
-                f"transformers {transformers.__version__} has no "
-                f"AutoModelForImageTextToText (added in 4.45); Qwen3-VL cannot "
-                f"load. The pin is deliberate — bumping it risks mmcv's "
-                f"compiled _ext against torch 2.2.2.")
+                f"transformers {v} has no Qwen2VLForConditionalGeneration "
+                f"(added in 4.45); this backend cannot load. Bumping the pin "
+                f"risks mmcv's compiled _ext against torch 2.2.2, so this "
+                f"reports unavailable rather than upgrading in place.")
+        if not (hasattr(transformers, "AutoModelForImageTextToText")
+                or hasattr(transformers, "AutoModelForVision2Seq")):
+            return False, f"transformers {v} has no vision-to-text auto class"
         return True, ""
 
     def _ensure(self):
@@ -298,11 +432,17 @@ class QwenGrounder:
         if not ok:
             raise RuntimeError(f"{self.model_id} is not loadable here: {why}")
         import torch
-        from transformers import AutoModelForImageTextToText, AutoProcessor
+        import transformers
+        from transformers import AutoProcessor
+
+        # Prefer the newer auto class where it exists, fall back to the one that
+        # has been there for years. Both resolve Qwen2-VL from its config.
+        Loader = getattr(transformers, "AutoModelForImageTextToText", None) \
+            or transformers.AutoModelForVision2Seq
 
         td = getattr(torch, self.dtype)
         self._proc = AutoProcessor.from_pretrained(self.model_id)
-        self._model = AutoModelForImageTextToText.from_pretrained(
+        self._model = Loader.from_pretrained(
             self.model_id, torch_dtype=td).to(self.device).eval()
 
         # Token id of each option letter. Resolved once, and checked: if a

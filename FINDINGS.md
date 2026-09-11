@@ -4429,6 +4429,80 @@ properly.
 
 ---
 
+## 22. cue7 — merging reading and listening back into using_laptop (2026-09-11)
+
+Requested: fold `reading` and `listening` into `using_laptop`, leaving 7 classes.
+It is a **regrouping of the cue9 space**, not a new projection, so it needed no
+label build — the cue9 sidecar already carries the ids and `taxonomy_lut` merges
+them. Splitting `screen_oriented` needed the annotation record back; merging
+three of its parts needs only the three ids.
+
+240 epochs, 3 seeds, same root and hyperparameters as everything else in §18.
+
+| taxonomy | classes | macro-F1 | seed sd |
+|---|---|---|---|
+| `cue6` | 6 | 0.5200 | ± 0.0122 |
+| **`cue7`** | **7** | **0.4656** | **± 0.0061** |
+| `cue9` | 9 | 0.4612 | ± 0.0104 |
+
+### 22.1 A prediction of mine that was wrong
+
+`docs/LABELS.md` said cue7's macro-F1 "will be higher than cue9's" because 7
+classes is an easier average than 9. It is higher by **+0.0044 — less than half
+of one seed's standard deviation**, i.e. not distinguishable. The arithmetic
+effect is real in direction and negligible in size, and the caveat as written
+overstated it. Corrected there.
+
+The reason the effect cancels is visible in the per-class table: the merge
+replaces three mean-slots (0.337, 0.673, 0.682) with one high one (0.859), and
+one-seventh of 0.859 is worth almost exactly what three-ninths of those three
+were.
+
+### 22.2 The merge re-creates the problem cue9 was built to solve
+
+Best seed each, same budget:
+
+| class | cue7 | cue9 | |
+|---|---|---|---|
+| `using_laptop` | **0.859** | 0.682 | the merged class |
+| `phone_use` | **0.557** | 0.511 | |
+| `head_down` | **0.634** | 0.604 | |
+| `turned_to_peer` | 0.214 | 0.228 | |
+| `looking_away` | 0.265 | 0.287 | |
+| `uncertain` | 0.556 | 0.594 | |
+| **`writing_notes`** | **0.203** | **0.297** | **−0.094** |
+| *(merged away)* | — | `reading` 0.337, `listening` 0.673 | |
+
+The merged class reaches 0.859 and the two off-task classes nearest it improve.
+But **`writing_notes` falls from 0.297 to 0.203**, and that is the whole story
+of this taxonomy.
+
+Merging `reading` and `listening` into `using_laptop` makes it **~74% of the
+corpus** — almost exactly the 75.7% that `screen_oriented` held in cue6. §20.4
+measured what a class that size does: it becomes an attractor that absorbs its
+neighbours. `writing_notes` is 0.75% of the data and sits semantically closest
+to the merged class, so it is absorbed first, exactly as `phone_use` and
+`turned_to_peer` were absorbed by `screen_oriented`.
+
+So cue7 undoes, for the thin on-task class, precisely what cue9 was built to
+fix. That is not an argument against it — it is the trade being made, and it
+should be made knowingly:
+
+* **cue7 is better** if the on-task distinction you care about is
+  laptop-vs-not: 0.859 on a class covering three-quarters of the room, the
+  tightest seed spread of any taxonomy here (± 0.0061), and small gains on
+  `phone_use` and `head_down`.
+* **cue9 is better** if writing, reading and listening are meant to be
+  *distinguishable* — which was the stated reason for splitting
+  `screen_oriented` in the first place. It keeps `writing_notes` at 0.297 and
+  reports `listening` at 0.673 as its own class.
+
+They are the same model on the same features answering differently-shaped
+questions, and neither macro-F1 ranks them: 7 classes and 9 classes are not
+comparable averages, which is the rule this log keeps restating.
+
+---
+
 ## 10. Changelog
 
 **2026-08-08**

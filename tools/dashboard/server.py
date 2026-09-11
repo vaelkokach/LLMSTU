@@ -143,6 +143,15 @@ CUE6_POLICY = {
 }
 
 
+def _vlm_status():
+    """The registry's verdict on the VLM backend, or why it could not ask."""
+    try:
+        import model_registry as MR
+        return dict(MR.VLM_STATUS)
+    except Exception as e:                                   # noqa: BLE001
+        return {"available": False, "reason": f"{type(e).__name__}: {e}"}
+
+
 def active_policy(taxonomy="cue6"):
     """Off-task classes and alert dwells for the taxonomy now running.
 
@@ -317,6 +326,10 @@ class Handler(BaseHTTPRequestHandler):
                 # needs to know which kind of source is running to disable the
                 # right options instead of offering one that will be refused.
                 "source_kind": (CONTEXT.get("source") or {}).get("kind", ""),
+                # Why the VLM-assisted entry is or is not on the list. A model
+                # that is simply absent looks the same as one nobody tried to
+                # offer; this says which, and on what version.
+                "vlm_status": _vlm_status(),
             }))
         if path == "/api/sources":
             return self._send(200, json.dumps({

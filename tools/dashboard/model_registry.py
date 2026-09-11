@@ -531,8 +531,15 @@ def _mark_recommended(entries: List[ModelEntry]) -> None:
 #: Qwen3-VL-4B-Instruct is ~8 GB in fp16 and is deliberately NOT the 27B that
 #: produced the training labels — see the independence caveat in
 #: attention/vlm_grounder.py. It weakens the coupling; it does not remove it.
-VLM_MODEL_ID = "Qwen/Qwen3-VL-4B-Instruct"
+VLM_MODEL_ID = "Qwen/Qwen2-VL-2B-Instruct"
 VLM_POLICY = "agreement"
+
+#: Why the VLM entry is or is not offered, set by the last :func:`_vlm_entries`
+#: call and surfaced through /api/models. Without it a missing entry is
+#: indistinguishable from a registry that never tried, and the reason lives only
+#: in a log line on a host nobody can read.
+VLM_STATUS = {"available": False, "reason": "not checked yet",
+              "model_id": VLM_MODEL_ID, "transformers": ""}
 
 
 def _vlm_entries(entries: List[ModelEntry]) -> List[ModelEntry]:
@@ -558,15 +565,20 @@ def _vlm_entries(entries: List[ModelEntry]) -> List[ModelEntry]:
     # transformers >= 4.45 and this stack pins 4.44.2 deliberately (bumping it
     # risks mmcv's compiled _ext against torch 2.2.2). A dropdown entry that
     # raises on selection is worse than no entry.
+    tv = ""
     try:
         import sys
         sys.path.insert(0, str(REPO / "LLMDet"))
+        import transformers
+        tv = transformers.__version__
         from attention.vlm_grounder import QwenGrounder
         ok, why = QwenGrounder.available()
     except Exception as e:                                   # noqa: BLE001
         ok, why = False, f"{type(e).__name__}: {e}"
+    VLM_STATUS.update({"available": bool(ok), "reason": why or "available",
+                       "model_id": VLM_MODEL_ID, "transformers": tv})
     if not ok:
-        print(f"[registry] VLM entries not offered: {why}")
+        print(f"[registry] VLM entries not offered (transformers {tv}): {why}")
         return []
 
     out = []

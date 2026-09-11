@@ -321,9 +321,16 @@ Groupings:
   annotator filled. It restores `listening`'s 30.4% of the corpus to one class,
   making `using_laptop` the majority class again at ~74%.
 
-  **Its macro-F1 will be higher than cue9's for an arithmetic reason** — 7
-  classes is an easier average than 9 — not because the model improved. Same
-  comparability rule as everywhere else on this page.
+  **Measured (FINDINGS §22): 0.4656 ± 0.0061 against cue9's 0.4612 ± 0.0104.**
+  The "easier average" effect is real in direction and negligible in size —
+  +0.0044, under half a seed's standard deviation — because the merge replaces
+  three mean-slots with one high one and those nearly cancel.
+
+  What the merge *does* change is the shape: `using_laptop` becomes ~74% of the
+  corpus, almost exactly the 75.7% `screen_oriented` held in cue6, and it
+  behaves the same way — `writing_notes` falls 0.297 → 0.203 as the thin class
+  nearest the attractor. cue7 buys `using_laptop` 0.859 and the tightest seed
+  spread here; it costs the on-task detail cue9 was built to recover.
 * `cue9` — a **passthrough of Layer 2b**, not a regrouping of Layer 2. It is
   listed here only because `--taxonomy cue9` is how a run selects it; its
   `space` key is what tells the loader its ids index `CUE9_CLASSES`. Training or
