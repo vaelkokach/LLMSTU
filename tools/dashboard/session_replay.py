@@ -410,6 +410,12 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
                 print(f"[replay] VLM failed, continuing temporal-only: {err}",
                       flush=True)
                 vlm_reported = True
+            # Distinguish "the VLM has not loaded yet" from "the VLM looked and
+            # had nothing to add". Both show no fusion, and only one is a
+            # problem.
+            if not fused and not getattr(grounder, "ready", True):
+                for srec in students.values():
+                    srec["vlm_loading"] = True
             for tid, fs in fused.items():
                 srec = students.get(str(tid))
                 if srec is None:

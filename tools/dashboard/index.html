@@ -715,6 +715,20 @@ function banner(text, isError){
   b.innerHTML = text ? `<div class="banner${isError?" err":""}">${text}</div>` : "";
 }
 
+function vlmBanner(students){
+  // The VLM takes about a minute to load and the demo session is ~64 s of
+  // video, so on a first selection the replay can finish before the first
+  // opinion exists. Saying so beats showing an absent opinion as though the
+  // model had considered the frame and declined to answer.
+  const loading = Object.values(students||{}).some(s=>s.vlm_loading);
+  const el = document.getElementById("modelbanner");
+  if(loading && el && !el.innerHTML){
+    el.innerHTML = '<div class="banner">VLM still loading — cues are the '
+      + 'temporal model alone until it is ready. Re-select this model once it '
+      + 'has loaded to see the fused opinion.</div>';
+  }
+}
+
 function renderModelSpec(m, notice){
   const tb=document.getElementById("modelspec");
   if(!m || !m.variant_id){ tb.innerHTML=""; document.getElementById("modelpill").textContent=""; return; }
@@ -781,6 +795,7 @@ async function tick(){
   try{
     const r = await fetch(api("api/state"),{cache:"no-store"});
     const s = await r.json();
+    vlmBanner(s.students);
 
     document.getElementById("status").textContent = s.running ? "live" : "idle";
     document.getElementById("status").className = "pill" + (s.running?" live":"");

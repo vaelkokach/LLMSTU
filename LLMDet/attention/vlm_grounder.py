@@ -177,11 +177,27 @@ class AsyncGrounder:
         self._max_age = float(max_age_s)
         self._stop = False
         self._err = None
+        #: False until the backend's weights are resident. Surfaced so the UI
+        #: can say "loading" instead of showing an absent opinion as if the VLM
+        #: had considered the frame and declined to answer.
+        self._ready = False
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
 
     def _loop(self):
         import time
+        # Load the weights BEFORE the first job rather than on it. The load is
+        # ~60 s and the demo session is 64 s of video, so a lazy load means the
+        # replay ends before the first opinion exists and the feature looks
+        # broken on every first selection. Warming here overlaps the load with
+        # the replay instead of serialising after it.
+        try:
+            ensure = getattr(self._g, "_ensure", None)
+            if callable(ensure):
+                ensure()
+            self._ready = True
+        except Exception as e:                               # noqa: BLE001
+            self._err = f"{type(e).__name__}: {e}"
         while not self._stop:
             with self._lock:
                 job, self._pending = self._pending, None
@@ -214,6 +230,11 @@ class AsyncGrounder:
             if age > self._max_age:
                 return None
             return sc, tids, age
+
+    @property
+    def ready(self) -> bool:
+        """Have the weights finished loading?"""
+        return self._ready
 
     @property
     def error(self):
