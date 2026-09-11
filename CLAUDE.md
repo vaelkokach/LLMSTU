@@ -11,6 +11,9 @@ Classroom student-attention analysis for a master's thesis. Two halves:
 `FINDINGS.md` is the long-form experimental record and the source of truth for any
 number. `THESIS_DEFENSIBILITY_REVIEW.md` lists the open threats.
 `docs/EXPERIMENT_STATUS.md` is the current state and what is in flight.
+`docs/LABELS.md` is every label at every layer -- detector prompt, the
+10-field annotation schema, the six derived cues, the regrouped taxonomies
+-- and a test keeps it honest.
 
 ## Layout
 

@@ -1,5 +1,11 @@
 # Visible-cue taxonomy (Branch B)
 
+> **This is the Branch B design record, not the current inventory.** The
+> class table below still lists `idle_other` as a seventh class; it was
+> merged into `uncertain` on 2026-07-29 (see the last section). For the
+> current labels at every layer, read [`docs/LABELS.md`](../../docs/LABELS.md),
+> which is checked against the code by `attention/tests/test_labels_doc.py`.
+
 Single source of truth: `attention/taxonomy.py` (`CUE_CLASSES`, `map_record`).
 
 The pipeline classifies **visible attention cues**, not attention itself. The
