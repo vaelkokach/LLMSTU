@@ -68,6 +68,24 @@ LAYOUTS: Dict[str, Dict[str, Tuple[int, int]]] = {
         "hp_facefound": (555, 556),
         "head": (556, 1074),
     },
+    # Object presence, measured by a SECOND detector. The 6 dims are
+    # (score_contained, y_frac, score*y_frac) for `cell phone` and for `laptop`
+    # -- the three features that survived the matched-pair validation in
+    # FINDINGS 21.4, and only those. `rel_area` (AUROC 0.556) and `n_contained`
+    # (0.270, inverted -- it measures how busy the desk is) are deliberately
+    # absent: a feature that does not discriminate still costs a column and
+    # still invites a story.
+    #
+    # It extends v1074_head rather than v570 because the head stream is the
+    # best-performing feature set, and object presence is orthogonal to it.
+    "v1080_obj": {
+        "base": (0, 552),
+        "headpose": (552, 556),
+        "hp_angles": (552, 555),
+        "hp_facefound": (555, 556),
+        "head": (556, 1074),
+        "objects": (1074, 1080),
+    },
 }
 
 #: Backwards-compatible aliases; v570 is what every existing caller means.
@@ -93,11 +111,15 @@ FEATURE_CONFIGS: Dict[str, List[str]] = {
     # head stream (needs a v1074_head build)
     "1070_head": ["base", "head"],
     "1074_hp_head": ["base", "headpose", "head"],
+    # object presence (needs a v1080_obj build)
+    "562_obj": ["base", "headpose", "objects"],
+    "1080_hp_head_obj": ["base", "headpose", "head", "objects"],
 }
 
 #: Which layout each config must be sliced against.
 CONFIG_LAYOUT: Dict[str, str] = {
-    name: ("v1074_head" if "head" in blocks else "v570")
+    name: ("v1080_obj" if "objects" in blocks
+           else "v1074_head" if "head" in blocks else "v570")
     for name, blocks in FEATURE_CONFIGS.items()
 }
 
@@ -105,6 +127,7 @@ CONFIG_LAYOUT: Dict[str, str] = {
 LAYOUT_WIDTH: Dict[str, int] = {
     "v570": 570,
     "v1074_head": 1074,
+    "v1080_obj": 1080,
 }
 
 

@@ -296,18 +296,29 @@ version was confounded by unmatched sampling and a default-value artefact
 
 ### Remaining work for phone_use, in order
 
-1. Add a NAMED feature block to `thesis_eval/data.py` LAYOUTS — e.g. `v1080_obj`
-   = v1074_head + 6 object dims — following the existing layout discipline
-   (a width/layout mismatch must stay fatal by design).
-2. Extend `attention/features.py` with the object pass: the PRETRAINED
-   `mm_grounding_dino` swin-t, prompt `"cell phone. laptop."`, features
-   `score_contained`, `y_frac`, `score*y_frac` per object class.
-   **Do not use the fine-tuned detector — it ignores prompts (§21).**
-3. Rebuild sequences (~40 GPU-min of CLIP over 284k crops; the object pass adds
-   a second detector forward per frame).
-4. Retrain cue6 + cue9, 240 epochs x 3 seeds, in a NEW work_dirs tree.
+1. ~~Named feature block~~ **DONE**: `v1080_obj` in `thesis_eval/data.py` =
+   v1074_head + 6 object dims at columns [1074, 1080). Verified backward
+   compatible — `556_hp`, `553_facefound` and `1074_hp_head` all read identical
+   columns from a v1080 build, and a config reading `objects` is correctly
+   refused by v570/v1074_head builds. New configs: `562_obj`,
+   `1080_hp_head_obj`. 14 tests.
+2. ~~Object extractor~~ **DONE**: `attention/object_features.py`.
+   `ObjectDetector` wraps the PRETRAINED mm_grounding_dino swin-t (kept separate
+   from `detector_adapter`, whose student geometry filters would reject a phone
+   and whose checkpoint ignores prompts). `student_object_features` emits the
+   three validated features per object and deliberately omits `rel_area` and
+   `n_contained`. Sanity-checked: a low phone gives s*y 0.206, the same score at
+   head height gives 0.026.
+3. **NEXT — wire into `sequence_builder`** and rebuild sequences to
+   `../grounding_data/llmstu_sequences_obj`, layout `v1080_obj`. The object pass
+   is 2 extra detector forwards per FRAME (not per student), so cost is roughly
+   the existing detector pass x2 on top of the CLIP pass.
+4. Retrain cue6 + cue9 with `--feature-config 1080_hp_head_obj`, 240 epochs x 3
+   seeds, in a NEW work_dirs tree.
 5. Compare per-class against `epochs240`; the number that matters is `phone_use`
-   F1 against 0.541 (cue6) / 0.511 (cue9).
+   F1 against **0.541** (cue6 @240) / **0.511** (cue9 @240). AUROC 0.958 on the
+   feature predicts a real gain; if `phone_use` does not move, the feature is
+   fine and the TEMPORAL model is not using it, which is a different problem.
 
 Expected cost: ~1 h rebuild + ~2 h training on 3 GPUs.
 
