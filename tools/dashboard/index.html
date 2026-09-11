@@ -545,18 +545,43 @@ function optionLabel(m){
 /* Groups, in the order they are offered. The canonical 6-cue target comes
    first and is the only group the server will default to; the others are
    offered but can never win a ranking they are not in. */
+/* Groups are ordered by HOW THE LABEL SPACE TREATS `screen_oriented`, because
+   that is the substantive difference between these models — it is 75.7% of the
+   corpus and covers four visibly different behaviours.
+
+   Each group is also a COMPARABILITY group: macro-F1 is only comparable inside
+   one. That constraint is why "everything that still predicts screen_oriented"
+   is three groups rather than one — a 6-class model and a 3-class abstaining
+   model cannot be ranked against each other (docs/LABELS.md), so they are
+   listed adjacently and labelled rather than merged. */
 const MODEL_GROUPS = [
+  {key:"cue9",
+   test:m=>m.taxonomy==="cue9",
+   label:"◆ SPLIT — 9 classes: screen_oriented replaced by writing_notes / "
+        +"using_laptop / reading / listening"},
+
   {key:"canonical",
    test:m=>m.is_canonical,
-   label:"Six visible cues — the thesis target, ranked by validation macro-F1"},
-  {key:"coarse",
-   test:m=>!m.is_canonical && m.taxonomy!=="cue6",
-   label:"Coarser taxonomies — a DIFFERENT, easier task: fewer classes and "
-        +"abstention. Not comparable to the six-cue numbers above"},
+   label:"▸ Still predicts screen_oriented — 6 cue classes, the thesis target"},
   {key:"alttarget",
    test:m=>!m.is_canonical && m.taxonomy==="cue6",
-   label:"Same six cues, different training target (cue ruleset v2 / "
-        +"partial labels) — comparable to each other, not to the group above"},
+   label:"▸ Still predicts screen_oriented — 6 classes, different training "
+        +"target (cue ruleset v2 / partial labels). Comparable to each other, "
+        +"not to the group above"},
+  {key:"coarse3",
+   test:m=>m.taxonomy==="coarse3_reliable",
+   label:"▸ Still predicts screen_oriented — 3 classes, abstains on the two "
+        +"gaze-ambiguous cues. A different, easier task"},
+
+  {key:"onoff",
+   test:m=>m.taxonomy==="onoff"||m.taxonomy==="onoff_reliable",
+   label:"▹ screen_oriented RENAMED, not removed — 2 classes, on_task is "
+        +"exactly {screen_oriented}. A different, easier task"},
+
+  {key:"other",
+   test:m=>!["cue9","cue6","coarse3_reliable","onoff","onoff_reliable"]
+            .includes(m.taxonomy),
+   label:"Other taxonomies"},
 ];
 
 async function loadModels(){
@@ -598,7 +623,12 @@ async function loadModels(){
 
   if(dead.length){
     const g2=document.createElement("optgroup");
-    g2.label="Trained but not deployable in a streaming path";
+    // These read feature blocks no live path can produce: `express` needs a
+    // second per-crop FER model, `dynamic` is a whole-track statistic. They stay
+    // listed, disabled, with the reason on hover — hiding them would make the
+    // feature ablation look smaller than it was.
+    g2.label="✕ Trained but not runnable live — needs facial-expression or "
+            +"whole-track motion features the streaming path cannot produce";
     dead.forEach(m=>{
       const o=document.createElement("option");
       o.value=m.variant_id; o.disabled=true;
@@ -618,7 +648,8 @@ async function loadModels(){
     "Each entry is the <strong>best validation seed</strong> of its variant; " +
     "the test column is shown but never ranks anything. Models are grouped by " +
     "what they were <strong>asked to predict</strong> — macro-F1 is only " +
-    "comparable inside a group.";
+    "comparable inside a group, so a 2-class score and a 9-class score on this " +
+    "list are answers to different questions.";
 }
 
 document.getElementById("modelsel").addEventListener("change", async (ev)=>{
