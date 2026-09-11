@@ -54,7 +54,20 @@ numbers above are unaffected. The fix is kept because it is correct and the next
 gold set may not be so lucky; the report records the no-op rather than implying
 a correction happened.
 
-## 3. Inter-annotator agreement is NOT resolved by this set
+## 3. Inter-annotator agreement — RESOLVED 2026-09-11 (FINDINGS §19)
+
+A shared 250-crop subset (`tools/gold_annotator/gold_candidates_iaa.jsonl`) was
+labelled independently by a second annotator: κ **0.800** mean over the ten
+fields, **0.711** on the derived cue class, n = 250. Threat C is closed.
+
+That pass also showed the ceiling in §1 is **annotator-dependent**. On the same
+250 crops it is **0.6880** against the second annotator and **0.8516** against
+wael; sampling explains −0.013 of the gap, the annotator −0.164. Quote the
+ceiling as a bracket, **0.69–0.85**, and prefer the annotator-independent
+human–human agreement. Raw numbers: `inter_annotator_agreement.json`,
+`label_ceiling_second_annotator.json`, `label_ceiling_wael_iaa250.json`.
+
+### The original finding, kept because it explains why the subset was needed
 
 `THESIS_DEFENSIBILITY_REVIEW.md` threat C is single-annotator labelling. This
 gold set does not close it.

@@ -3889,7 +3889,7 @@ direction the rule repair predicts. The v2 *training* intervention failed
 independent set of human labels. This is also the evidence behind cue9's
 `head_down` rule (§15.2).
 
-### 17.2 Threat C is NOT closed by this set
+### 17.2 Threat C is not closed by this set — **closed separately, see §19**
 
 ```
 Admin gold : 984 unique crops
@@ -3902,10 +3902,14 @@ annotate **essentially disjoint samples**. `compute_agreement.py` returns
 κ = 1.000 over n = 2, which measures nothing.
 
 So this is a second, better, independent gold **sample** — not a second
-annotation of the first. No inter-annotator κ can be quoted from the pair, and
-`THESIS_DEFENSIBILITY_REVIEW.md` threat C stands. Closing it needs one annotator
-to re-annotate a shared subset of `gold_candidates.jsonl`, which both existing
-gold files already index; nothing in the pipeline has to change.
+annotation of the first. No inter-annotator κ can be quoted from the pair.
+
+**Done the same day (§19).** A shared 250-crop subset was drawn from
+`gold_candidates.jsonl` and labelled independently by a second annotator:
+κ 0.800 mean over the ten fields, 0.711 on the derived cue, n = 250. Threat C
+closes. §19 also shows that **the ceiling in §17.1 is annotator-dependent by
+~0.16 macro-F1**, so 0.8645 must be quoted as one end of a bracket rather than as
+the ceiling.
 
 ### 17.3 A measurement bug in the ceiling tool, which was a no-op here
 
@@ -4038,6 +4042,124 @@ reproducibility, confirmed rather than assumed.
   proves their *orderings* change — the effect is large but broadly similar
   across taxonomies — but their absolute values are floors, and the head-stream
   result (§EXPERIMENT_STATUS 2) has not been re-measured at 240.
+
+---
+
+## 19. Inter-annotator agreement — threat C closes, and the label ceiling turns out to be annotator-dependent (2026-09-11) ★★
+
+A second annotator labelled the 250-crop shared subset drawn by
+`make_iaa_manifest.py`. 250/250 completed, all `status: ok`, exact overlap with
+the first pass. Reports under `reports/gold_wael/`.
+
+### 19.1 The agreement, per field
+
+Cohen's kappa over 250 crops both annotators labelled:
+
+| field | kappa | agreement | |
+|---|---|---|---|
+| `laptop_visible` | 0.992 | 99.6% | almost perfect |
+| `occluded` | 0.955 | 98.0% | |
+| `phone_visible` | 0.934 | 98.4% | |
+| `hand_state` | 0.902 | 92.8% | |
+| `talking` | 0.861 | 96.8% | |
+| `posture` | 0.794 | 83.6% | substantial |
+| `gaze_direction` | 0.710 | 74.8% | |
+| `activity` | 0.677 | 71.2% | |
+| `attention_target` | 0.664 | 73.2% | |
+| `engagement_level` | **0.511** | 68.4% | moderate |
+
+**Mean kappa 0.800 over the 10 fields.** The ordering is the useful part: the
+four booleans and `hand_state` are near-perfect, and the four *interpretive*
+fields are the weak ones. `engagement_level` is the weakest at 0.511 — and it is
+also the field no cue rule reads except as an `unknown` test in the no-signal
+gate, so its weakness costs the cue labels almost nothing. The fields that ARE
+load-bearing sit at 0.66–0.71.
+
+### 19.2 On the derived cue label — the number the models are scored against
+
+| label space | kappa | raw agreement |
+|---|---|---|
+| `cue6` | **0.711** | **76.0%** |
+| `cue9` | **0.713** | 75.2% |
+
+Both "substantial" on the Landis–Koch scale. **Two people shown the same crop
+assign the same cue class 76% of the time.**
+
+cue9 does not degrade agreement despite having three more classes — but do not
+over-read that: the subset was stratified on *cue6* classes, so `screen_oriented`
+is 45 of 250 here against 76% of the corpus, and the four classes cue9 splits it
+into have n = 13/11/10/10. The cue9 kappa is dominated by the off-task classes,
+whose rules are identical in both taxonomies. It is evidence that the split does
+not *hurt* agreement, not that it is free.
+
+### 19.3 The label ceiling is a property of the ANNOTATOR, not just the labeller
+
+This is the finding that changes how §5 and §17 must be quoted.
+
+Running the same ceiling measurement against the second annotator gives **0.6880**
+macro-F1, against **0.8645** for the first. The obvious confound is the sample —
+wael's 1,000 crops are unstratified, the subset's 250 are stratified to balance
+rare classes, and stratification alone would depress a ceiling. So it was
+controlled: wael's labels restricted to **exactly the same 250 crops**.
+
+| gold set | n | ceiling (v1) | field-exact on all 10 |
+|---|---|---|---|
+| wael, all | 1,000 | 0.8645 | 73.9% |
+| **wael, the IAA 250** | 250 | **0.8516** | 75.2% |
+| **second annotator, the same 250** | 250 | **0.6880** | 47.6% |
+
+**Sampling accounts for −0.013. The annotator accounts for −0.164.**
+
+The mechanism is the annotation UI: it **pre-fills the pseudo-label**, and the
+two annotators deferred to it at very different rates — wael kept the pre-filled
+value on 73.9% of crops (all 10 fields exact), the second annotator on 47.6%.
+Per field, the drop tracks subjectivity exactly:
+
+| field | wael | 2nd | Δ |
+|---|---|---|---|
+| `engagement_level` | 91.8% | 65.6% | **−26.2** |
+| `attention_target` | 89.3% | 70.0% | −19.3 |
+| `gaze_direction` | 86.9% | 68.0% | −18.9 |
+| `activity` | 75.8% | 60.4% | −15.4 |
+| `posture` | 97.1% | 82.8% | −14.3 |
+| `hand_state` | 95.1% | 88.8% | −6.3 |
+| `talking` | 99.0% | 96.4% | −2.6 |
+| `phone_visible` | 99.3% | 97.6% | −1.7 |
+| `occluded` | 99.8% | 98.4% | −1.4 |
+| `laptop_visible` | 99.8% | 100.0% | +0.2 |
+
+The objective booleans barely move; the interpretive fields collapse. That is the
+signature of anchoring, not of one annotator being wrong.
+
+**So "the label ceiling is 0.8645" is not a property of Qwen3.5-27B. It is a
+property of (the pseudo-labeller + how much that annotator deferred to its
+pre-filled answer).** `measure_ceiling.py` has always carried the caveat that
+pre-filling makes the ceiling optimistic; this measures how optimistic: **about
+0.16 macro-F1.**
+
+Quote it as a **bracket, not a number**: the ceiling is between **0.69 and 0.85**
+depending on annotator, and the annotator-independent quantity is the
+human–human agreement in §19.2 — kappa 0.711, 76.0%.
+
+### 19.4 What this does to the model numbers
+
+Nothing, directly — no model result changes. What changes is the denominator
+they are read against. The best cue6 model is 0.5200 ± 0.0122 (§18) against
+pseudo-labels that two humans only agree with each other about 76% of the time.
+The headroom to "the ceiling" is therefore smaller and much less certain than
+0.4838-against-0.8645 made it look, and any claim of the form "the model reaches
+X% of what is achievable" needs the bracket, not the single number.
+
+### 19.5 Threat C
+
+`THESIS_DEFENSIBILITY_REVIEW.md` threat C — single annotator, no agreement
+measurement — **is closed**: kappa 0.800 mean over fields, 0.711 on the derived
+cue, n = 250, two annotators, same crops, independent passes.
+
+It closes with one caveat, and it is the same one as everywhere else here: both
+passes saw the same pre-filled values, so 0.711 is an **upper bound** on
+independent agreement. `make_iaa_manifest.py --blind` would bound it from below
+and has not been run.
 
 ---
 

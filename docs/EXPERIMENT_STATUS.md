@@ -168,7 +168,11 @@ v2 remains ahead model-free.
 ### Open threats (`THESIS_DEFENSIBILITY_REVIEW.md`)
 
 * **A — ethics**: consent obtained per the author, but no document in the repo.
-* **C — single annotator**: no inter-annotator agreement for LLMSTU.
+* ~~**C — single annotator**~~: **closed 2026-09-11.** Second annotator on a
+  250-crop shared subset: κ 0.800 mean over fields, **0.711 on the derived cue**
+  (76.0% agreement). It also showed the label ceiling is annotator-dependent —
+  0.8516 vs 0.6880 on the *same* crops — so quote it as a bracket 0.69–0.85
+  rather than as 0.8645 (FINDINGS §19).
 * **D — pseudo-label provenance**: partly resolved. `llmstu/config.py:47` names
   `Qwen/Qwen3.5-27B`, which **does exist** on the Hub; the ambiguity is in the prose,
   not the config.

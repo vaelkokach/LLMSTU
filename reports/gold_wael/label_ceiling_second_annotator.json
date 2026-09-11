@@ -1,0 +1,286 @@
+{
+  "n_matched": 250,
+  "n_rejected": 0,
+  "reject_rate": 0.0,
+  "n_unmatched_human": 0,
+  "measured_field_join": {
+    "filled": {
+      "face_kpts": 250
+    },
+    "n_labels_changed": 0,
+    "transitions": {}
+  },
+  "all_fields_exact": 0.476,
+  "field_agreement": {
+    "activity": {
+      "agreement": 0.604,
+      "n": 250
+    },
+    "gaze_direction": {
+      "agreement": 0.68,
+      "n": 250
+    },
+    "attention_target": {
+      "agreement": 0.7,
+      "n": 250
+    },
+    "engagement_level": {
+      "agreement": 0.656,
+      "n": 250
+    },
+    "posture": {
+      "agreement": 0.828,
+      "n": 250
+    },
+    "hand_state": {
+      "agreement": 0.888,
+      "n": 250
+    },
+    "phone_visible": {
+      "agreement": 0.976,
+      "n": 250
+    },
+    "laptop_visible": {
+      "agreement": 1.0,
+      "n": 250
+    },
+    "talking": {
+      "agreement": 0.964,
+      "n": 250
+    },
+    "occluded": {
+      "agreement": 0.984,
+      "n": 250
+    }
+  },
+  "by_ruleset": {
+    "v1": {
+      "ruleset": "v1",
+      "n_items": 250,
+      "accuracy": 0.692,
+      "macro_f1": 0.6880119471186753,
+      "balanced_accuracy": 0.6925680209347306,
+      "macro_f1_bootstrap": {
+        "mean": 0.6848502697596984,
+        "ci95": [
+          0.6276128755089507,
+          0.7418865555375317
+        ]
+      },
+      "per_class": {
+        "screen_oriented": {
+          "precision": 0.6176470588235294,
+          "recall": 0.6885245901639344,
+          "f1": 0.6511627906976745,
+          "support_human": 61
+        },
+        "looking_away": {
+          "precision": 0.5333333333333333,
+          "recall": 0.6857142857142857,
+          "f1": 0.6,
+          "support_human": 35
+        },
+        "head_down": {
+          "precision": 0.7380952380952381,
+          "recall": 0.9393939393939394,
+          "f1": 0.8266666666666667,
+          "support_human": 33
+        },
+        "turned_to_peer": {
+          "precision": 0.8157894736842105,
+          "recall": 0.7560975609756098,
+          "f1": 0.7848101265822786,
+          "support_human": 41
+        },
+        "phone_use": {
+          "precision": 0.8857142857142857,
+          "recall": 0.6739130434782609,
+          "f1": 0.7654320987654321,
+          "support_human": 46
+        },
+        "uncertain": {
+          "precision": 0.6363636363636364,
+          "recall": 0.4117647058823529,
+          "f1": 0.5,
+          "support_human": 34
+        }
+      },
+      "confusion_matrix": [
+        [
+          42,
+          10,
+          0,
+          3,
+          1,
+          5
+        ],
+        [
+          3,
+          24,
+          3,
+          3,
+          1,
+          1
+        ],
+        [
+          0,
+          2,
+          31,
+          0,
+          0,
+          0
+        ],
+        [
+          3,
+          5,
+          0,
+          31,
+          0,
+          2
+        ],
+        [
+          8,
+          0,
+          6,
+          1,
+          31,
+          0
+        ],
+        [
+          12,
+          4,
+          2,
+          0,
+          2,
+          14
+        ]
+      ],
+      "class_order": [
+        "screen_oriented",
+        "looking_away",
+        "head_down",
+        "turned_to_peer",
+        "phone_use",
+        "uncertain"
+      ]
+    },
+    "v2": {
+      "ruleset": "v2",
+      "n_items": 250,
+      "accuracy": 0.704,
+      "macro_f1": 0.7007940460251479,
+      "balanced_accuracy": 0.7104966527792614,
+      "macro_f1_bootstrap": {
+        "mean": 0.6976171825029489,
+        "ci95": [
+          0.6388505135493817,
+          0.7540569668068609
+        ]
+      },
+      "per_class": {
+        "screen_oriented": {
+          "precision": 0.6527777777777778,
+          "recall": 0.6811594202898551,
+          "f1": 0.6666666666666667,
+          "support_human": 69
+        },
+        "looking_away": {
+          "precision": 0.4722222222222222,
+          "recall": 0.68,
+          "f1": 0.5573770491803278,
+          "support_human": 25
+        },
+        "head_down": {
+          "precision": 0.7380952380952381,
+          "recall": 0.9393939393939394,
+          "f1": 0.8266666666666667,
+          "support_human": 33
+        },
+        "turned_to_peer": {
+          "precision": 0.8157894736842105,
+          "recall": 0.775,
+          "f1": 0.7948717948717949,
+          "support_human": 40
+        },
+        "phone_use": {
+          "precision": 0.8857142857142857,
+          "recall": 0.6739130434782609,
+          "f1": 0.7654320987654321,
+          "support_human": 46
+        },
+        "uncertain": {
+          "precision": 0.7037037037037037,
+          "recall": 0.5135135135135135,
+          "f1": 0.59375,
+          "support_human": 37
+        }
+      },
+      "confusion_matrix": [
+        [
+          47,
+          11,
+          2,
+          3,
+          1,
+          5
+        ],
+        [
+          1,
+          17,
+          2,
+          3,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          31,
+          0,
+          0,
+          0
+        ],
+        [
+          3,
+          4,
+          0,
+          31,
+          0,
+          2
+        ],
+        [
+          8,
+          0,
+          6,
+          1,
+          31,
+          0
+        ],
+        [
+          12,
+          3,
+          1,
+          0,
+          2,
+          19
+        ]
+      ],
+      "class_order": [
+        "screen_oriented",
+        "looking_away",
+        "head_down",
+        "turned_to_peer",
+        "phone_use",
+        "uncertain"
+      ]
+    }
+  },
+  "human_file": "Gold_annotation_iaa/gold_annotations_Second_annotator.jsonl",
+  "pseudo_file": "grounding_data/llmstu_tools/outputs/gold_candidates.jsonl",
+  "caveats": [
+    "the annotation tool pre-fills pseudo-labels, so agreement is an optimistic estimate of pseudo-label accuracy",
+    "rejected crops are excluded, so the ceiling is conditional on the crop being readable",
+    "one annotator unless a second gold file is scored separately; run compute_agreement.py for kappa before quoting this as THE ceiling",
+    "face_kpts is joined from the pseudo manifest by file_name: the gold tool does not collect it, and without it the `uncertain` gate (occluded AND face_kpts <= 2) fires on the pseudo side only"
+  ]
+}

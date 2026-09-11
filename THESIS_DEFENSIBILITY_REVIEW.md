@@ -25,7 +25,7 @@ The corrected project contains enough technical depth for a master's thesis:
 - an instructor dashboard and measured deployment optimisations; and
 - a unusually valuable audit of silent experimental failures.
 
-The thesis is nevertheless exposed in four places: the repository does not preserve most raw HPC evidence, the human-gold event set is small and single-annotator, the exact pseudo-labelling model release is unknown, and no ethics/consent approval record is present. The first two weaken the empirical claims; the last may become an administrative blocker depending on institutional rules.
+The thesis is nevertheless exposed in four places: the repository does not preserve most raw HPC evidence, the human-gold event set is small and single-annotator *(closed 2026-09-11 — see C; a second annotator gives κ 0.800 over fields and 0.711 on the derived cue, and in doing so shows the label ceiling is annotator-dependent by ~0.16 macro-F1)*, the exact pseudo-labelling model release is unknown, and no ethics/consent approval record is present. The first two weaken the empirical claims; the last may become an administrative blocker depending on institutional rules.
 
 My practical judgement is:
 
@@ -112,11 +112,40 @@ The final register contains 207 metric entries, 134 marked citable. In this clon
 
 Without this bundle, the thesis can be defended as a documented completed project, but not independently reproduced from the submitted repository.
 
-### C. Single-annotator human gold
+### C. Single-annotator human gold — **CLOSED 2026-09-11**
 
 The raw dense bundle verifies 984 annotations, of which 754 are accepted and 230 rejected. The corrected event denominator is only 16 distinct episodes over ten tracks. No second-annotator file is present, despite the proposed design diagram and supervisor notes calling for two annotators.
 
 **Action:** if time permits, have a second person independently annotate 100–200 sampled frames or several complete tracks and report per-cue agreement/Cohen's kappa. If this cannot be done, state plainly that the human-gold set reflects one annotator's operational interpretation and use “diagnostic set,” not “ground truth” or “ceiling.”
+
+**Done, 2026-09-11 (FINDINGS §19).** A second annotator independently labelled a
+250-crop shared subset, stratified across the six cue classes — above the
+100–200 the action asked for. Results:
+
+| | |
+|---|---|
+| mean Cohen's κ, 10 annotation fields | **0.800** |
+| κ on the derived `cue6` class | **0.711** (76.0% raw agreement) |
+| κ on the derived `cue9` class | 0.713 (75.2%) |
+| strongest / weakest field | `laptop_visible` 0.992 / `engagement_level` 0.511 |
+
+Both derived-cue figures are "substantial" on Landis–Koch. `engagement_level` is
+the weakest field and is read by no cue rule except as an `unknown` test, so it
+costs the cue labels little.
+
+**But the second half of the action still stands, for a reason the measurement
+itself uncovered.** The same pass shows the "ceiling" is a property of the
+annotator, not only of the pseudo-labeller: on the *same 250 crops* it is 0.8516
+against the first annotator and **0.6880** against the second, and a control
+isolating the sample shows stratification explains only −0.013 of that gap while
+the annotator explains −0.164. The cause is that the annotation UI pre-fills the
+pseudo-label and the two annotators deferred to it at very different rates
+(73.9% vs 47.6% of crops kept entirely).
+
+So the review's fallback wording should be adopted anyway: quote the ceiling as
+a **bracket, 0.69–0.85**, prefer the annotator-independent human–human agreement
+(κ 0.711), and do not call any single figure "the ceiling". Both passes saw the
+same pre-fill, so even 0.711 is an upper bound on independent agreement.
 
 ### D. Pseudo-label provenance
 

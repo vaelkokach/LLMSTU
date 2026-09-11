@@ -1,0 +1,57 @@
+{
+  "n": 250,
+  "cue6": {
+    "kappa": 0.7111663104384496,
+    "agreement": 0.76
+  },
+  "cue9": {
+    "kappa": 0.71256374594344,
+    "agreement": 0.752
+  },
+  "fields": {
+    "activity": {
+      "kappa": 0.6768054009408554,
+      "agreement": 0.712
+    },
+    "gaze_direction": {
+      "kappa": 0.7104193862729596,
+      "agreement": 0.748
+    },
+    "attention_target": {
+      "kappa": 0.6641401989092075,
+      "agreement": 0.732
+    },
+    "engagement_level": {
+      "kappa": 0.510969147724459,
+      "agreement": 0.684
+    },
+    "posture": {
+      "kappa": 0.7942180285083316,
+      "agreement": 0.836
+    },
+    "hand_state": {
+      "kappa": 0.9018709930655504,
+      "agreement": 0.928
+    },
+    "phone_visible": {
+      "kappa": 0.9335901182095895,
+      "agreement": 0.984
+    },
+    "laptop_visible": {
+      "kappa": 0.9919897468760013,
+      "agreement": 0.996
+    },
+    "talking": {
+      "kappa": 0.8606660164414099,
+      "agreement": 0.968
+    },
+    "occluded": {
+      "kappa": 0.9550521395181589,
+      "agreement": 0.98
+    }
+  },
+  "prefill_kept": {
+    "wael": 0.739,
+    "second_annotator": 0.476
+  }
+}
