@@ -146,11 +146,18 @@ SWEEP_LABEL = {
     "wave2": "head stream + partial labels",
     "wave2b": "partial labels, reduction fixed",
     "cue9": "screen_oriented split into four on-task cues",
+    "cue9_probe": "cue9 convergence probe (single seed, not a reported result)",
+    "epochs240": "the full_det family re-run at 240 epochs (FINDINGS 15.4)",
 }
 
 #: The target every published number in FINDINGS.md is measured against. Only
 #: models trained on it may become the dashboard default.
 CANONICAL_GROUP = ("cue6", "v1", "single")
+
+#: Sweeps that exist to answer a question, not to produce a servable model. They
+#: are scanned and shown, but never chosen as the default: a single-seed probe
+#: is a measurement, and best-of-one is not a selection.
+PROBE_SWEEPS = {"cue9_probe"}
 
 
 def _rel(path: Path) -> str:
@@ -474,6 +481,8 @@ def scan(thesis_root: Path = THESIS) -> List[ModelEntry]:
         # which no session cache stores — defaulting to it would land every
         # visitor on a model that cannot re-decide the session in front of
         # them. It stays offered, and live analysis can select it.
+        if e.sweep in PROBE_SWEEPS:
+            continue
         if e.live_capable and e.replay_capable and e.is_canonical:
             e.is_default = True     # best canonical-target variant on validation
             break

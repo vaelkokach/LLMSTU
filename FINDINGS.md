@@ -3783,12 +3783,33 @@ sweep family selects at or near the boundary regardless of taxonomy.**
 
 cue9 was therefore left at 90 epochs — matching the protocol is what makes it
 comparable to the rest of the family — and a separate 240-epoch single-seed
-**convergence probe** is recorded under `work_dirs/thesis/cue9_probe/` to
-quantify what the budget costs. Every number in §15.3 should be read as a
-**floor**.
+**convergence probe** was run to quantify what the budget costs. Every number in
+§15.3 should be read as a **floor**.
+
+**The probe, seed 42, `work_dirs/thesis/cue9_probe/`:**
+
+| budget | selected epoch | val macro-F1 |
+|---|---|---|
+| 90 | 89 of 90 (99%) | 0.4267 |
+| **240** | **206 of 240 (86%)** | **0.4492** |
+
+**+0.0225 from the budget alone**, same seed, same data, same everything else.
+Two things the table says beyond the gain:
+
+* at 240 the selection rule finally has room — epoch 206 of 240, against 89 of
+  90. The 90-epoch runs were not selecting a peak, they were selecting the end
+  of the budget.
+* the best *raw* epoch was 203 at 0.4811, against the smoothed rule's 0.4492.
+  The ~0.03 gap is per-epoch validation noise, and it is why the 5-epoch
+  smoothed window exists; the smoothed number is the honest one.
 
 This is a finding about the protocol, and it applies to the published cue6
-numbers too.
+numbers too. **A 240-epoch re-run of the whole `full_det` family (cue6,
+onoff_reliable, coarse3_reliable, cue9 × 3 seeds) is in flight** under
+`work_dirs/thesis/epochs240/`, in a new tree so the 90-epoch checkpoints that
+this log and the model registry reference are not overwritten. It also gives the
+cue6 baseline **three seeds on `full_det` for the first time** — the `coarse/`
+sweep only ever ran s42, so its 0.4838 has no measured spread at all.
 
 ### 15.5 Plumbing
 
