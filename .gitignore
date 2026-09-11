@@ -94,3 +94,13 @@ outputs/branch_c/error_analysis/crops/
 # classroom recording. Untracked AND unignored is how that gets committed by
 # accident, so it is named explicitly.
 results_v2/
+
+# Transfer staging. These arrive as tarballs extracted at the repo root and are
+# 1.4 GB together; `git add -A` swept them into a commit once and the push died.
+# The repo already ignores the 5.9 GB bundle dirs (91d362b); this is the same
+# class, and .gitignore has bitten this repo three times now.
+/*.tgz
+/llmstu_*.tar.gz
+/gold_*.tar.gz
+/event_gold_bundle_part*.tar.gz
+/cue_rules_v2.tar.gz

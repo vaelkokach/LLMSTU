@@ -4375,6 +4375,58 @@ against the label showed the feature does not work, before a sequence rebuild
 That is the same discipline as §18's convergence probe, applied to a feature
 instead of a budget.
 
+### 21.3 The first attempt to fix it was confounded
+
+Tightening the geometry gave `y_frac` an AUROC of **0.994**, which is not a
+result, it is a bug: `y_frac` defaulted to `0.0` when nothing was detected, so it
+was encoding *"was anything found"* rather than *where*. `n_contained` came out
+**inverted** (4.27 detections around students with no phone against 2.46 around
+students with one), which is impossible if the only difference is this student's
+phone — and that was the tell.
+
+The cause was the sampling. Positives and negatives were drawn independently,
+one per source frame, from a file in corpus order, so the two groups came from
+**different frames and different rooms**. The measurement was comparing
+classrooms, not students.
+
+### 21.4 Matched pairs, and the feature works
+
+Re-run with both students drawn from the **same source frame** — one with
+`phone_visible`, one without — so room, camera, lighting and detector behaviour
+are identical and the only difference is the student. 250 pairs, un-occluded,
+`y_frac` now NaN rather than 0 when nothing is contained:
+
+| feature | AUROC | n | mean + | mean − |
+|---|---|---|---|---|
+| **`score × y_frac`** | **0.958** | 500 | 0.145 | 0.029 |
+| `y_frac` | 0.892 | 494 | 0.656 | 0.241 |
+| **`score_contained`** | **0.827** | 500 | 0.226 | 0.134 |
+| `rel_area` | 0.556 | 500 | 0.016 | 0.014 |
+| `n_contained` | 0.270 | 500 | 2.612 | 4.224 |
+
+**The signal is real, and it is physically sensible.** A phone belonging to the
+student sits **66% of the way down** their box — hands, desk height. The
+detector's false positives on students *without* phones cluster at **24%**, up at
+head and shoulder level. Score alone reaches 0.827; multiplying by height reaches
+0.958.
+
+`rel_area` carries nothing (0.556) and `n_contained` is inverted — counting
+detections measures how busy the desk is, not who is holding a phone. Both are
+excluded.
+
+This is the same measurement that failed in §21.2. What changed is the geometry
+(containment rather than a 15% pad, and vertical position) and the control
+(matched frames). **It now clears the 0.75 bar that was set before looking**, so
+a rebuild and retrain are warranted for `phone_use` — which is what the
+inter-annotator kappa of 0.934 on `phone_visible` predicted, since a label humans
+agree on that a model cannot predict is a feature problem by elimination.
+
+`laptop_visible` shows **no usable signal** on the unmatched test (every
+candidate ≤ 0.55 or inverted) and has not been re-run matched. Laptops are large,
+mostly open on desks, and present for students who are not using them, so
+presence is a weaker cue than for phones — expected, and not yet measured
+properly.
+
 ---
 
 ## 10. Changelog

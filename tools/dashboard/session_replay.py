@@ -90,7 +90,8 @@ def load_grounder(entry, device: str = "cpu"):
     """The VLM for a `+vlm` entry, or None. Loaded lazily by the caller."""
     if not getattr(entry, "vlm", False):
         return None
-    from attention.vlm_grounder import QwenGrounder, StubGrounder
+    from attention.vlm_grounder import (AsyncGrounder, LlavaOneVisionGrounder,
+                                        QwenGrounder)
     ok, why = QwenGrounder.available()
     if not ok:
         # Fail loudly at selection, not silently at the first frame, and do NOT
@@ -103,7 +104,11 @@ def load_grounder(entry, device: str = "cpu"):
             f"checkpoint without the second opinion.")
     print(f"[replay] VLM second opinion: {entry.vlm_model_id} on {device} "
           f"(policy {entry.vlm_policy}). Expect seconds per frame.")
-    return QwenGrounder(model_id=entry.vlm_model_id, device=device)
+    # Wrapped so the caller never blocks on it. A synchronous VLM cannot be
+    # live: ~0.2-0.5 s per student is 1.5-3 s for six, against a pipeline that
+    # manages 1-4 fps.
+    return AsyncGrounder(QwenGrounder(model_id=entry.vlm_model_id,
+                                      device=device))
 
 
 class SessionCache:
@@ -197,30 +202,42 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
     # per student. Both are strictly optional -- if the VLM is absent the run is
     # exactly the run without it, which is the property that lets the slow path
     # be opt-in rather than a fork of the pipeline.
-    fuse = None
+    submit = fuse_latest = None
     if grounder is not None:
         import cv2 as _cv2
         from attention.fusion import Policy, fuse_frame
         policy = Policy(getattr(entry, "vlm_policy", "agreement"))
-        def fuse(jpeg_bytes, rows, probs_by_track):
-            """-> {track_id: FusedStudent} or {} when the frame is unusable."""
+
+        def submit(jpeg_bytes, rows, t):
+            """Offer the newest frame to the VLM. Never blocks."""
             if jpeg_bytes is None or not rows:
-                return {}
+                return
             img = _cv2.imdecode(np.frombuffer(jpeg_bytes, np.uint8),
                                 _cv2.IMREAD_COLOR)
             if img is None:
-                return {}
+                return
             # Boxes are cached at full resolution; the JPEG is downscaled.
             sw = cache.meta.get("source_width")
             sc = img.shape[1] / float(sw) if sw else 1.0
-            boxes = [[v * sc for v in cache.bbox[r]] for r in rows]
-            tids = [int(cache.track_id[r]) for r in rows]
-            vlm = grounder.score_students(img, boxes)
-            return fuse_frame({t: probs_by_track[t] for t in tids
-                               if t in probs_by_track},
-                              {t: vlm[i] for i, t in enumerate(tids)
-                               if t in probs_by_track},
-                              policy=policy)
+            grounder.submit(img,
+                            [[v * sc for v in cache.bbox[r]] for r in rows],
+                            [int(cache.track_id[r]) for r in rows], t)
+
+        def fuse_latest(probs_by_track, t):
+            """Fuse against the most recent VLM opinion, whatever its age.
+
+            Returns ({track_id: FusedStudent}, age_seconds). A student the VLM
+            has not seen -- new track, or scored before it appeared -- is fused
+            temporal-only by fuse_frame rather than dropped, which is what lets
+            a slow opinion be useful instead of disruptive.
+            """
+            got = grounder.latest(t)
+            if got is None:
+                return {}, None
+            scores, tids, age = got
+            vlm = {tid: scores[i] for i, tid in enumerate(tids)
+                   if i < len(scores) and tid in probs_by_track}
+            return fuse_frame(probs_by_track, vlm, policy=policy), age
 
     inf = cache.meta.get("inference", {})
     win = int(inf.get("window_size", 32))
@@ -235,7 +252,7 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
     #: one opinion per second of source video.
     vlm_every = int(cache.meta.get("fps", 25.0))
     last_vlm_frame = -10 ** 9
-    vlm_cache: Dict[int, object] = {}
+    vlm_reported = False
     fps = cache.fps
     n_pushed = 0
     wall0 = time.time()
@@ -296,23 +313,31 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
         # opinions the previous one is carried, which is the same thing the
         # temporal stride already does for the model itself. A student the VLM
         # has never seen is fused temporal-only rather than dropped.
-        if fuse is not None and students:
+        if submit is not None and students:
+            # Offer work on a stride, and read whatever is ready EVERY frame.
+            # The two rates are independent on purpose: the VLM answers when it
+            # answers, and the display never waits for it.
             if frame - last_vlm_frame >= vlm_every:
                 last_vlm_frame = frame
-                try:
-                    vlm_cache = fuse(jpg, rows, probs_by_track)
-                except Exception as e:                       # noqa: BLE001
-                    # A VLM failure must degrade to the temporal model, not take
-                    # the run down: the fused entry is the same checkpoint plus
-                    # an opinion, and the checkpoint is still right without it.
-                    print(f"[replay] VLM failed on frame {frame}: "
-                          f"{type(e).__name__}: {e}", flush=True)
-                    vlm_cache, fuse = {}, None
-            for tid, fs in vlm_cache.items():
+                submit(jpg, rows, t)
+            fused, age = fuse_latest(probs_by_track, t)
+            err = grounder.error
+            if err and not vlm_reported:
+                # Degrade to the temporal model and say so once, rather than
+                # per frame: the fused entry is the same checkpoint plus an
+                # opinion, and the checkpoint is still right without it.
+                print(f"[replay] VLM failed, continuing temporal-only: {err}",
+                      flush=True)
+                vlm_reported = True
+            for tid, fs in fused.items():
                 srec = students.get(str(tid))
                 if srec is None:
                     continue
                 srec["fusion"] = fs.to_json()
+                # Staleness is REPORTED, never hidden. An opinion seconds old
+                # about a student who has since moved is worth showing and worth
+                # labelling; it is not worth passing off as current.
+                srec["fusion"]["age_s"] = None if age is None else round(age, 1)
                 if fs.cue:                  # the policy picked a label
                     srec["cue"] = fs.cue
                 srec["contested"] = bool(fs.contested)

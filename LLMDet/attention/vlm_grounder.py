@@ -128,6 +128,117 @@ class StubGrounder:
         return rows
 
 
+class AsyncGrounder:
+    """Runs any grounder on its own thread, and never makes a frame wait.
+
+    A VLM cannot be synchronous in a live path. Measured arithmetic: one
+    option-likelihood forward pass per student is ~0.2-0.5 s on an L4, so six
+    students is 1.5-3 s, against a pipeline that manages 1-4 fps. Calling
+    `score_students` inline would drop the frame rate by an order of magnitude
+    and the overlay would fall behind the room -- the exact failure `LatestFrame`
+    exists to prevent, reintroduced one layer up.
+
+    So the caller never blocks. `submit()` hands over the newest frame and
+    returns immediately; `latest()` returns the most recent completed scores, or
+    None before the first one lands. `fuse_frame` already treats a student with
+    no VLM row as temporal-only, so a stale or absent opinion degrades exactly
+    the way the data model was built for.
+
+    The staleness is REPORTED rather than hidden: `latest()` also returns the
+    age of the opinion, so a UI can say "VLM opinion 2.4 s old" instead of
+    implying it is current.
+    """
+
+    def __init__(self, grounder, max_age_s: float = 10.0):
+        import threading
+        self._g = grounder
+        self._lock = threading.Lock()
+        self._pending = None          # (frame, boxes, tids, t)
+        self._result = None           # (scores, tids, t)
+        self._max_age = float(max_age_s)
+        self._stop = False
+        self._err = None
+        self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._thread.start()
+
+    def _loop(self):
+        import time
+        while not self._stop:
+            with self._lock:
+                job, self._pending = self._pending, None
+            if job is None:
+                time.sleep(0.02)
+                continue
+            frame, boxes, tids, t = job
+            try:
+                sc = self._g.score_students(frame, boxes)
+                with self._lock:
+                    self._result = (sc, tids, t)
+            except Exception as e:                           # noqa: BLE001
+                with self._lock:
+                    self._err = f"{type(e).__name__}: {e}"
+
+    def submit(self, frame, boxes, tids, t):
+        """Offer work. Replaces any job not yet started -- newest wins."""
+        if not len(boxes):
+            return
+        with self._lock:
+            self._pending = (frame, list(boxes), list(tids), t)
+
+    def latest(self, now: float):
+        """(scores, track_ids, age_seconds) or None. Stale results expire."""
+        with self._lock:
+            if self._result is None:
+                return None
+            sc, tids, t = self._result
+            age = now - t
+            if age > self._max_age:
+                return None
+            return sc, tids, age
+
+    @property
+    def error(self):
+        with self._lock:
+            return self._err
+
+    def close(self):
+        self._stop = True
+
+
+class LlavaOneVisionGrounder:
+    """The 0.5B LLaVA-OneVision that already ships with the detector.
+
+    Chosen for one reason: it loads on THIS stack. The detector config names
+    `../huggingface/my_llava-onevision-qwen2-0.5b-ov-2` as its LMM, so the
+    weights are already on disk and already in the artifact repo -- and
+    `predict()` never reads them, so they are free to repurpose. At 0.5B it is
+    roughly 8x faster than a 4B, which is what makes an async second opinion
+    keep up with a live camera at all.
+
+    It is loaded through the VENDORED `llava` package rather than transformers,
+    which is why it works where `QwenGrounder` does not: it never touches
+    `AutoModelForImageTextToText`.
+
+    Independence caveat, unchanged and if anything stronger: this is a Qwen2
+    backbone, and the labels came from Qwen3.5-27B. It is a cheaper opinion, not
+    an independent one. Report it as an ensemble member.
+    """
+
+    MODEL_DIR = "../huggingface/my_llava-onevision-qwen2-0.5b-ov-2"
+
+    @staticmethod
+    def available(model_dir: Optional[str] = None) -> "tuple[bool, str]":
+        import os
+        d = model_dir or LlavaOneVisionGrounder.MODEL_DIR
+        if not os.path.isdir(d):
+            return False, f"{d} is not on disk"
+        try:
+            import llava            # noqa: F401
+        except Exception as e:      # noqa: BLE001
+            return False, f"vendored llava package not importable: {e}"
+        return True, ""
+
+
 class QwenGrounder:
     """Qwen3-VL scoring the six options in one forward pass per student.
 

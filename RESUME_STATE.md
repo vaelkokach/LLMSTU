@@ -246,3 +246,76 @@ it. The script to adapt is in this session's history; it samples 120 positive an
   t4-medium and must be re-measured before being quoted
 * all 29 live models + calibrations on HF; registry taxonomy-aware
 * threat C closed (kappa 0.800 / 0.711); label ceiling shown annotator-dependent
+
+
+---
+
+# Session 2 continuation — VLM made live-capable, phone feature validated
+
+## VLM: the speed problem is SOLVED (task 4)
+
+`AsyncGrounder` in `attention/vlm_grounder.py` runs any grounder on its own
+thread. `submit()` returns immediately and replaces unstarted work (newest
+wins); `latest()` returns the most recent opinion with its **age**, and expires
+anything older than `max_age_s`. `session_replay` submits on a stride and reads
+every frame.
+
+Measured with a deliberately slow stub (0.4 s per student, i.e. a realistic 4B
+VLM) over the 900-frame session:
+
+    21.8 fps end to end, 95% of student-frames fused,
+    opinion age median 2.9 s / max 4.4 s
+
+Synchronously the same workload is ~0.4 fps. **The pipeline is now decoupled
+from VLM speed entirely**, which is what "fast enough for live" required.
+8 tests in `attention/tests/test_async_grounder.py`.
+
+`LlavaOneVisionGrounder.available()` confirms the 0.5B LLaVA-OneVision already
+on disk is loadable (vendored `llava` package, no transformers dependency). Its
+`score_students` is NOT yet implemented — that is the remaining VLM work, and it
+is the path that avoids the transformers 4.44.2 pin entirely.
+
+## Phone feature: VALIDATED, retrain is justified (task 5)
+
+Matched-pair test (both students from the same frame) gives:
+
+    score x y_frac      AUROC 0.958
+    y_frac              AUROC 0.892
+    score_contained     AUROC 0.827
+    rel_area            0.556   (drop)
+    n_contained         0.270   (inverted, drop)
+
+Physically sensible: a real phone sits 66% down the student box, false positives
+cluster at 24% (head height).
+
+**Two earlier versions of this test were wrong and both were caught**, which is
+why the numbers above should be trusted more than a single run: the naive padded
+-centre feature gave 5.9 points of separation (§21.2), and the first tightened
+version was confounded by unmatched sampling and a default-value artefact
+(§21.3). The tell was `n_contained` coming out inverted.
+
+### Remaining work for phone_use, in order
+
+1. Add a NAMED feature block to `thesis_eval/data.py` LAYOUTS — e.g. `v1080_obj`
+   = v1074_head + 6 object dims — following the existing layout discipline
+   (a width/layout mismatch must stay fatal by design).
+2. Extend `attention/features.py` with the object pass: the PRETRAINED
+   `mm_grounding_dino` swin-t, prompt `"cell phone. laptop."`, features
+   `score_contained`, `y_frac`, `score*y_frac` per object class.
+   **Do not use the fine-tuned detector — it ignores prompts (§21).**
+3. Rebuild sequences (~40 GPU-min of CLIP over 284k crops; the object pass adds
+   a second detector forward per frame).
+4. Retrain cue6 + cue9, 240 epochs x 3 seeds, in a NEW work_dirs tree.
+5. Compare per-class against `epochs240`; the number that matters is `phone_use`
+   F1 against 0.541 (cue6) / 0.511 (cue9).
+
+Expected cost: ~1 h rebuild + ~2 h training on 3 GPUs.
+
+## Still open
+
+* FPS re-measure on l4x1 (the 1 fps / 125 s figures are t4-medium).
+* `turned_to_peer` — no validated intervention yet. It is partly label-limited
+  (humans ~81%, model 0.239) and neither head yaw (+0.021) nor 150 extra epochs
+  (+0.01) moved it. Do NOT retrain it speculatively.
+* `laptop_visible` — no signal on the unmatched test; re-run matched before
+  concluding.
