@@ -83,10 +83,10 @@ class FusedStudent:
         }
 
 
-def _as_probs(v: Sequence[float]) -> np.ndarray:
+def _as_probs(v: Sequence[float], k: int = NUM_CUES) -> np.ndarray:
     a = np.asarray(v, dtype=np.float64)
-    if a.shape != (NUM_CUES,):
-        raise ValueError(f"expected {NUM_CUES} cue scores, got {a.shape}")
+    if a.shape != (k,):
+        raise ValueError(f"expected {k} cue scores, got {a.shape}")
     if (a < 0).any():
         raise ValueError("cue scores must be non-negative probabilities")
     s = a.sum()
@@ -98,16 +98,24 @@ def _as_probs(v: Sequence[float]) -> np.ndarray:
 def fuse_student(temporal: Sequence[float],
                  vlm: Optional[Sequence[float]] = None,
                  policy: Policy = Policy.AGREEMENT,
-                 temporal_weight: float = 0.5) -> FusedStudent:
+                 temporal_weight: float = 0.5,
+                 classes: Optional[Sequence[str]] = None) -> FusedStudent:
     """Combine one student's two opinions.
 
-    ``temporal`` and ``vlm`` are probability vectors over CUE_CLASSES. ``vlm``
-    may be None -- the VLM is optional and slower, so the system must stay
-    correct without it rather than degrade to nothing.
+    ``temporal`` and ``vlm`` are probability vectors over ``classes``, which
+    defaults to the six cue classes. ``vlm`` may be None -- the VLM is optional
+    and slower, so the system must stay correct without it rather than degrade
+    to nothing.
+
+    ``classes`` must be the SAME list the grounder scored against. Both vectors
+    are indexed positionally, so a mismatch does not raise, it silently pairs
+    every cue with the wrong name.
     """
-    t = _as_probs(temporal)
+    cl = list(CUE_CLASSES if classes is None else classes)
+    k = len(cl)
+    t = _as_probs(temporal, k)
     t_id = int(t.argmax())
-    out = FusedStudent(temporal_cue=CUE_CLASSES[t_id], temporal_conf=float(t[t_id]),
+    out = FusedStudent(temporal_cue=cl[t_id], temporal_conf=float(t[t_id]),
                        policy=policy.value)
 
     if vlm is None:
@@ -115,9 +123,9 @@ def fuse_student(temporal: Sequence[float],
         out.note = "temporal only; no VLM opinion for this student"
         return out
 
-    v = _as_probs(vlm)
+    v = _as_probs(vlm, k)
     v_id = int(v.argmax())
-    out.vlm_cue = CUE_CLASSES[v_id]
+    out.vlm_cue = cl[v_id]
     out.vlm_conf = float(v[v_id])
     out.agree = t_id == v_id
 
@@ -151,7 +159,7 @@ def fuse_student(temporal: Sequence[float],
     f = f / f.sum()
     f_id = int(f.argmax())
     out.fused = [float(x) for x in f]
-    out.cue = CUE_CLASSES[f_id]
+    out.cue = cl[f_id]
     out.contested = not out.agree
     out.note = (f"{policy.value}: {out.cue}"
                 + ("" if out.agree else
@@ -162,7 +170,8 @@ def fuse_student(temporal: Sequence[float],
 def fuse_frame(temporal: Dict[int, Sequence[float]],
                vlm: Optional[Dict[int, Sequence[float]]] = None,
                policy: Policy = Policy.AGREEMENT,
-               temporal_weight: float = 0.5) -> Dict[int, FusedStudent]:
+               temporal_weight: float = 0.5,
+               classes: Optional[Sequence[str]] = None) -> Dict[int, FusedStudent]:
     """Fuse every tracked student in one frame, keyed by track id.
 
     A student present in ``temporal`` but missing from ``vlm`` is fused as
@@ -170,7 +179,7 @@ def fuse_frame(temporal: Dict[int, Sequence[float]],
     tracker, so gaps are normal and must not remove students from the display.
     """
     vlm = vlm or {}
-    return {tid: fuse_student(t, vlm.get(tid), policy, temporal_weight)
+    return {tid: fuse_student(t, vlm.get(tid), policy, temporal_weight, classes)
             for tid, t in temporal.items()}
 
 

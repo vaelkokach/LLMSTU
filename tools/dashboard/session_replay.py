@@ -50,17 +50,32 @@ CALIBRATION_DIR = (REPO / "LLMDet" / "work_dirs" / "thesis" / "runtime"
 #: honest default — an unrecognised class is one this overlay cannot interpret.
 CUE_COLOUR = {
     # cue6
-    "screen_oriented": (61, 220, 132),
-    "head_down": (86, 95, 255),
+    "screen_oriented": (61, 220, 132),      # green
+    "head_down": (86, 95, 255),             # red
     "phone_use": (86, 95, 255),
-    "looking_away": (84, 180, 255),
+    "looking_away": (84, 180, 255),         # amber
     "turned_to_peer": (84, 180, 255),
-    "uncertain": (160, 160, 160),
+    "uncertain": (160, 160, 160),           # grey
     # onoff / onoff_reliable
     "on_task": (61, 220, 132),
     "off_task": (86, 95, 255),
     # coarse3_reliable
     "down_or_hidden": (86, 95, 255),
+    # cue9 / cue7 -- the four classes screen_oriented was split into.
+    #
+    # These were missing, and the consequence was not cosmetic: they are ~74% of
+    # students, so nearly every box drew in the fallback grey, and grey is ALSO
+    # what an abstention draws as. "writing notes" and "the model is not sure"
+    # were the same colour on screen.
+    #
+    # All four are on-task, so they stay in the cool half of the palette, well
+    # away from the amber and red the off-task cues own. They are distinct from
+    # each other because the whole point of the split is that these are
+    # different behaviours.
+    "using_laptop": (61, 220, 132),         # green -- screen_oriented's heir
+    "reading": (180, 210, 90),              # teal
+    "listening": (220, 170, 70),            # blue
+    "writing_notes": (120, 235, 200),       # lime
 }
 
 #: Grey. Also what an abstention draws as, since `displayed_cue` is the
@@ -107,8 +122,13 @@ def load_grounder(entry, device: str = "cpu"):
     # Wrapped so the caller never blocks on it. A synchronous VLM cannot be
     # live: ~0.2-0.5 s per student is 1.5-3 s for six, against a pipeline that
     # manages 1-4 fps.
+    # The grounder must score the SAME label space the temporal model predicts.
+    # Both vectors are fused positionally, so handing a cue9 model a six-wide
+    # opinion would not raise -- it would pair every cue with the wrong name.
+    from attention.taxonomy import taxonomy_classes
+    classes = taxonomy_classes(getattr(entry, "taxonomy", "cue6"))
     return AsyncGrounder(QwenGrounder(model_id=entry.vlm_model_id,
-                                      device=device))
+                                      device=device, classes=classes))
 
 
 class SessionCache:
@@ -208,6 +228,8 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
         import cv2 as _cv2
         from attention.fusion import Policy, fuse_frame
         policy = Policy(getattr(entry, "vlm_policy", "agreement"))
+        from attention.taxonomy import taxonomy_classes as _tc
+        fuse_classes = _tc(getattr(entry, "taxonomy", "cue6"))
 
         def submit(jpeg_bytes, rows, t):
             """Offer the newest frame to the VLM. Never blocks."""
@@ -238,7 +260,8 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
             scores, tids, age = got
             vlm = {tid: scores[i] for i, tid in enumerate(tids)
                    if i < len(scores) and tid in probs_by_track}
-            return fuse_frame(probs_by_track, vlm, policy=policy), age
+            return fuse_frame(probs_by_track, vlm, policy=policy,
+                              classes=fuse_classes), age
 
     inf = cache.meta.get("inference", {})
     win = int(inf.get("window_size", 32))

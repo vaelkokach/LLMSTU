@@ -31,12 +31,33 @@ def peaked(cue: str, conf: float = 0.8) -> np.ndarray:
 
 def test_every_cue_has_a_phrase_and_order_follows_the_taxonomy():
     """Index i of the score vector must be class i, or every cue is paired
-    with the wrong phrase and nothing downstream notices."""
-    assert set(CUE_PHRASES) == set(CUE_CLASSES)
-    got = phrases_in_class_order()
-    assert len(got) == len(CUE_CLASSES)
-    for i, c in enumerate(CUE_CLASSES):
-        assert got[i] == CUE_PHRASES[c]
+    with the wrong phrase and nothing downstream notices.
+
+    The invariant now spans BOTH label spaces: cue9 splits `screen_oriented`
+    into four classes that each need their own phrase, and a phrase with no
+    class is dead weight that will eventually be pressed into service for the
+    wrong one.
+    """
+    from attention.taxonomy import LABEL_SPACES
+    every_class = {c for cl in LABEL_SPACES.values() for c in cl}
+    assert every_class <= set(CUE_PHRASES), (
+        f"classes with no phrase: {sorted(every_class - set(CUE_PHRASES))}")
+    assert set(CUE_PHRASES) <= every_class, (
+        f"phrases with no class: {sorted(set(CUE_PHRASES) - every_class)}")
+
+    for space, classes in LABEL_SPACES.items():
+        got = phrases_in_class_order(classes)
+        assert len(got) == len(classes), space
+        for i, c in enumerate(classes):
+            assert got[i] == CUE_PHRASES[c], f"{space}[{i}] is not {c}"
+
+
+def test_a_class_without_a_phrase_raises_rather_than_shortening_the_list():
+    """A gap would shift every option letter after it onto the wrong cue, and
+    the scores would be well-formed and wrong."""
+    import pytest as _pytest
+    with _pytest.raises(KeyError, match="no cue phrase"):
+        phrases_in_class_order(list(CUE_CLASSES) + ["not_a_cue"])
 
 
 def test_phrases_describe_behaviour_not_mental_state():

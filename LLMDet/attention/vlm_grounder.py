@@ -45,8 +45,24 @@ from .cue_phrases import phrases_in_class_order
 from .taxonomy import CUE_CLASSES
 
 NUM_CUES = len(CUE_CLASSES)
-#: Letters presented to the model, one per cue, in CUE_CLASSES order.
+#: Letters presented to the model, one per cue, in class order. The six-class
+#: list is the default; :func:`option_letters` builds one for any width.
 OPTION_LETTERS = [chr(ord("A") + i) for i in range(NUM_CUES)]
+
+
+def option_letters(n: int) -> List[str]:
+    """``n`` single-character option labels.
+
+    Capped at 26 deliberately: past Z the labels would need two characters, and
+    option-likelihood scoring reads ONE token at the answer position. A
+    two-character label would be measuring a prefix, and every score after it
+    would be quietly wrong rather than absent.
+    """
+    if not 1 <= n <= 26:
+        raise ValueError(
+            f"{n} options: option-likelihood scoring needs one single-character "
+            f"label per class, so it supports 1-26.")
+    return [chr(ord("A") + i) for i in range(n)]
 
 
 class Grounder(Protocol):
@@ -57,25 +73,28 @@ class Grounder(Protocol):
         ...
 
 
-def uniform_rows(n: int) -> np.ndarray:
-    """`n` rows of "no opinion" -- the honest output when scoring fails."""
-    return np.full((n, NUM_CUES), 1.0 / NUM_CUES, dtype=np.float32)
+def uniform_rows(n: int, k: int = NUM_CUES) -> np.ndarray:
+    """`n` rows of "no opinion" over `k` classes -- the honest output when
+    scoring fails."""
+    return np.full((n, k), 1.0 / k, dtype=np.float32)
 
 
-def build_prompt() -> str:
+def build_prompt(classes: Optional[Sequence[str]] = None) -> str:
     """The multiple-choice question, built from the phrase mapping.
 
     Mirrors the labelling pipeline's guard clause: judge the student in the
     centre of the crop, describe visible behaviour, never infer identity.
     """
+    cl = list(CUE_CLASSES if classes is None else classes)
+    letters = option_letters(len(cl))
     opts = "\n".join(f"{L}. {p}" for L, p in
-                     zip(OPTION_LETTERS, phrases_in_class_order()))
+                     zip(letters, phrases_in_class_order(cl)))
     return (
         "Look only at the student in the centre of this crop. Describe what is "
         "visible; do not guess identity, age, gender or ethnicity.\n\n"
         "Which ONE option best describes this student?\n"
         f"{opts}\n\n"
-        f"Answer with a single letter ({OPTION_LETTERS[0]}-{OPTION_LETTERS[-1]})."
+        f"Answer with a single letter ({letters[0]}-{letters[-1]})."
     )
 
 
@@ -376,7 +395,12 @@ class QwenGrounder:
                  model_id: str = "Qwen/Qwen2-VL-2B-Instruct",
                  device: str = "cuda:0",
                  dtype: str = "float16",
-                 max_students: int = 12):
+                 max_students: int = 12,
+                 classes: Optional[Sequence[str]] = None):
+        #: The label space this grounder scores. Defaults to the six cue
+        #: classes; a cue9 model needs its own nine, with their own phrases and
+        #: their own nine option letters.
+        self.classes = list(CUE_CLASSES if classes is None else classes)
         self.model_id = model_id
         self.device = device
         self.dtype = dtype
@@ -450,7 +474,7 @@ class QwenGrounder:
         # measuring a prefix, and every score after it would be wrong.
         tok = self._proc.tokenizer
         ids = []
-        for L in OPTION_LETTERS:
+        for L in option_letters(len(self.classes)):
             enc = tok.encode(L, add_special_tokens=False)
             if len(enc) != 1:
                 raise RuntimeError(

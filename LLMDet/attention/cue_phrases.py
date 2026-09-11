@@ -23,7 +23,7 @@ from a VLM that is unsure.
 
 from __future__ import annotations
 
-from typing import Dict, List
+from typing import Dict, List, Optional, Sequence
 
 from .taxonomy import CUE_CLASSES
 
@@ -53,18 +53,52 @@ CUE_PHRASES: Dict[str, str] = {
     "uncertain":
         "a student who is blocked from view, turned away, or too unclear to "
         "judge",
+
+    # --- cue9 / cue7: the four classes screen_oriented was split into -------
+    # Each is the same kind of sentence as the six above: what a person would
+    # SEE, never what the student is thinking. The four are deliberately
+    # contrastive -- a VLM asked to choose between them needs the difference
+    # spelled out, because "working at a desk" describes all four.
+    # activity == writing_notes
+    "writing_notes":
+        "a student writing or taking notes by hand, pen or pencil in hand, "
+        "looking down at paper",
+    # activity == using_laptop with a task-consistent target
+    "using_laptop":
+        "a student working at an open laptop or computer screen, hands at the "
+        "keyboard or trackpad",
+    # gaze in {laptop, own_desk}
+    "reading":
+        "a student reading from a book, sheet or screen on the desk in front "
+        "of them, hands not writing or typing",
+    # gaze == teacher_or_board
+    "listening":
+        "a student facing the teacher or the board at the front of the room, "
+        "attending to them rather than to their own desk",
 }
 
 
-def phrases_in_class_order() -> List[str]:
-    """Phrases ordered to match CUE_CLASSES, so index i is class i.
+def phrases_in_class_order(classes: "Optional[Sequence[str]]" = None) -> List[str]:
+    """Phrases ordered to match ``classes``, so index i is class i.
 
     The scorer returns a vector aligned with this order and the fusion layer
     indexes it by class id. A mismatch would silently pair every cue with the
-    wrong phrase, so the order is derived from CUE_CLASSES rather than from
+    wrong phrase, so the order is derived from the class list rather than from
     the literal above.
+
+    ``classes`` defaults to the six cue classes. Pass ``CUE9_CLASSES`` (or any
+    taxonomy's classes) to score a different label space; a class with no phrase
+    raises rather than being skipped, because a short option list would shift
+    every letter after it onto the wrong cue.
     """
-    return [CUE_PHRASES[c] for c in CUE_CLASSES]
+    cl = list(CUE_CLASSES if classes is None else classes)
+    missing = [c for c in cl if c not in CUE_PHRASES]
+    if missing:
+        raise KeyError(
+            f"no cue phrase for {missing}. Every class needs one: the options "
+            f"are presented as a lettered list and a gap would shift every "
+            f"letter after it onto the wrong cue.")
+    return [CUE_PHRASES[c] for c in cl]
 
 
 def describe_mapping() -> str:
