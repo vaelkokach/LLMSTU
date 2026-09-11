@@ -30,6 +30,17 @@ longer exist and omits ones that do.
     python tools/dashboard/artifact_manifest.py --emit artifacts_manifest.json
     python tools/dashboard/artifact_manifest.py --verify artifacts_manifest.json \
         --root /path/to/snapshot_of_the_artifact_repo
+
+When the Hub is reachable, ``--check-remote`` answers the question directly
+instead of via a carried manifest, and ``--push`` uploads whatever is missing as
+one commit:
+
+    python tools/dashboard/artifact_manifest.py --check-remote
+    HF_TOKEN=hf_...write python tools/dashboard/artifact_manifest.py --push
+
+``--push`` needs a **write** token. A read token fails with a 403 naming the
+preupload endpoint, which is easy to misread as a permissions problem with the
+repo rather than with the token.
 """
 from __future__ import annotations
 
@@ -195,6 +206,69 @@ def verify(man: dict, root: Path) -> int:
     return 1 if bad else 0
 
 
+def _remote_files(repo: str, token=None) -> set:
+    from huggingface_hub import HfApi
+    return set(HfApi().list_repo_files(repo, repo_type="model", token=token))
+
+
+def check_remote(man: dict, repo: str, token=None) -> tuple:
+    """(missing paths, {variant: what it is missing}) against the live repo.
+
+    The Space builds its registry from whatever is in this repo, so a model
+    whose files never landed is simply not offered — no error, no empty entry,
+    nothing that says it was expected. That is the failure this answers.
+    """
+    have = _remote_files(repo, token)
+    missing = [f["path"] for f in man["files"]
+               if f.get("present") and f["path"] not in have]
+    bad = {}
+    for m in man["models"]:
+        if not m.get("needed"):
+            continue
+        gaps = [k for k in ("checkpoint", "calibration") if m[k] not in have]
+        d = "/".join(m["checkpoint"].split("/")[:-2])
+        gaps += [e for e in ("run_record.json", "eval_val/metrics.json")
+                 if f"{d}/{e}" not in have]
+        if gaps:
+            bad[m["variant_id"]] = gaps
+    return missing, bad
+
+
+def report_remote(man: dict, repo: str, token=None) -> int:
+    missing, bad = check_remote(man, repo, token)
+    need = [m for m in man["models"] if m.get("needed")]
+    print(f"{repo}")
+    print(f"  live-capable models in this checkout : {len(need)}")
+    print(f"  models the Space CANNOT offer        : {len(bad)}")
+    if bad:
+        print()
+        for k, v in sorted(bad.items()):
+            print(f"    {k:44} missing {', '.join(v)}")
+    nbytes = sum(Path(REPO / p).stat().st_size for p in missing
+                 if (REPO / p).exists())
+    print(f"\n  {len(missing)} file(s) to upload, {nbytes / 1e6:.1f} MB")
+    return 1 if bad else 0
+
+
+def push(man: dict, repo: str, token=None, message=None) -> int:
+    """Upload everything the repo is missing, as one commit."""
+    from huggingface_hub import CommitOperationAdd, HfApi
+    missing, bad = check_remote(man, repo, token)
+    if not missing:
+        print("nothing to upload — the repo already has every file")
+        return 0
+    nbytes = sum((REPO / p).stat().st_size for p in missing)
+    print(f"uploading {len(missing)} files ({nbytes / 1e6:.1f} MB) to {repo}")
+    ops = [CommitOperationAdd(path_in_repo=p, path_or_fileobj=str(REPO / p))
+           for p in missing]
+    info = HfApi().create_commit(
+        repo_id=repo, repo_type="model", operations=ops, token=token,
+        commit_message=message or (
+            f"Add {len(bad)} model variant(s) the Space was missing"))
+    print("committed:", getattr(info, "oid", info))
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -204,10 +278,25 @@ def main() -> int:
                     help="copy of the artifact repo to verify (default: this repo)")
     ap.add_argument("--no-hashes", action="store_true",
                     help="sizes only; much faster over 564 MB of checkpoints")
+    ap.add_argument("--repo", default="WaelK/llmstu-dashboard-artifacts",
+                    help="the artifact repo --check-remote/--push talk to")
+    ap.add_argument("--check-remote", action="store_true",
+                    help="ask the Hub which models the Space is missing")
+    ap.add_argument("--push", action="store_true",
+                    help="upload the missing files as one commit (WRITE token)")
     args = ap.parse_args()
 
     if args.verify:
         return verify(json.loads(args.verify.read_text()), args.root)
+
+    if args.check_remote or args.push:
+        import os
+        token = (os.environ.get("HF_TOKEN")
+                 or os.environ.get("HUGGING_FACE_HUB_TOKEN") or None)
+        man = build(with_hashes=False)
+        if args.push:
+            return push(man, args.repo, token)
+        return report_remote(man, args.repo, token)
 
     man = build(with_hashes=not args.no_hashes)
     print(f"registry default : {man['registry_default']}")
