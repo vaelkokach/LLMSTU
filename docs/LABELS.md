@@ -287,8 +287,9 @@ Groupings:
 
 **Any number from an abstaining taxonomy must be quoted with its coverage, and
 macro-F1 over 2 or 3 classes is not comparable to macro-F1 over 6.**
-`onoff_reliable` reaches 0.768 at 91% coverage against `cue6`'s 0.479 at 100%;
-that is a different, easier task, not a better model.
+`onoff_reliable` reaches 0.8415 ± 0.0072 at 91% coverage against `cue6`'s
+0.5200 ± 0.0122 at 100% (both at 240 epochs, FINDINGS §18; 0.768 and 0.479 at the
+earlier 90-epoch budget). That is a different, easier task, not a better model.
 
 ---
 

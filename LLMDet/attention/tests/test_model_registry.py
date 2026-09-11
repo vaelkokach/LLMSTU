@@ -162,6 +162,41 @@ def test_best_in_group_never_crosses_targets(tmp_path):
     assert MR.best_in_group(entries, "no_such_taxonomy") is None
 
 
+def test_the_epoch_budget_is_not_part_of_the_target(tmp_path):
+    """A longer run is the SAME question asked of a better-trained model.
+
+    The 240-epoch family re-run (FINDINGS 15.4) puts a second cue6/556_hp variant
+    on disk. It must land in the canonical comparability group and rank against
+    the 90-epoch one on validation — the budget changes how well the model
+    answers, not what it was asked. Putting it in the key would split one
+    question into two and let a worse model keep the default by never being
+    compared to the better one.
+    """
+    _run(tmp_path, "coarse", "cue6_s42", macro_f1=0.4838)
+    _run(tmp_path, "epochs240", "mstcn_556_cue6_s42", macro_f1=0.5100)
+
+    entries = MR.scan(tmp_path)
+    assert {e.variant_id for e in entries} == {
+        "coarse/mstcn_556_hp", "epochs240/mstcn_556_hp"}
+    assert {e.comparable_group for e in entries} == {"cue6/v1/single"}
+    # the better-trained one wins the default, because they ARE comparable
+    assert MR.default_entry(entries).variant_id == "epochs240/mstcn_556_hp"
+
+
+def test_a_single_seed_probe_never_becomes_the_default(tmp_path):
+    """cue9_probe is one seed at a larger budget, run to measure what the budget
+    was costing. Best-of-one is a measurement, not a selection, so it is shown
+    and never chosen."""
+    _run(tmp_path, "coarse", "cue6_s42", macro_f1=0.4838)
+    _run(tmp_path, "cue9_probe", "probe_s42", macro_f1=0.9000)
+
+    entries = MR.scan(tmp_path)
+    assert MR.default_entry(entries).sweep == "coarse"
+    probe, = [e for e in entries if e.sweep == "cue9_probe"]
+    assert not probe.is_default
+    assert probe in entries, "a probe is still offered, just never defaulted to"
+
+
 @pytest.mark.skipif(not (REPO / "LLMDet" / "work_dirs" / "thesis").is_dir(),
                     reason="needs the real work_dirs tree")
 def test_the_real_tree_has_one_target_per_variant():

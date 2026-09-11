@@ -29,16 +29,41 @@ resolve it. Label-limited *and* resolution-limited; adding explicit head yaw
 
 ### Coarser taxonomies (`llmstu_sequences_full_det`, 556_hp)
 
+**Superseded by the 240-epoch re-run — see §2b.** Kept because every other
+number on this page is still at 90 epochs.
+
 | taxonomy | macro-F1 | coverage | note |
 |---|---|---|---|
 | `cue6` (matched baseline) | 0.479 ± 0.007 | 100% | |
 | **`onoff_reliable`** | **0.768 ± 0.016** | 91% | on_task 0.90, off_task 0.64 |
-| `coarse3_reliable` | 0.706 ± 0.055 | 91% | **too unstable to report** — sd 0.055, CIs span [0.46, 0.85] |
+| `coarse3_reliable` | 0.706 ± 0.055 | 91% | ~~too unstable to report~~ — the sd was the epoch budget (§2b) |
 
 `_reliable` abstains on `looking_away` and `turned_to_peer`. **0.768 over 2 classes at
 91% coverage is not comparable to 0.479 over 6 at 100%** — averaging over fewer classes
 is easier and abstention removes the hardest 9%. Report it as a different, better-posed
 task, not as an improvement to the model.
+
+### 2b. The same family at 240 epochs (2026-09-11) ★★
+
+Every run in the `full_det` family was selecting at or near epoch 89 of 90 with
+loss still falling, so the budget — not the taxonomy — was the binding
+constraint. Re-run at 240 epochs, three seeds each, everything else identical:
+
+| taxonomy | cls | cov | 90 epochs | **240 epochs** | Δ | seeds up |
+|---|---|---|---|---|---|---|
+| `cue6` | 6 | 100% | 0.4838 *(n=1)* | **0.5200 ± 0.0122** | +0.036 | 1/1 |
+| `onoff_reliable` | 2 | 91% | 0.7682 ± 0.0158 | **0.8415 ± 0.0072** | +0.073 | 3/3 |
+| `coarse3_reliable` | 3 | 91% | 0.7063 ± 0.0550 | **0.7597 ± 0.0136** | +0.053 | 3/3 |
+| `cue9` | 9 | 100% | 0.4299 ± 0.0140 | **0.4612 ± 0.0104** | +0.031 | 3/3 |
+
+10 of 10 measurable seed pairs improve. `coarse3_reliable`'s sd falls 4x and it
+is now reportable: s44 had converged by epoch 90 and s42/s43 had not, so the
+"instability" was three seeds sampled at three points on their learning curves.
+
+Two of twelve runs still select in the last 5% of 240, so these are floors too —
+quote them as *measured at 240 epochs*, not as converged. **Everything else on
+this page is still at 90 epochs and is therefore also a floor**, including the
+head-stream result below. FINDINGS §18.
 
 ### Head stream (`llmstu_sequences_head`, 1074_hp_head)
 
@@ -94,26 +119,29 @@ either way.)
 the split needs the annotation record, which `screen_oriented` has already
 discarded — so it has its own sidecar label build and no sequence rebuild.
 
-**macro-F1 0.4299 ± 0.0140** over 9 classes at 100% coverage, 3 seeds. Not
-comparable to cue6's 0.4838 over 6: averaging over more classes, one of them
-0.75% of the data, is a harder average.
+**macro-F1 0.4612 ± 0.0104** over 9 classes at 100% coverage, 3 seeds, at 240
+epochs (0.4299 ± 0.0140 at 90 — see §2b). Not comparable to cue6's 0.5200 over 6:
+averaging over more classes, one of them 0.75% of the data, is a harder average.
 
-| | F1 |
-|---|---|
-| `listening` | 0.694 |
-| `using_laptop` | 0.641 |
-| `head_down` | 0.630 |
-| `uncertain` | 0.594 (cue6: 0.477) |
-| `phone_use` | 0.452 (cue6: 0.538) |
-| `reading` | 0.365 |
-| `writing_notes` | 0.245 (414 val frames) |
-| `looking_away` | 0.215 (cue6: 0.248) |
-| `turned_to_peer` | 0.171 (cue6: 0.208) |
+Best seed at 240 epochs, against cue6 at the same budget:
 
-The split is learnable, `writing_notes` is thin but did not collapse, and the two
-known-bad classes are unchanged — their rules did not change, so that is the
-negative control. **Caveat: 90 epochs selects at the boundary for cue9 AND for
-the cue6 baseline, so all of these are floors** (FINDINGS §15.4).
+| | F1 | cue6 @240 |
+|---|---|---|
+| `using_laptop` | 0.682 | — |
+| `listening` | 0.673 | — |
+| `head_down` | 0.604 | 0.706 |
+| `uncertain` | 0.594 | 0.565 |
+| `phone_use` | 0.511 | 0.541 |
+| `reading` | 0.337 | — |
+| `writing_notes` | 0.297 (414 val frames) | — |
+| `looking_away` | **0.287** | 0.234 |
+| `turned_to_peer` | **0.228** | 0.217 |
+
+The split is learnable and `writing_notes` is thin but did not collapse. The
+notable row is `looking_away`: **better under cue9 than under cue6 at the same
+budget**, with a byte-identical rule. The difference is what was taken OUT of it
+— `gaze == down` moved to `head_down` — which is the `RULESET_V2_RATIONALE`
+diagnosis paying off in a trained model for the first time.
 
 ## 3c. Second gold set — ceiling replicates, threat C does not close
 
@@ -130,10 +158,11 @@ v2 remains ahead model-free.
 |---|---|
 | VLM fusion (`attention/fusion.py`, `vlm_grounder.py`) | built and tested, **not wired** into `pipeline_bridge` or the dashboard |
 | Live RTSP/HTTP source | server side done (`693ef37`); **browser-camera capture now shipped** (FINDINGS §16) |
-| cue9 convergence | 3 seeds at 90 epochs are a floor; 240-epoch probe under `work_dirs/thesis/cue9_probe/` |
+| ~~cue9 convergence~~ | done — the whole family re-run at 240 (§2b, FINDINGS §18) |
+| Re-running the OTHER sweeps at 240 | `arch/`, `ladder/`, `ff_det/`, `ff_bp/`, `headpose/`, `posefix/` and the head stream are all still 90-epoch floors |
 | cue9 on the coarse/test splits | unspent, like every other taxonomy |
 | Test split for the coarse taxonomies | unspent — the obvious next step for a reportable number |
-| `coarse3_reliable` instability | needs more seeds or dropping |
+| ~~`coarse3_reliable` instability~~ | answered: it was the epoch budget, not the taxonomy (§2b) |
 | Option-order sensitivity of the VLM scorer | unmeasured; permute and check before quoting any agreement rate |
 
 ### Open threats (`THESIS_DEFENSIBILITY_REVIEW.md`)

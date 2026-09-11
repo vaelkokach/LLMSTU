@@ -3804,12 +3804,10 @@ Two things the table says beyond the gain:
   smoothed window exists; the smoothed number is the honest one.
 
 This is a finding about the protocol, and it applies to the published cue6
-numbers too. **A 240-epoch re-run of the whole `full_det` family (cue6,
-onoff_reliable, coarse3_reliable, cue9 × 3 seeds) is in flight** under
-`work_dirs/thesis/epochs240/`, in a new tree so the 90-epoch checkpoints that
-this log and the model registry reference are not overwritten. It also gives the
-cue6 baseline **three seeds on `full_det` for the first time** — the `coarse/`
-sweep only ever ran s42, so its 0.4838 has no measured spread at all.
+numbers too. The whole `full_det` family was re-run at 240 epochs: **§18 has the
+result, and it supersedes every number in §15.3.** cue9 becomes
+0.4612 ± 0.0104, and `coarse3_reliable`'s "too unstable to report" sd of 0.055
+turns out to have been this budget rather than that taxonomy.
 
 ### 15.5 Plumbing
 
@@ -3933,6 +3931,113 @@ Field-exact on all 10 fields: 73.9%. `activity` is the weakest field at **75.8%*
 cue9 keys `writing_notes` and `using_laptop` on `activity`. **75.8% is therefore
 the honest ceiling on those two classes**, and it is the first thing to quote
 against `writing_notes` = 0.245.
+
+---
+
+## 18. The 90-epoch budget was the binding constraint on the whole family (2026-09-11) ★★
+
+§15.4 noticed that every run in the `full_det` family selected at or near the
+last epoch of 90 with loss still falling. The family was re-run at 240 epochs —
+cue6, onoff_reliable, coarse3_reliable and cue9, three seeds each, everything
+else identical, in a new tree (`work_dirs/thesis/epochs240/`) so the 90-epoch
+checkpoints this log references are untouched.
+
+**Every taxonomy improved, on every seed.**
+
+| taxonomy | cls | cov | 90 epochs | 240 epochs | Δ | seeds up |
+|---|---|---|---|---|---|---|
+| `cue6` | 6 | 1.000 | 0.4838 *(n=1)* | **0.5200 ± 0.0122** | +0.0362 | 1/1 |
+| `onoff_reliable` | 2 | 0.910 | 0.7682 ± 0.0158 | **0.8415 ± 0.0072** | +0.0733 | 3/3 |
+| `coarse3_reliable` | 3 | 0.910 | 0.7063 ± 0.0550 | **0.7597 ± 0.0136** | +0.0534 | 3/3 |
+| `cue9` | 9 | 1.000 | 0.4299 ± 0.0140 | **0.4612 ± 0.0104** | +0.0313 | 3/3 |
+
+10 of 10 measurable seed pairs improve. The cue6 row compares a 3-seed mean
+against a single seed, because the `coarse/` sweep only ever ran s42 — the
+like-for-like s42 comparison is 0.4838 → 0.5082, **+0.0244**. This re-run also
+gives cue6 **three seeds on `full_det` for the first time**.
+
+### 18.1 "Too unstable to report" was a budget artefact
+
+`docs/EXPERIMENT_STATUS.md` called `coarse3_reliable` **too unstable to report**
+— sd 0.055, CIs spanning [0.46, 0.85]. At 240 epochs its sd is **0.0136**, a 4x
+reduction, and the mechanism is visible per seed:
+
+| seed | @90 | @240 | Δ | selected epoch @90 |
+|---|---|---|---|---|
+| 42 | 0.6894 | 0.7663 | +0.077 | 89/90 |
+| 43 | 0.6617 | 0.7441 | +0.082 | 74/90 |
+| 44 | 0.7677 | 0.7687 | +0.001 | 89/90 |
+
+s44 had converged by 90; s42 and s43 had not. Stopping early did not add noise to
+a converged result — it **sampled three seeds at three different points on their
+learning curves**, and that spread was then read as seed instability. At 240 all
+three select at 95/100/89, comfortably inside the budget, and agree.
+
+The open item "`coarse3_reliable` instability — needs more seeds or dropping" is
+answered: neither. It needed epochs.
+
+### 18.2 Is 240 enough?
+
+Mostly, and not everywhere. Selected epochs:
+
+| taxonomy | @240 |
+|---|---|
+| `coarse3_reliable` | 95, 100, 89 — converged well inside |
+| `cue9` | 206, 201, 210 |
+| `cue6` | 196, 230, 168 |
+| `onoff_reliable` | 229, 190, 198 |
+
+`coarse3_reliable` genuinely converges. **Two of twelve runs still select in the
+last 5% of the budget** (cue6 s43 at 230, onoff_reliable s42 at 229), so 240 is
+adequate but not generous, and these numbers are a floor for a second time —
+smaller than the first, but a floor. Quote them as measured at 240 epochs rather
+than as converged.
+
+### 18.3 Where cue9's gain lands
+
+Best seed, 0.4452 → 0.4680, and the gain is concentrated in the tail:
+
+| class | @90 | @240 | Δ |
+|---|---|---|---|
+| `looking_away` | 0.215 | **0.287** | +0.073 |
+| `phone_use` | 0.452 | 0.511 | +0.059 |
+| `turned_to_peer` | 0.171 | **0.228** | +0.056 |
+| `writing_notes` | 0.245 | 0.297 | +0.052 |
+| `using_laptop` | 0.641 | 0.682 | +0.041 |
+| `reading` | 0.365 | 0.337 | −0.029 |
+| `head_down` | 0.630 | 0.604 | −0.025 |
+| `listening` | 0.694 | 0.673 | −0.021 |
+
+The four rare classes rise and the three common ones give a little back — the
+signature of the `sqrt`-inverse-frequency weighting finally getting the epochs it
+needs to pull the tail up. macro-F1 is an unweighted mean over classes, so that
+trade is a real gain in it.
+
+**`looking_away` and `turned_to_peer` are better under cue9 than under cue6 at
+the same budget**: 0.287 / 0.228 against cue6-@240's 0.234 / 0.217. Both rules are
+byte-identical between the two taxonomies, so the difference comes from what was
+taken OUT of `looking_away` — moving `gaze == down` to `head_down` (§15.2). That
+is the `RULESET_V2_RATIONALE` diagnosis paying off in a trained model for the
+first time; v2's own intervention never did.
+
+### 18.4 Training is exactly reproducible
+
+The §15.4 convergence probe and this family's `cue9` s42 are the same run under
+two names. Both selected **epoch 206 at 0.4492**, and their `run_record.json`
+specs differ only in `experiment_id` and `output_dir`. Seed-controlled
+reproducibility, confirmed rather than assumed.
+
+### 18.5 Consequences
+
+* `epochs240/mstcn_556_hp` (0.5326 best seed, 0.5200 ± 0.0122) is the **new
+  dashboard default** — best on the canonical target and replay-capable.
+* Every number in §15.3, and the `coarse/` rows in `EXPERIMENT_STATUS.md` §2, is
+  superseded by the table above.
+* **This applies to the rest of the sweeps too.** `arch/`, `ladder/`, `ff_det/`,
+  `ff_bp/`, `headpose/` and `posefix/` were all trained at 90 epochs. Nothing here
+  proves their *orderings* change — the effect is large but broadly similar
+  across taxonomies — but their absolute values are floors, and the head-stream
+  result (§EXPERIMENT_STATUS 2) has not been re-measured at 240.
 
 ---
 

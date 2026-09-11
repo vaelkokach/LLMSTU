@@ -1,9 +1,22 @@
 {
   "generated_by": "tools/dashboard/artifact_manifest.py",
-  "registry_default": "arch/asrf_556_hp",
-  "n_variants": 30,
-  "n_live_capable": 25,
+  "registry_default": "epochs240/mstcn_556_hp",
+  "n_variants": 34,
+  "n_live_capable": 29,
   "models": [
+    {
+      "variant_id": "epochs240/mstcn_556_hp",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.5325896022685875,
+      "comparable_group": "cue6/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/epochs240/mstcn_556_cue6_s43/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/epochs240__mstcn_556_hp.json",
+      "calibration_present": true
+    },
     {
       "variant_id": "wave2/mstcn_1074_hp_head",
       "needed": true,
@@ -226,6 +239,19 @@
       "calibration_present": true
     },
     {
+      "variant_id": "epochs240/mstcn_556_hp:coarse3_reliable",
+      "needed": true,
+      "taxonomy": "coarse3_reliable",
+      "n_classes": 3,
+      "coverage": 0.9102383963280408,
+      "val_macro_f1": 0.7686531574919728,
+      "comparable_group": "coarse3_reliable/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/epochs240/mstcn_556_coarse3_reliable_s44/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/epochs240__mstcn_556_hp:coarse3_reliable.json",
+      "calibration_present": true
+    },
+    {
       "variant_id": "coarse/mstcn_556_hp:coarse3_reliable",
       "needed": true,
       "taxonomy": "coarse3_reliable",
@@ -304,6 +330,19 @@
       "calibration_present": true
     },
     {
+      "variant_id": "epochs240/mstcn_556_hp:cue9",
+      "needed": true,
+      "taxonomy": "cue9",
+      "n_classes": 9,
+      "coverage": 1.0,
+      "val_macro_f1": 0.46802697362627754,
+      "comparable_group": "cue9/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/epochs240/mstcn_556_cue9_s44/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/epochs240__mstcn_556_hp:cue9.json",
+      "calibration_present": true
+    },
+    {
       "variant_id": "cue9/mstcn_556_hp:cue9",
       "needed": true,
       "taxonomy": "cue9",
@@ -314,6 +353,19 @@
       "replay_capable": true,
       "checkpoint": "LLMDet/work_dirs/thesis/cue9/mstcn_556_cue9_s43/checkpoints/best.pth",
       "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/cue9__mstcn_556_hp:cue9.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "epochs240/mstcn_556_hp:onoff_reliable",
+      "needed": true,
+      "taxonomy": "onoff_reliable",
+      "n_classes": 2,
+      "coverage": 0.9102383963280408,
+      "val_macro_f1": 0.8496197499246061,
+      "comparable_group": "onoff_reliable/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/epochs240/mstcn_556_onoff_reliable_s44/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/epochs240__mstcn_556_hp:onoff_reliable.json",
       "calibration_present": true
     },
     {
@@ -541,6 +593,78 @@
       "present": true,
       "bytes": 29669,
       "sha256": "4ed7b78aae6b2bce4a1c2b938e3f75d4b5d315676ed5ed3fee752b26268042f2"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/epochs240/mstcn_556_coarse3_reliable_s44/checkpoints/best.pth",
+      "present": true,
+      "bytes": 10877430,
+      "sha256": "81d8a2953d8e14feef05277100e29c3366cad1fbe66160fd9f188da565a022cc"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/epochs240/mstcn_556_coarse3_reliable_s44/eval_val/metrics.json",
+      "present": true,
+      "bytes": 9961,
+      "sha256": "f09495ad4e7bbb1bf1dea07253515258991d4970ed551966d34a3ca8c38616ac"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/epochs240/mstcn_556_coarse3_reliable_s44/run_record.json",
+      "present": true,
+      "bytes": 67340,
+      "sha256": "79a517725da0cc2e95144d754a3fb30da9dfd6271ae8f2f3754f131f9b5246da"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/epochs240/mstcn_556_cue6_s43/checkpoints/best.pth",
+      "present": true,
+      "bytes": 10888118,
+      "sha256": "07983aff26bd2156f8da54265934ae07c039c4f0a457cc58d6566c7cc2c55559"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/epochs240/mstcn_556_cue6_s43/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11600,
+      "sha256": "06d4ee85f73837e0ff348244178ab0db3c8fe074a6ab31018360f522f4d88fa2"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/epochs240/mstcn_556_cue6_s43/run_record.json",
+      "present": true,
+      "bytes": 67619,
+      "sha256": "064a0ae657779b826ff3c443aa63fbf613cb86debf423c9d5352b9552e18ad8a"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/epochs240/mstcn_556_cue9_s44/checkpoints/best.pth",
+      "present": true,
+      "bytes": 10898934,
+      "sha256": "c1bfbff4e2e9ca7cbfbdac293764a19b2544ac957c2ed2fe8f219d881db68673"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/epochs240/mstcn_556_cue9_s44/eval_val/metrics.json",
+      "present": true,
+      "bytes": 13064,
+      "sha256": "8ff57e547f80801fbb25969c77869e8877ec3a6d6c4aaf850095d43e52a8d8e1"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/epochs240/mstcn_556_cue9_s44/run_record.json",
+      "present": true,
+      "bytes": 67975,
+      "sha256": "92f75d0397c584c9f3785f74ed79bc28fd95395b5b3856f7b97df4b5014859b5"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/epochs240/mstcn_556_onoff_reliable_s44/checkpoints/best.pth",
+      "present": true,
+      "bytes": 10873846,
+      "sha256": "e42fee3103ef21249c51ad9a7d797c09d59ea4547bc4d3f1615c516a1358eebd"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/epochs240/mstcn_556_onoff_reliable_s44/eval_val/metrics.json",
+      "present": true,
+      "bytes": 9382,
+      "sha256": "55c5f4e49d438af368a5dc8ea5c5899a2f0c5888ab6d40a027e9c8bac10d878f"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/epochs240/mstcn_556_onoff_reliable_s44/run_record.json",
+      "present": true,
+      "bytes": 67248,
+      "sha256": "85a28767253f64b7543c251feee1f36c10c7d8bfc23b13eafe84f25f8944e3e3"
     },
     {
       "path": "LLMDet/work_dirs/thesis/ff_bp/mstcn_553_ff_s42/checkpoints/best.pth",
@@ -801,6 +925,30 @@
       "sha256": "3984106e0e803bff65f4308c1c5385a1476dc63d14e78eb45d21d5caac5fdbce"
     },
     {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/epochs240__mstcn_556_hp.json",
+      "present": true,
+      "bytes": 839,
+      "sha256": "bf4ea0ee7bb08c1af5622fae9640513b346741413e92df1c8f615c1ccf0bc51c"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/epochs240__mstcn_556_hp:coarse3_reliable.json",
+      "present": true,
+      "bytes": 832,
+      "sha256": "3b40003e9d48707c81c145e6f6f4521ad07adbe001ac591cb905be2dfec547b0"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/epochs240__mstcn_556_hp:cue9.json",
+      "present": true,
+      "bytes": 840,
+      "sha256": "59add239ac666a76d4a8949aaa3aa8f9d1d81194398be852beee699ddbf8c69c"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/epochs240__mstcn_556_hp:onoff_reliable.json",
+      "present": true,
+      "bytes": 832,
+      "sha256": "c71691694a599d3e5cde1a8ba87bcfe7cb86fdde7eb2b315942ef2a3d0381fe0"
+    },
+    {
       "path": "LLMDet/work_dirs/thesis/runtime/dashboard/ff_bp__mstcn_553_facefound.json",
       "present": true,
       "bytes": 833,
@@ -893,8 +1041,8 @@
     {
       "path": "LLMDet/work_dirs/thesis/runtime/model_registry.json",
       "present": true,
-      "bytes": 52918,
-      "sha256": "12572834da899783242300b1a86281696d910ebfbc606bfa4fb5bd172a01be47"
+      "bytes": 59819,
+      "sha256": "cb191e036364de2183d58287ce734c25f177b9af96f9cacf1ccd204884fde33a"
     },
     {
       "path": "LLMDet/work_dirs/thesis/wave2/mstcn_556_cue6_s43/checkpoints/best.pth",
