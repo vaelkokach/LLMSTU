@@ -207,7 +207,7 @@ class PushedFrames:
             self.last_push = time.time()
 
 
-def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
+def run_live(config_path, video, push_fn, blur_faces=False, max_frames=0,
              record=None, device=None, entry=None, should_stop=None,
              stats_fn=None, frame_source=None):
     """Detector -> tracker -> features -> temporal model over a live video.
@@ -371,7 +371,10 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
     t_stats = t_start
     print(f"[dashboard] source: {kind} {source!r}"
           + (" — frames are dropped to stay current" if live else ""))
-    while n < max_frames:
+    # max_frames <= 0 means no cap. A live camera has no natural end, so the run
+    # stops on should_stop(), on the source dying, or on the frame buffer going
+    # idle -- not on a frame count nobody chose.
+    while max_frames <= 0 or n < max_frames:
         # Lets the dashboard abandon a run mid-video when the user picks a
         # different model, instead of leaving two pipelines pushing frames.
         if should_stop is not None and should_stop():

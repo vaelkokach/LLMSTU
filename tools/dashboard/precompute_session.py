@@ -76,10 +76,17 @@ def _git_commit() -> str:
 
 
 def precompute(config_path: str, video: str, out_dir: str, device: str = "cpu",
-               max_frames: int = 900, jpeg_width: int = 960,
+               max_frames: int = 0, jpeg_width: int = 960,
                progress_every: int = 25, progress_fn=None,
                should_stop=None) -> Path:
     """Build a session cache for one video.
+
+    ``max_frames = 0`` means **the whole video**, and is the default. It used to
+    default to 900 — 36 seconds at 25 fps — so analysing a lecture silently
+    produced a cache of its first half-minute. Nothing said so: the session
+    replayed cleanly, just short. That is precisely the failure the abort path
+    below was written to prevent, arriving through the default instead of
+    through a cancel.
 
     ``progress_fn(dict)`` is called every ``progress_every`` frames so a caller
     with a UI can show how far along a multi-minute pass is. ``should_stop()``
@@ -165,7 +172,21 @@ def precompute(config_path: str, video: str, out_dir: str, device: str = "cpu",
         cap_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         # Only meaningful for a file; a stream reports 0 or garbage.
         n_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
-        n_target = min(max_frames, n_total) if n_total > 0 else max_frames
+        # max_frames <= 0 means "all of it". A stream reports n_total 0, so the
+        # target is simply unknown there and the progress fraction stays open.
+        if max_frames and max_frames > 0:
+            n_target = min(max_frames, n_total) if n_total > 0 else max_frames
+        else:
+            n_target = n_total
+        if n_total > 0:
+            mins = n_total / max(fps, 1e-9) / 60.0
+            print(f"[precompute] {n_total} frames ({mins:.1f} min at "
+                  f"{fps:.1f} fps); target {n_target or 'all'}", flush=True)
+            # One JPEG per processed frame, ~78 KB each, plus the feature rows.
+            if n_target > 5000:
+                print(f"[precompute] NOTE: {n_target} frames will write about "
+                      f"{n_target * 78 / 1e6:.1f} GB of cached JPEGs. Pass "
+                      f"--frames N to cap it.", flush=True)
 
         rows_frame, rows_track, rows_bbox = [], [], []
         rows_base, rows_lm, rows_det = [], [], []
@@ -173,7 +194,7 @@ def precompute(config_path: str, video: str, out_dir: str, device: str = "cpu",
         n = 0
         t0 = time.time()
         aborted = False
-        while n < max_frames:
+        while max_frames <= 0 or n < max_frames:
             if should_stop is not None and should_stop():
                 aborted = True
                 break
@@ -312,7 +333,8 @@ def main():
     ap.add_argument("--device", default="cpu",
                     help="cpu (default) or cuda:N. The dashboard is built to "
                          "run with no GPU at all.")
-    ap.add_argument("--frames", type=int, default=900)
+    ap.add_argument("--frames", type=int, default=0,
+                    help="0 (default) = the whole video; N caps it at N frames")
     ap.add_argument("--jpeg-width", type=int, default=960)
     args = ap.parse_args()
     precompute(args.config, args.video, args.out, args.device, args.frames,

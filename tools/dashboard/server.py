@@ -908,10 +908,11 @@ def main():
     ap.add_argument("--device", default="cpu", help="cpu (default) or cuda:N")
     ap.add_argument("--speed", type=float, default=1.0,
                     help="session replay speed multiplier (1.0 = source fps)")
-    ap.add_argument("--analyse-frames", type=int, default=900,
+    ap.add_argument("--analyse-frames", type=int, default=0,
                     help="frame cap when analysing an uploaded video")
     ap.add_argument("--blur-faces", action="store_true")
-    ap.add_argument("--max-frames", type=int, default=100000)
+    ap.add_argument("--max-frames", type=int, default=0,
+                    help="cap on a LIVE run; 0 (default) = no cap")
     ap.add_argument("--no-upload", action="store_true",
                     help="serve read-only: no file uploads accepted")
     args = ap.parse_args()

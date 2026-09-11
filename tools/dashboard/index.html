@@ -168,6 +168,10 @@
     <div class="card" id="modelcard">
       <h2>Model</h2>
       <select id="modelsel" disabled><option>loading…</option></select>
+      <label class="note" style="display:flex;gap:6px;align-items:center;margin:6px 0 0">
+        <input type="checkbox" id="showall"> show all trained variants
+        <span id="allcount"></span>
+      </label>
       <table class="spec"><tbody id="modelspec"></tbody></table>
       <div id="modelbanner"></div>
       <p class="note" id="modelnote"></p>
@@ -606,8 +610,18 @@ async function loadModels(){
     return;
   }
 
-  const live = MODELS.models.filter(m=>m.live_capable!==false);
-  const dead = MODELS.models.filter(m=>m.live_capable===false);
+  // Default view is the curated shortlist: the best model per taxonomy. The
+  // other ~30 are seeds of ablations whose conclusions are already written
+  // down, and showing them all buries the handful anyone would actually run.
+  // Nothing is deleted — the checkbox reveals them.
+  const showAll = $("showall").checked;
+  const pool = showAll ? MODELS.models
+                       : MODELS.models.filter(m=>m.recommended);
+  const live = pool.filter(m=>m.live_capable!==false);
+  const dead = pool.filter(m=>m.live_capable===false);
+  $("allcount").textContent =
+      showAll ? `(showing all ${MODELS.models.length})`
+              : `(showing ${pool.length} of ${MODELS.models.length})`;
   // On a cached session a model reading the head block cannot run: the cache
   // holds base + head pose only. Disable it here rather than let the switch
   // fail server-side.
@@ -623,6 +637,7 @@ async function loadModels(){
       o.value=m.variant_id;
       const blocked = onSession && m.replay_capable===false;
       o.textContent=optionLabel(m) + (blocked ? "  — needs live video" : "");
+      if(m.recommended_why) o.title = m.recommended_why;
       if(blocked){ o.disabled=true; o.title=m.blocked_reason; }
       og.appendChild(o);
     });
@@ -659,6 +674,8 @@ async function loadModels(){
     "comparable inside a group, so a 2-class score and a 9-class score on this " +
     "list are answers to different questions.";
 }
+
+$("showall").addEventListener("change", ()=>loadModels());
 
 document.getElementById("modelsel").addEventListener("change", async (ev)=>{
   const id = ev.target.value;

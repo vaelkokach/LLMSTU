@@ -327,6 +327,11 @@ class ModelEntry:
     coverage: float = 1.0
     #: True when the head stream must be switched on in the live extractor.
     needs_head_stream: bool = False
+    #: On the curated shortlist the dashboard shows by default — the best model
+    #: for each taxonomy. Everything else stays in the registry and is one
+    #: checkbox away; nothing is deleted. See :func:`_mark_recommended`.
+    recommended: bool = False
+    recommended_why: str = ""
     val: Dict[str, float] = field(default_factory=dict)
     test: Dict[str, float] = field(default_factory=dict)
     #: mean +/- sd of macro-F1 over the variant's seeds. The thesis tables
@@ -462,6 +467,59 @@ def _make_entry(variant_id: str, seeds: List[Dict], chosen: Dict) -> ModelEntry:
     )
 
 
+def _mark_recommended(entries: List[ModelEntry]) -> None:
+    """Flag the best model per TAXONOMY, which is what a chooser actually wants.
+
+    34 variants is a research record, not a menu. Most are seeds of an ablation
+    whose conclusion is already written down — the feature ladder, the
+    architecture sweep, the PRODEN negative result. Offering them all invites
+    the comparison the grouping exists to prevent, and buries the four models
+    anyone would actually run.
+
+    So the shortlist is one entry per taxonomy, chosen on validation, and:
+
+    * **restricted to the canonical training target** where the taxonomy has one.
+      `cue6` has five targets (v1/v2 x single/PRODEN); only v1 single-label is
+      the one every published number is measured against, so the v2 and PRODEN
+      variants are ablations and stay off the shortlist.
+    * **`cue6` gets two entries, deliberately.** The best mean
+      (`epochs240/mstcn_556_hp`, 0.5200 +- 0.0122) can replay a cached session;
+      the best single score (`wave2/mstcn_1074_hp_head`, 0.5307) reads the head
+      block and is live-only. Neither dominates, and picking one silently would
+      hide a real trade-off.
+
+    Nothing is removed — `recommended` is a display hint. The full registry is
+    still scanned, still served by /api/models, and still one checkbox away.
+    """
+    by_tax: Dict[str, List[ModelEntry]] = {}
+    for e in entries:
+        if e.live_capable:
+            by_tax.setdefault(e.taxonomy, []).append(e)
+
+    for taxonomy, rows in by_tax.items():
+        canonical = [e for e in rows
+                     if e.ruleset == "v1" and e.objective == "single"]
+        pool = canonical or rows
+        best = max(pool, key=lambda e: e.val["macro_f1"])
+        best.recommended = True
+        best.recommended_why = (
+            f"best {taxonomy} model on validation"
+            + ("" if canonical else " (no canonical-target run exists)"))
+
+        # The live-only/replay-capable split, where it is a real choice rather
+        # than a strictly worse option.
+        others = [e for e in pool if e is not best
+                  and e.replay_capable != best.replay_capable]
+        if others:
+            alt = max(others, key=lambda e: e.val["macro_f1"])
+            alt.recommended = True
+            alt.recommended_why = (
+                "highest score on this taxonomy, but LIVE-ONLY — reads the head "
+                "block, which a session cache does not store"
+                if not alt.replay_capable else
+                "best that can also re-decide a cached session")
+
+
 def scan(thesis_root: Path = THESIS) -> List[ModelEntry]:
     """One entry per variant, best validation seed, ordered best-first.
 
@@ -486,6 +544,7 @@ def scan(thesis_root: Path = THESIS) -> List[ModelEntry]:
         if e.live_capable and e.replay_capable and e.is_canonical:
             e.is_default = True     # best canonical-target variant on validation
             break
+    _mark_recommended(entries)
     return entries
 
 
