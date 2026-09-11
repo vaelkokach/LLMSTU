@@ -444,8 +444,16 @@ class Handler(BaseHTTPRequestHandler):
         elif not alive:
             status = "not consuming: the camera pipeline is not running"
         elif buf.taken == 0:
-            status = ("warming up: the detector loads on first use and takes "
-                      "about 40 s. Frames pushed until then are skipped.")
+            # Measured on the deployed t4-medium Space from a cold start:
+            # 125 s from selecting the camera to the first analysed frame. The
+            # docstring in app.py quotes ~40 s for the detector weights alone;
+            # end to end it is GroundingDINO + CLIP + the head-pose backend, and
+            # on a Space that has just woken it is slower still. Understating it
+            # is what makes a warming pipeline look like a dead one.
+            status = ("warming up: loading the detector, CLIP and the head-pose "
+                      "backend. Cold start measured at ~2 minutes on this "
+                      "hardware. Frames pushed until then are skipped; watch "
+                      "'analysed', not 'skipped'.")
         else:
             status = "consuming"
         return self._send(200, json.dumps({
