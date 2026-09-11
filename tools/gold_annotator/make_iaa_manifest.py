@@ -32,6 +32,25 @@ which is exactly the wrong place.
 **Every drawn crop is already in the first gold set.** Anything else cannot be
 joined and is wasted annotation effort.
 
+### The kappa this produces is an UPPER bound, and here is why
+
+Both passes are pre-filled from the same pseudo-labels, and the first annotator
+accepted the pre-filled value on **89.1% of the 250 x 6 categorical fields**
+measured here (`pseudo_edited` was true on only 261 of their 1,000 crops). A
+second annotator working from the same prefill will also accept most of them, so
+some of the agreement measured is two people deferring to one model rather than
+two people seeing the same thing.
+
+That is the price of keeping the conditions identical to the first pass, and the
+alternative is worse: annotating blind would measure a different task than the
+one the first pass performed, and the ceiling in `measure_ceiling.py` carries
+exactly the same caveat for exactly the same reason.
+
+So report it as what it is -- **an upper bound on independent agreement, under
+the same pre-fill conditions as the first pass**. ``--blind`` strips the label
+fields from the manifest and bounds it from the other side; annotating both is
+the only way to get a range, and it doubles the work.
+
     python tools/gold_annotator/make_iaa_manifest.py --n 250
     # then, as the second annotator:
     python tools/gold_annotator/serve.py \\
@@ -51,6 +70,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "LLMDet"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from attention.taxonomy import CUE_CLASSES, map_record          # noqa: E402
 
@@ -75,6 +95,11 @@ def main() -> int:
                     help="target size; the draw is per-class and may fall short "
                          "for a class the first annotator rarely used")
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--blind", action="store_true",
+                    help="strip the label fields so nothing is pre-filled. "
+                         "Measures independent agreement rather than agreement "
+                         "under a shared prefill -- a LOWER bound, and not the "
+                         "condition the first pass ran under")
     args = ap.parse_args()
 
     first = [r for r in load_jsonl(args.first) if r.get("status") == "ok"]
@@ -122,6 +147,18 @@ def main() -> int:
 
     picked = sorted(set(picked))
     rows = [pseudo[f] for f in picked]
+    if args.blind:
+        from vocab import ALL_LABEL_FIELDS
+        # `caption` and `model_confidence` must go too. index.html:103 renders
+        # the caption under the crop, and the captions STATE THE LABEL in plain
+        # English -- "looking down at a mobile phone held in both hands",
+        # "raising their hand", "writing on a desk". Stripping `activity` while
+        # still displaying that is not blinding, it is blinding one field and
+        # leaving the answer on screen.
+        drop = set(ALL_LABEL_FIELDS) | {"caption", "model_confidence"}
+        rows = [{k: v for k, v in r.items() if k not in drop} for r in rows]
+        print(f"BLIND: stripped {len(drop)} fields (labels, caption, "
+              f"model_confidence); nothing will be pre-filled or described.")
     args.out.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
 
     hist = Counter(CUE_CLASSES[map_record(
@@ -135,8 +172,12 @@ def main() -> int:
     for cue, (got, want) in short.items():
         print(f"  note: {cue} could only supply {got} of {want}")
     print(f"\nwritten: {args.out}")
-    print("It carries the PSEUDO-labels, so the second pass sees what the first "
-          "saw and the two are independent.")
+    print("BLIND: no pre-fill and no caption. This measures independent "
+          "agreement -- a LOWER bound -- and is NOT the condition the first "
+          "pass ran under." if args.blind else
+          "It carries the PSEUDO-labels, so the second pass sees what the "
+          "first saw. Agreement from it is an UPPER bound; see the module "
+          "docstring.")
     return 0
 
 

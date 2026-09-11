@@ -36,6 +36,13 @@ REPO = Path(__file__).resolve().parents[2]
 CROPS_ROOT = REPO / "grounding_data" / "LLMSTU" / "crops"
 FRAMES_ROOT = REPO / "grounding_data" / "stu_img" / "frames"
 
+#: The annotator itself, for --with-tool. Listed explicitly rather than globbed:
+#: the previous hand-assembled bundle shipped __pycache__ and
+#: .ipynb_checkpoints, which is noise at best and a stale second copy of the
+#: vocabulary at worst.
+TOOL_FILES = ("serve.py", "index.html", "vocab.py", "README.md",
+              "compute_agreement.py", "finalize_gold.py")
+
 
 def human(n: int) -> str:
     for unit in ("B", "KB", "MB", "GB"):
@@ -88,6 +95,11 @@ def main() -> int:
     ap.add_argument("--with-frames", action="store_true",
                     help="also include each crop's full source frame (the `f` "
                          "key view). Large -- see the size report.")
+    ap.add_argument("--with-tool", action="store_true",
+                    help="also include the annotator itself, so the bundle is "
+                         "self-contained and needs only Python 3")
+    ap.add_argument("--start-here", type=Path, default=None,
+                    help="a README to place at the root of the bundle")
     ap.add_argument("--dry-run", action="store_true",
                     help="report sizes and missing files, write nothing")
     args = ap.parse_args()
@@ -138,6 +150,16 @@ def main() -> int:
         with tarfile.open(args.out, "w:gz") as tar:
             tar.add(staged / "gold_candidates.jsonl",
                     arcname="grounding_data/llmstu_tools/outputs/gold_candidates.jsonl")
+            if args.with_tool:
+                here = Path(__file__).resolve().parent
+                for name in TOOL_FILES:
+                    f = here / name
+                    if f.exists():
+                        tar.add(f, arcname=f"tools/gold_annotator/{name}")
+                    else:
+                        print(f"  note: {name} not found, omitted", file=sys.stderr)
+            if args.start_here and args.start_here.exists():
+                tar.add(args.start_here, arcname="START_HERE.md")
             for i, (src, arc) in enumerate(items, 1):
                 tar.add(src, arcname=arc)
                 if i % 250 == 0:
