@@ -135,8 +135,29 @@ inference:
   temporal_stride: 2
   window_size: 32
   min_frames_for_pred: 10
-  label_smooth_window: 3
-  label_switch_margin: 0
+  # Display smoothing. These steady what is DRAWN; the raw prediction, its
+  # confidence and the alert gate are untouched, so an alert still fires on what
+  # the model actually decided.
+  #
+  # They were 3 and 0, and at those values they do NOTHING. Measured on the live
+  # path over 400 frames of 0325.mp4, 2,310 student-frames, counting changes of
+  # the displayed cue:
+  #
+  #   window  margin   switches   vs unsmoothed
+  #        3       0        120            0%      <- the old setting
+  #        5       1         88          -27%
+  #        9       2         60          -50%      <- now
+  #
+  # 3 cannot work with temporal_stride 2: each prediction is held for two
+  # frames, so a window of three spans at most two distinct decisions and the
+  # majority vote just tracks its input. margin 0 disables the hysteresis
+  # entirely (the test is `< margin`, never true at 0).
+  #
+  # 9 frames is ~0.36 s at 25 fps -- the lag a genuine change now takes to
+  # appear, which is the price of halving the flicker. realtime_infer.py has
+  # used these same values since it was written; the dashboard was the outlier.
+  label_smooth_window: 9
+  label_switch_margin: 2
 
 privacy:
   anonymize_faces: false

@@ -241,6 +241,7 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=0,
     from attention.thesis_eval.runtime import load_runtime_model, predict_window
     from attention.tracking import IoUTracker
     from attention.realtime_infer import _det_appearance_feature
+    from attention.display_smoothing import BoxSmoother, LabelSmoother
     from session_replay import calibration_path, colour_for
 
     cfg = yaml.safe_load(open(config_path))
@@ -339,6 +340,14 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=0,
         temporal_stride=int(cfg["inference"].get("temporal_stride", 1)))
     win = int(cfg["inference"]["window_size"])
     minf = int(cfg["inference"].get("min_frames_for_pred", 4))
+    # The config has declared these since it was written and this path never
+    # read them, so the live overlay ran with NO smoothing while the file said
+    # otherwise. They steady what is DRAWN; the raw prediction, its confidence
+    # and the alert gate are passed through untouched below.
+    smooth_box = BoxSmoother()
+    smooth_label = LabelSmoother(
+        window=int(cfg["inference"].get("label_smooth_window", 3)),
+        margin=int(cfg["inference"].get("label_switch_margin", 0)))
     hist = defaultdict(lambda: deque(maxlen=win))
     dwell = {}
     rec = open(record, "w") if record else None
@@ -396,7 +405,10 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=0,
                                            for d in dets])
         else:
             tracks = tracker.coast()
-        stride.drop_missing(tr.track_id for tr in tracks)
+        live_ids = [tr.track_id for tr in tracks]
+        stride.drop_missing(live_ids)
+        smooth_box.drop(live_ids)
+        smooth_label.drop(live_ids)
         students = {}
         if tracks:
             fv = feat.extract_batch(frame, [tr.bbox_xyxy for tr in tracks])
@@ -414,7 +426,9 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=0,
                                      predict_window(bundle, np.stack(list(h))))
                 else:
                     r = stride.cached(tr.track_id)
-                cue = r["displayed_cue"]
+                # Smoothed for display; `raw_cue` below keeps the model's own
+                # answer, so nothing downstream is fooled about what it said.
+                cue = smooth_label(tr.track_id, r["displayed_cue"])
                 conf = r["confidence"]
                 # Dwell accumulates on the DISPLAYED cue, so an abstention
                 # interrupts an episode rather than silently extending it.
@@ -431,7 +445,8 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=0,
                     # comparable between runs; the box is, and it is what lets
                     # tools/verify_stride_equivalence.py match students across
                     # configurations the way a human comparing two overlays would.
-                    "bbox": [round(float(v), 1) for v in tr.bbox_xyxy],
+                    "bbox": [round(float(v), 1)
+                             for v in smooth_box(tr.track_id, tr.bbox_xyxy)],
                     "dwell": st["dwell"], "alerted": st["alerted"],
                     # raw prediction preserved even when abstaining: the point
                     # of abstention is to withhold an alert, not evidence
@@ -440,8 +455,11 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=0,
 
         vis = frame.copy()
         for tr in tracks:
-            x1, y1, x2, y2 = [int(v) for v in tr.bbox_xyxy]
             s = students.get(str(tr.track_id))
+            # Draw the SAME box that was reported, or the raw one for a track
+            # too new to have a prediction yet.
+            x1, y1, x2, y2 = [int(v) for v in
+                              (s["bbox"] if s else tr.bbox_xyxy)]
             cue = s["cue"] if s else "…"
             col = colour_for(cue)
             if blur_faces:

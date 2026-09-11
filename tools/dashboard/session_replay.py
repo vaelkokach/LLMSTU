@@ -190,6 +190,7 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
     ``pipeline_bridge.run_live`` so the server does not care which produced it.
     """
     import cv2
+    from attention.display_smoothing import BoxSmoother, LabelSmoother
     from attention.thesis_eval.runtime import StrideController, predict_window
 
     # The names the MODEL predicts, from its own checkpoint spec. Pushing
@@ -245,6 +246,11 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
     # The detector stride is already baked into the cache (frames it skipped
     # have coasted boxes). Only the temporal stride is still ours to apply.
     stride = StrideController(1, int(inf.get("temporal_stride", 1)))
+    # Same smoothing as the live path, so a cached replay and a live run of the
+    # same model look alike as well as decide alike.
+    smooth_box = BoxSmoother()
+    smooth_label = LabelSmoother(window=int(inf.get("label_smooth_window", 3)),
+                                 margin=int(inf.get("label_switch_margin", 0)))
 
     hist = defaultdict(lambda: deque(maxlen=win))
     dwell: Dict[int, Dict] = {}
@@ -268,7 +274,10 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
 
         # Forget tracks the tracker dropped, on empty frames too — otherwise a
         # reused track id would inherit a stale cached prediction.
-        stride.drop_missing(int(cache.track_id[r]) for r in rows)
+        live_ids = [int(cache.track_id[r]) for r in rows]
+        stride.drop_missing(live_ids)
+        smooth_box.drop(live_ids)
+        smooth_label.drop(live_ids)
 
         if rows:
             vec = cache.live_vector(rows, entry.head_pose_backend)
@@ -285,7 +294,7 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
                                        predict_window(bundle, np.stack(list(h))))
                 else:
                     res = stride.cached(tid)
-                cue = res["displayed_cue"]
+                cue = smooth_label(tid, res["displayed_cue"])
 
                 prev = dwell.get(tid)
                 if prev and prev["cue"] == cue:
@@ -298,7 +307,8 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
                 students[str(tid)] = {
                     "cue": cue,
                     "conf": round(float(res["confidence"]), 2),
-                    "bbox": [round(float(v), 1) for v in cache.bbox[r]],
+                    "bbox": [round(float(v), 1)
+                             for v in smooth_box(tid, cache.bbox[r])],
                     "dwell": st["dwell"],
                     "alerted": st["alerted"],
                     "raw_cue": res["cue"],

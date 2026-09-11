@@ -298,6 +298,7 @@ the loss **and** from the metrics.
 | `onoff_reliable` | `on_task`, `off_task` | `looking_away`, `turned_to_peer` |
 | `coarse3_reliable` | `screen_oriented`, `down_or_hidden`, `phone_use` | `looking_away`, `turned_to_peer` |
 | `cue9` | `writing_notes`, `using_laptop`, `reading`, `listening`, `looking_away`, `head_down`, `turned_to_peer`, `phone_use`, `uncertain` | |
+| `cue7` | `writing_notes`, `using_laptop`, `looking_away`, `head_down`, `turned_to_peer`, `phone_use`, `uncertain` | |
 
 Groupings:
 
@@ -306,6 +307,23 @@ Groupings:
   {`head_down`, `phone_use`, `uncertain`}.
 * `coarse3_reliable` — `down_or_hidden` = {`head_down`, `uncertain`}; the other
   two are singletons.
+* `cue7` — **a regrouping of Layer 2b**: `reading` and `listening` merged into
+  `using_laptop`, everything else a singleton. Unlike `cue9` it needs no new
+  label build — the cue9 sidecar already carries the ids and `taxonomy_lut`
+  merges them. Splitting `screen_oriented` needed the annotation record back;
+  merging three of its parts needs only the three ids.
+
+  The merge is supported by the measured numbers: at 240 epochs cue9 reaches
+  `using_laptop` 0.682 and `listening` 0.673 but `reading` only 0.337, and the
+  two are keyed on *different fields* — `using_laptop` on
+  `activity == using_laptop`, `reading` on `gaze in {laptop, own_desk}` — so the
+  same student at a laptop can land in either depending on which field the
+  annotator filled. It restores `listening`'s 30.4% of the corpus to one class,
+  making `using_laptop` the majority class again at ~74%.
+
+  **Its macro-F1 will be higher than cue9's for an arithmetic reason** — 7
+  classes is an easier average than 9 — not because the model improved. Same
+  comparability rule as everywhere else on this page.
 * `cue9` — a **passthrough of Layer 2b**, not a regrouping of Layer 2. It is
   listed here only because `--taxonomy cue9` is how a run selects it; its
   `space` key is what tells the loader its ids index `CUE9_CLASSES`. Training or

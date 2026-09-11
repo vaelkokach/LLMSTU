@@ -562,6 +562,41 @@ TAXONOMIES: Dict[str, Dict] = {
     # so that --taxonomy cue9 selects it the way every other target is selected;
     # it regroups nothing, and `space` is what tells the loader that its ids
     # index CUE9_CLASSES rather than CUE_CLASSES.
+    # cue9 with `reading` and `listening` folded into `using_laptop`.
+    #
+    # A REGROUPING of cue9, not a new projection, so it needs no label build:
+    # the cue9 sidecar already carries the ids and `taxonomy_lut` merges them.
+    # That is the difference between this and cue9 itself -- splitting
+    # `screen_oriented` needed the annotation record back, merging three classes
+    # needs only the three ids.
+    #
+    # The merge is defensible on the measured numbers: at 240 epochs cue9 scores
+    # `using_laptop` 0.682 and `listening` 0.673 but `reading` only 0.337, and
+    # `reading` is keyed on `gaze in {laptop, own_desk}` while `using_laptop` is
+    # keyed on `activity == using_laptop` -- the same student at a laptop can
+    # satisfy either depending on which field the annotator filled. Merging them
+    # removes a distinction the labels do not reliably carry.
+    #
+    # It also restores `listening`'s 30.4% of the corpus to the same class,
+    # which makes `using_laptop` the majority class again (~74%). Expect the
+    # macro-F1 to rise for the arithmetic reason that 7 classes is an easier
+    # average than 9, NOT because the model improved: it is a different task,
+    # and the same comparability rule applies as everywhere else here.
+    "cue7": {
+        "space": "cue9",
+        "classes": ["writing_notes", "using_laptop", "looking_away",
+                    "head_down", "turned_to_peer", "phone_use", "uncertain"],
+        "groups": {
+            "writing_notes": ["writing_notes"],
+            "using_laptop": ["using_laptop", "reading", "listening"],
+            "looking_away": ["looking_away"],
+            "head_down": ["head_down"],
+            "turned_to_peer": ["turned_to_peer"],
+            "phone_use": ["phone_use"],
+            "uncertain": ["uncertain"],
+        },
+        "note": "cue9 with reading and listening merged into using_laptop",
+    },
     "cue9": {
         "space": "cue9",
         "classes": CUE9_CLASSES,
