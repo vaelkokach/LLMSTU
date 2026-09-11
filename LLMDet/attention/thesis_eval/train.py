@@ -406,8 +406,11 @@ def main():
                          "i.e. to plain cross-entropy.")
     ap.add_argument("--taxonomy", default="cue6",
                     help="label set: cue6 (default), onoff, onoff_reliable, "
-                         "coarse3_reliable. The _reliable variants abstain on "
-                         "looking_away and turned_to_peer; report coverage.")
+                         "coarse3_reliable, cue9. The _reliable variants abstain "
+                         "on looking_away and turned_to_peer; report coverage. "
+                         "cue9 is a DIFFERENT label space (screen_oriented split "
+                         "four ways) and REQUIRES --cue-labels from "
+                         "`build_cue_labels --label-space cue9`.")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--epochs", type=int, default=90)
     ap.add_argument("--batch-size", type=int, default=32)

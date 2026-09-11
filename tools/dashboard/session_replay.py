@@ -42,14 +42,35 @@ CALIBRATION_DIR = (REPO / "LLMDet" / "work_dirs" / "thesis" / "runtime"
                    / "dashboard")
 
 #: BGR overlay colours, matching the chip colours in index.html.
+#:
+#: Keyed by class NAME rather than by id, so a model predicting a regrouped
+#: taxonomy draws in the right colour without a second table: `on_task` is the
+#: green `screen_oriented` is, `off_task` and `down_or_hidden` are the red the
+#: cues they merge are. Any name not listed falls back to grey, which is the
+#: honest default — an unrecognised class is one this overlay cannot interpret.
 CUE_COLOUR = {
+    # cue6
     "screen_oriented": (61, 220, 132),
     "head_down": (86, 95, 255),
     "phone_use": (86, 95, 255),
     "looking_away": (84, 180, 255),
     "turned_to_peer": (84, 180, 255),
     "uncertain": (160, 160, 160),
+    # onoff / onoff_reliable
+    "on_task": (61, 220, 132),
+    "off_task": (86, 95, 255),
+    # coarse3_reliable
+    "down_or_hidden": (86, 95, 255),
 }
+
+#: Grey. Also what an abstention draws as, since `displayed_cue` is the
+#: ABSTAIN_LABEL ("uncertain") whenever the model was not confident enough.
+UNKNOWN_COLOUR = (160, 160, 160)
+
+
+def colour_for(cue: str):
+    """BGR for one class name, grey for anything this table does not know."""
+    return CUE_COLOUR.get(cue, UNKNOWN_COLOUR)
 
 
 def calibration_path(variant_id: str) -> Path:
@@ -134,8 +155,12 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
     ``pipeline_bridge.run_live`` so the server does not care which produced it.
     """
     import cv2
-    from attention.taxonomy import CUE_CLASSES
     from attention.thesis_eval.runtime import StrideController, predict_window
+
+    # The names the MODEL predicts, from its own checkpoint spec. Pushing
+    # CUE_CLASSES here would have told the UI to render six cue chips for a
+    # two-class model, so the legend and the model would disagree.
+    class_names = list(bundle.class_names)
 
     inf = cache.meta.get("inference", {})
     win = int(inf.get("window_size", 32))
@@ -201,7 +226,7 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
         if jpg is not None and overlay and students:
             jpg = _draw(cv2, jpg, students, cache.meta, blur_faces)
 
-        push_fn(t, jpg, students, CUE_CLASSES)
+        push_fn(t, jpg, students, class_names)
         n_pushed += 1
 
         if realtime and speed > 0:
@@ -232,7 +257,7 @@ def _draw(cv2, jpeg_bytes: bytes, students: Dict[str, Dict], meta: Dict,
     scale = img.shape[1] / float(src_w)
     for seat, s in students.items():
         x1, y1, x2, y2 = [int(v * scale) for v in s["bbox"]]
-        col = CUE_COLOUR.get(s["cue"], (160, 160, 160))
+        col = colour_for(s["cue"])
         if blur_faces:
             hh = max(1, int(0.35 * (y2 - y1)))
             roi = img[max(0, y1):max(0, y1) + hh, max(0, x1):max(0, x2)]
@@ -266,6 +291,14 @@ def main():
         raise SystemExit(f"unknown model {args.model!r}")
     if not entry.deployable:
         raise SystemExit(f"{entry.variant_id} is not deployable: {entry.blocked_reason}")
+    # A cache holds base + both head-pose blocks and nothing else. Without this
+    # the run reaches predict_window's width assert, which correctly reports
+    # 556 against 1074 but reads as a broken extractor rather than as a model
+    # this cache cannot serve.
+    if not entry.replay_capable:
+        raise SystemExit(
+            f"{entry.variant_id} cannot replay a session cache: "
+            f"{entry.blocked_reason}")
 
     cache = SessionCache(args.cache)
     bundle, cal = load_model(entry, args.device)

@@ -1,0 +1,988 @@
+{
+  "generated_by": "tools/dashboard/artifact_manifest.py",
+  "registry_default": "arch/asrf_556_hp",
+  "n_variants": 30,
+  "n_live_capable": 25,
+  "models": [
+    {
+      "variant_id": "wave2/mstcn_1074_hp_head",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.5306936125483556,
+      "comparable_group": "cue6/v1/single",
+      "replay_capable": false,
+      "checkpoint": "LLMDet/work_dirs/thesis/wave2/mstcn_head_s44/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/wave2__mstcn_1074_hp_head.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "arch/asrf_556_hp",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.5258114928668317,
+      "comparable_group": "cue6/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/arch/asrf_556_hp_s43/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/arch__asrf_556_hp.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "ff_det/mstcn_553_facefound",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.5121129188841311,
+      "comparable_group": "cue6/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/ff_det/mstcn_553_ff_s43/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/ff_det__mstcn_553_facefound.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "cue_v2/mstcn_556_hp",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.5108935806467548,
+      "comparable_group": "cue6/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/cue_v2/v1_base_s42/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/cue_v2__mstcn_556_hp.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "arch/mstcn_556_hp",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.5067150037726657,
+      "comparable_group": "cue6/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/arch/mstcn_556_hp_s43/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/arch__mstcn_556_hp.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "posefix/asrf_556_hp",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.5040596648423415,
+      "comparable_group": "cue6/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/posefix/asrf_556_hp_bp_s42/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/posefix__asrf_556_hp.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "ff_bp/mstcn_553_facefound",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.4936714656837157,
+      "comparable_group": "cue6/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/ff_bp/mstcn_553_ff_s42/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/ff_bp__mstcn_553_facefound.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "coarse/mstcn_556_hp",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.4838153889789814,
+      "comparable_group": "cue6/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/coarse/mstcn_556_cue6_s42/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/coarse__mstcn_556_hp.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "posefix/mstcn_556_hp",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.4828974385239633,
+      "comparable_group": "cue6/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/posefix/mstcn_556_hp_bp_s42/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/posefix__mstcn_556_hp.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "wave2/mstcn_556_hp",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.48161369261367465,
+      "comparable_group": "cue6/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/wave2/mstcn_556_cue6_s43/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/wave2__mstcn_556_hp.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "ff_det/transformer_553_facefound",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.4250856167674412,
+      "comparable_group": "cue6/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/ff_det/transformer_553_ff_s44/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/ff_det__transformer_553_facefound.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "ff_bp/transformer_553_facefound",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.41676680954312745,
+      "comparable_group": "cue6/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/ff_bp/transformer_553_ff_s43/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/ff_bp__transformer_553_facefound.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "ladder/transformer_556_hp",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.4092053693197135,
+      "comparable_group": "cue6/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/ladder/transformer_556_hp_s44/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/ladder__transformer_556_hp.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "posefix/transformer_556_hp",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.40729362472568326,
+      "comparable_group": "cue6/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/posefix/transformer_556_hp_bp_s42/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/posefix__transformer_556_hp.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "headpose/transformer_553_facefound",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.40341785595658397,
+      "comparable_group": "cue6/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/headpose/transformer_553_facefound_s44/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/headpose__transformer_553_facefound.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "headpose/transformer_555_angles",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.3914319672880003,
+      "comparable_group": "cue6/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/headpose/transformer_555_angles_s44/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/headpose__transformer_555_angles.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "ladder/transformer_552_base",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.3777167855094838,
+      "comparable_group": "cue6/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/ladder/transformer_552_base_s43/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/ladder__transformer_552_base.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "coarse/mstcn_556_hp:coarse3_reliable",
+      "needed": true,
+      "taxonomy": "coarse3_reliable",
+      "n_classes": 3,
+      "coverage": 0.9102383963280408,
+      "val_macro_f1": 0.7677490799945458,
+      "comparable_group": "coarse3_reliable/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/coarse/mstcn_556_coarse3_reliable_s44/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/coarse__mstcn_556_hp:coarse3_reliable.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "cue_v2/mstcn_556_hp:proden",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.4911781598132407,
+      "comparable_group": "cue6/v1/proden",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/cue_v2/v1_proden_s43/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/cue_v2__mstcn_556_hp:proden.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "wave2b/mstcn_556_hp:proden",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.3942307598216091,
+      "comparable_group": "cue6/v1/proden",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/wave2b/mstcn_556_pll_s43/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/wave2b__mstcn_556_hp:proden.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "wave2/mstcn_556_hp:proden",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.3661348149614317,
+      "comparable_group": "cue6/v1/proden",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/wave2/mstcn_556_pll_s43/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/wave2__mstcn_556_hp:proden.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "cue_v2/mstcn_556_hp:v2+proden",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.4850818952814357,
+      "comparable_group": "cue6/v2/proden",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/cue_v2/v2_proden_s43/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/cue_v2__mstcn_556_hp:v2+proden.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "cue_v2/mstcn_556_hp:v2",
+      "needed": true,
+      "taxonomy": "cue6",
+      "n_classes": 6,
+      "coverage": 1.0,
+      "val_macro_f1": 0.4919718713026014,
+      "comparable_group": "cue6/v2/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/cue_v2/v2_base_s42/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/cue_v2__mstcn_556_hp:v2.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "cue9/mstcn_556_hp:cue9",
+      "needed": true,
+      "taxonomy": "cue9",
+      "n_classes": 9,
+      "coverage": 1.0,
+      "val_macro_f1": 0.4452212101292642,
+      "comparable_group": "cue9/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/cue9/mstcn_556_cue9_s43/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/cue9__mstcn_556_hp:cue9.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "coarse/mstcn_556_hp:onoff_reliable",
+      "needed": true,
+      "taxonomy": "onoff_reliable",
+      "n_classes": 2,
+      "coverage": 0.9102383963280408,
+      "val_macro_f1": 0.7860178146633578,
+      "comparable_group": "onoff_reliable/v1/single",
+      "replay_capable": true,
+      "checkpoint": "LLMDet/work_dirs/thesis/coarse/mstcn_556_onoff_reliable_s43/checkpoints/best.pth",
+      "calibration": "LLMDet/work_dirs/thesis/runtime/dashboard/coarse__mstcn_556_hp:onoff_reliable.json",
+      "calibration_present": true
+    },
+    {
+      "variant_id": "arch/mstcn_570_full",
+      "needed": false,
+      "reason": "cannot run live or replay: the 7 expression dims need a second per-crop FER model; the 7 dynamic dims are whole-track statistics (fidget variance, a personalised gaze baseline), not per-frame quantities"
+    },
+    {
+      "variant_id": "arch/asrf_570_full",
+      "needed": false,
+      "reason": "cannot run live or replay: the 7 expression dims need a second per-crop FER model; the 7 dynamic dims are whole-track statistics (fidget variance, a personalised gaze baseline), not per-frame quantities"
+    },
+    {
+      "variant_id": "ladder/transformer_563_expr",
+      "needed": false,
+      "reason": "cannot run live or replay: the 7 expression dims need a second per-crop FER model"
+    },
+    {
+      "variant_id": "ladder/transformer_570_full",
+      "needed": false,
+      "reason": "cannot run live or replay: the 7 expression dims need a second per-crop FER model; the 7 dynamic dims are whole-track statistics (fidget variance, a personalised gaze baseline), not per-frame quantities"
+    },
+    {
+      "variant_id": "ladder/transformer_563_dyn",
+      "needed": false,
+      "reason": "cannot run live or replay: the 7 dynamic dims are whole-track statistics (fidget variance, a personalised gaze baseline), not per-frame quantities"
+    }
+  ],
+  "files": [
+    {
+      "path": "LLMDet/configs/attention_runtime.yaml",
+      "present": true,
+      "bytes": 6148,
+      "sha256": "34d003d15fe0c68c1f1a70ea64145814dbef9fc227f3436fb8b6f3da56e39ff1"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/arch/asrf_556_hp_s43/checkpoints/best.pth",
+      "present": true,
+      "bytes": 18830424,
+      "sha256": "b070f38b44ed13c25565e3bd61ad5a72a9b4933911794fe417bc1535873f7d53"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/arch/asrf_556_hp_s43/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11467,
+      "sha256": "902b7bfd72ecc15a0d65caebbfed7d3c30aa3ace8632b0169ad9860639090bda"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/arch/asrf_556_hp_s43/run_record.json",
+      "present": true,
+      "bytes": 29387,
+      "sha256": "b4c19abc20218b71fa1d2b7b958797bf00c47ef03c59461252ad03ca404d8509"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/arch/mstcn_556_hp_s43/checkpoints/best.pth",
+      "present": true,
+      "bytes": 10888054,
+      "sha256": "8d525e2d3ba0545a13e886c9e4a25c9725c73441d1e053b811d4eeee1e33ba46"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/arch/mstcn_556_hp_s43/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11451,
+      "sha256": "b1195197b227e01d7bb0c3408d31c18e152405e4087aa63f7dda3c5856a81a8e"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/arch/mstcn_556_hp_s43/run_record.json",
+      "present": true,
+      "bytes": 29437,
+      "sha256": "1c644ba6e04b60a281108e00c0aa72722408f62164c73313ad1b81acdc1cb9ac"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/coarse/mstcn_556_coarse3_reliable_s44/checkpoints/best.pth",
+      "present": true,
+      "bytes": 10877366,
+      "sha256": "30b802250a63c1f4c7cf84bc1121871985be69014bab39368dfaf24bd0924f97"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/coarse/mstcn_556_coarse3_reliable_s44/eval_val/metrics.json",
+      "present": true,
+      "bytes": 9912,
+      "sha256": "0a46e8e28cc8321ccf9ce5e349dc25f0854808128fbcc1a389c0b17a8b5f9712"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/coarse/mstcn_556_coarse3_reliable_s44/run_record.json",
+      "present": true,
+      "bytes": 29311,
+      "sha256": "043ff83abaf4d7f92049a45ced961ef7846831ce40610e3b2f2411f4da0f8eb0"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/coarse/mstcn_556_cue6_s42/checkpoints/best.pth",
+      "present": true,
+      "bytes": 10888118,
+      "sha256": "2e349cfdf1e83995a78f545ba72d51f8261e4ccf6e084b1e905f73d87c8f7d89"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/coarse/mstcn_556_cue6_s42/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11582,
+      "sha256": "b24739171453b10f317b1cf285cb7a4302d15cf74c5d78b5f87e102369389992"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/coarse/mstcn_556_cue6_s42/run_record.json",
+      "present": true,
+      "bytes": 29490,
+      "sha256": "0f1a78e56f2478db8123cec153278eea5bd355e8ba63e6fa3e79cedfd7e78c66"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/coarse/mstcn_556_onoff_reliable_s43/checkpoints/best.pth",
+      "present": true,
+      "bytes": 10873782,
+      "sha256": "510eb2dfd01713cbfb7aeb38b57ab0caef7c1378dd6bcc3ecfaaa0e9588291ad"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/coarse/mstcn_556_onoff_reliable_s43/eval_val/metrics.json",
+      "present": true,
+      "bytes": 9314,
+      "sha256": "3dbd3bad8a0a2b0df039be03c348423663d9cc4c0bde8a0e9f06f37815d21bf4"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/coarse/mstcn_556_onoff_reliable_s43/run_record.json",
+      "present": true,
+      "bytes": 29243,
+      "sha256": "5a1d988d2f7ae49e3f0988df41d690d9a2877a9272be662dac6d5fd23190e89c"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/cue9/mstcn_556_cue9_s43/checkpoints/best.pth",
+      "present": true,
+      "bytes": 10898934,
+      "sha256": "f8c3ee26916a9c4f4ed4ad714c908a622dc3b6afea7f579ced97c9671aab23c9"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/cue9/mstcn_556_cue9_s43/eval_val/metrics.json",
+      "present": true,
+      "bytes": 13102,
+      "sha256": "6132a394344df092fcff0e5838976f491f48e592a65a10100785d95feffc6930"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/cue9/mstcn_556_cue9_s43/run_record.json",
+      "present": true,
+      "bytes": 29833,
+      "sha256": "a573345ad859f8a34576fe9131bc0f3bf093498dd2bad4256a857e5c65cd8359"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/cue_v2/v1_base_s42/checkpoints/best.pth",
+      "present": true,
+      "bytes": 10888118,
+      "sha256": "e4dea4f2a1362a1db0cbf7efebdedbf4e9c64d2ba0a35ac410f68f2baae1f802"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/cue_v2/v1_base_s42/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11615,
+      "sha256": "49793e35f8c7939de7dcea5cfee7b4a8cace944f93c3e6386e3b018beed8ec4c"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/cue_v2/v1_base_s42/run_record.json",
+      "present": true,
+      "bytes": 29519,
+      "sha256": "3ded972386ba92aaeb4a339fd7809159bb28d07d6a00437e383fc02389c00964"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/cue_v2/v1_proden_s43/checkpoints/best.pth",
+      "present": true,
+      "bytes": 10888118,
+      "sha256": "794208f70cda0cb40f09eb08546e9843d343ffe314506befc6620c9b582e9861"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/cue_v2/v1_proden_s43/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11631,
+      "sha256": "32c98854b73337a6aee2d31d5e034e48d454e29262692df8be7ca82f812ce5c0"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/cue_v2/v1_proden_s43/run_record.json",
+      "present": true,
+      "bytes": 29547,
+      "sha256": "dc7551d2c75f3123aa5964719ac6f6eb4774d69d6584fadc263c1420d22c62ae"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/cue_v2/v2_base_s42/checkpoints/best.pth",
+      "present": true,
+      "bytes": 10888182,
+      "sha256": "d7a530e12d15e0e841bd4b569fa1170f62f12a210bca748b1f58bf926ec2ac1a"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/cue_v2/v2_base_s42/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11712,
+      "sha256": "ec0f72eb0d376016f2f9e6d193738dbc53fc8d832363ec66b3d73009217fc555"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/cue_v2/v2_base_s42/run_record.json",
+      "present": true,
+      "bytes": 29658,
+      "sha256": "1a91e331ebd3cd5204c432c39c7dfb30a4837b9566918e4c8c5e971e518f5acb"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/cue_v2/v2_proden_s43/checkpoints/best.pth",
+      "present": true,
+      "bytes": 10888182,
+      "sha256": "05383180869ff78a88516249d875116ce811587f2945811d7a29c59a889d5727"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/cue_v2/v2_proden_s43/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11701,
+      "sha256": "e5545c6ed3d3f70dfacbe2db13d6f4b46b97bb24726ad55858d58f8a66914134"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/cue_v2/v2_proden_s43/run_record.json",
+      "present": true,
+      "bytes": 29669,
+      "sha256": "4ed7b78aae6b2bce4a1c2b938e3f75d4b5d315676ed5ed3fee752b26268042f2"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/ff_bp/mstcn_553_ff_s42/checkpoints/best.pth",
+      "present": true,
+      "bytes": 10886518,
+      "sha256": "cbf44323fa71e17b855eb532c11a636a26e8c5a39f0a2340118402b9370fd498"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/ff_bp/mstcn_553_ff_s42/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11484,
+      "sha256": "e5482471817753f8ff807be4c8d1ff52019a88079cd02a87a9050deddf28d6ed"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/ff_bp/mstcn_553_ff_s42/run_record.json",
+      "present": true,
+      "bytes": 29420,
+      "sha256": "db7c416ca3a06f9c62384565691907c7f2042bb251d59fc4891c334071acb704"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/ff_bp/transformer_553_ff_s43/checkpoints/best.pth",
+      "present": true,
+      "bytes": 51868800,
+      "sha256": "927ee95dcf3073165c189b1284e5c1714246e6f1caa9d767547fa36b848dd741"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/ff_bp/transformer_553_ff_s43/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11482,
+      "sha256": "a93a3a928ab80ddaced604efeede66d0e13670dd2bdd4ab4e223a74ecdf9e6d4"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/ff_bp/transformer_553_ff_s43/run_record.json",
+      "present": true,
+      "bytes": 29505,
+      "sha256": "315a15fc93b2187bed7d32b226c225607fa0cd39296ad9c8cd63b80bec923d63"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/ff_det/mstcn_553_ff_s43/checkpoints/best.pth",
+      "present": true,
+      "bytes": 10886518,
+      "sha256": "5258fa064050ea2afc7fe3e0ba2b832ceb2b0e95be91938aba7e6d73e738c8dd"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/ff_det/mstcn_553_ff_s43/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11473,
+      "sha256": "f15a61c537e1a11cdf8ba70f07b6c5ebf691bb0e74e32ed5df67ab04f056b465"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/ff_det/mstcn_553_ff_s43/run_record.json",
+      "present": true,
+      "bytes": 29411,
+      "sha256": "78accfb1f0329e56b221bd848bdcf21ef8c0c4643ff491eae107a6aba3e99bc2"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/ff_det/transformer_553_ff_s44/checkpoints/best.pth",
+      "present": true,
+      "bytes": 51868800,
+      "sha256": "620a33c9a7e25d5e16c4026c173600cfeee601e948ec698362e9a80c4b27eab0"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/ff_det/transformer_553_ff_s44/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11539,
+      "sha256": "ce3d48142f92effb65c864ae250e66e8c3d8332209995bad61d868f73bd0d25d"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/ff_det/transformer_553_ff_s44/run_record.json",
+      "present": true,
+      "bytes": 29500,
+      "sha256": "7c9d5bb269d8669c990fe81ba882beb814ddd93654486cb09311241df73ad4dc"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/headpose/transformer_553_facefound_s44/checkpoints/best.pth",
+      "present": true,
+      "bytes": 51868800,
+      "sha256": "4733aa5312b6a10d9a9c7ddea4ac28033a4defc9789c7addfff8ac602aa47432"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/headpose/transformer_553_facefound_s44/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11547,
+      "sha256": "31c6e49346d5f5a96ccde9e41d3c14cf598d134a833dda9e794ce5566abd72dc"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/headpose/transformer_553_facefound_s44/run_record.json",
+      "present": true,
+      "bytes": 29547,
+      "sha256": "b89126f677a97c5f3c9899691e2919e1c67d5f2a933297dc21efdcd8ff1819e9"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/headpose/transformer_555_angles_s44/checkpoints/best.pth",
+      "present": true,
+      "bytes": 51872896,
+      "sha256": "001d6241d5d4404a33f9d6507a8a079e25c0e570c93d851a630e29e0e29e5682"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/headpose/transformer_555_angles_s44/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11525,
+      "sha256": "d7d0fa8be7cc6ab2d1ce806e376c38997739f89d71276194f7756c1101fc0aab"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/headpose/transformer_555_angles_s44/run_record.json",
+      "present": true,
+      "bytes": 29545,
+      "sha256": "4435492cbe4bdc6d90b6d8267f779e7a2b504a5f46b02e9c90f13bd3649900ec"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/ladder/transformer_552_base_s43/checkpoints/best.pth",
+      "present": true,
+      "bytes": 51866752,
+      "sha256": "4ccaa8ea7b7d65307e4bc94d0560b7bc097b10999b1c5b18f83b10cb0ba9e534"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/ladder/transformer_552_base_s43/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11494,
+      "sha256": "64e535bf5eebc24d046a0d228bc2736ef7d1b3a50154e8db313f3bb86839a286"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/ladder/transformer_552_base_s43/run_record.json",
+      "present": true,
+      "bytes": 29503,
+      "sha256": "8c5c91840f974af3d35bc5510d8f3c06bd3062737c002ce589672292c517686f"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/ladder/transformer_556_hp_s44/checkpoints/best.pth",
+      "present": true,
+      "bytes": 51874944,
+      "sha256": "8dc33fc44d493196e9a03cef23af2eebc96e7a95feb9047cf33b69e60adf2ebd"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/ladder/transformer_556_hp_s44/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11508,
+      "sha256": "50bcbb2d78a7bb65f4f93e7b48a0403b084b8b54ff4e4e160351577e47fb3070"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/ladder/transformer_556_hp_s44/run_record.json",
+      "present": true,
+      "bytes": 29533,
+      "sha256": "8e4c5e204a51e66f4eb843fde6b2d7d700d019adee14656ea8741db09f6a7570"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/posefix/asrf_556_hp_bp_s42/checkpoints/best.pth",
+      "present": true,
+      "bytes": 18830488,
+      "sha256": "fd7b5dad1ab3e7c7ec9b654dbf5fb78a7a9ba34f9eec8431d05c187c1f6a9527"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/posefix/asrf_556_hp_bp_s42/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11488,
+      "sha256": "da36261477b9279350a1ab447d485a0261c362e9d500c37c43d1a82e7922ab88"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/posefix/asrf_556_hp_bp_s42/run_record.json",
+      "present": true,
+      "bytes": 29430,
+      "sha256": "9199539444c6db985b3016a4e3653908371c9421068d3a7fe085a0b156438f45"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/posefix/mstcn_556_hp_bp_s42/checkpoints/best.pth",
+      "present": true,
+      "bytes": 10888054,
+      "sha256": "d305bdcec83ac1cc73225444ed42ef545eb92fc8531167618d030465e80c808f"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/posefix/mstcn_556_hp_bp_s42/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11464,
+      "sha256": "5dae3a601c63d12c18c4e28ace852465275051ff530d8094cb8043ee9b95b37f"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/posefix/mstcn_556_hp_bp_s42/run_record.json",
+      "present": true,
+      "bytes": 29444,
+      "sha256": "063af4b47abe313de6d6b2e40b12a1a29e680775e0f01fb0d41213f0d09468fb"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/posefix/transformer_556_hp_bp_s42/checkpoints/best.pth",
+      "present": true,
+      "bytes": 51874944,
+      "sha256": "ef1c99113adb929b72837379065a95301de534b1f989ae34e409644fd7b692c2"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/posefix/transformer_556_hp_bp_s42/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11512,
+      "sha256": "ff9fabc5422fd7a42f37cea46e4cee9dccf199ebe971ca9371649125b65abbf8"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/posefix/transformer_556_hp_bp_s42/run_record.json",
+      "present": true,
+      "bytes": 29542,
+      "sha256": "159b1066d3fb1c24cd1cebdc06e04136b70737f8a94149a25ec4764658e8960b"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/arch__asrf_556_hp.json",
+      "present": true,
+      "bytes": 831,
+      "sha256": "515657f5d60319dba4c5725ff9b406967629979a6c34a4c194c86fe22f74c3e7"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/arch__mstcn_556_hp.json",
+      "present": true,
+      "bytes": 832,
+      "sha256": "8780ba4b99983364815abc5fdbb232ce517d8029756bee970c8f68c9da203377"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/coarse__mstcn_556_hp.json",
+      "present": true,
+      "bytes": 835,
+      "sha256": "945863a7266f3933aeb7790c88cff90d7e02c1d7ab2b129b2b3e86fc20787e9d"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/coarse__mstcn_556_hp:coarse3_reliable.json",
+      "present": true,
+      "bytes": 830,
+      "sha256": "d36c4c5fb46df3dc76fd86bea6f95c6f3cd1539e1858829948d86262de0254a2"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/coarse__mstcn_556_hp:onoff_reliable.json",
+      "present": true,
+      "bytes": 829,
+      "sha256": "f286d92de27ff4d47afd30e3a13429881a354fab58b3a145ef1dcb5455616dd1"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/cue9__mstcn_556_hp:cue9.json",
+      "present": true,
+      "bytes": 834,
+      "sha256": "eb74c6e0c0d714c60fe31a95332cdbe5d0a0d440073a23bd7306e5f3d7d148fe"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/cue_v2__mstcn_556_hp.json",
+      "present": true,
+      "bytes": 829,
+      "sha256": "06c4cef9eeb7c1b436b4c18c6fe68f304666e37405e3e565df7b68564eec1984"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/cue_v2__mstcn_556_hp:proden.json",
+      "present": true,
+      "bytes": 828,
+      "sha256": "20d74a30078ee81a64644f801ba9854f1aaa033158d50368e53bfcb4c676cd74"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/cue_v2__mstcn_556_hp:v2+proden.json",
+      "present": true,
+      "bytes": 829,
+      "sha256": "b55e2116f6b0aba627acf3551975343358c4cd9987a3797743c49dec6ec97069"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/cue_v2__mstcn_556_hp:v2.json",
+      "present": true,
+      "bytes": 828,
+      "sha256": "3984106e0e803bff65f4308c1c5385a1476dc63d14e78eb45d21d5caac5fdbce"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/ff_bp__mstcn_553_facefound.json",
+      "present": true,
+      "bytes": 833,
+      "sha256": "a16d34408bade67dfc5a39f78ecf1a49a0809439d48cbc13af1272660bd8f0fe"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/ff_bp__transformer_553_facefound.json",
+      "present": true,
+      "bytes": 837,
+      "sha256": "19506ebbfb5c9c31c9d427c9d56d4f1213dac895c88f65ba8ae6c222df3c5ec6"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/ff_det__mstcn_553_facefound.json",
+      "present": true,
+      "bytes": 833,
+      "sha256": "11ec8b91452b7e44d01f4339b73b4b9f37e6f8a8176f29e31e2ad66bb450cd94"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/ff_det__transformer_553_facefound.json",
+      "present": true,
+      "bytes": 839,
+      "sha256": "0a0ffe19adbad5e3fd6bc18ff6400738159da1ae7e58873c574ac1f5c8b6bd6f"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/headpose__transformer_553_facefound.json",
+      "present": true,
+      "bytes": 847,
+      "sha256": "f396b069f42e440cc09d7406a7fb54a87aa9c3653aab5c49ca3b7b9ede2e395d"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/headpose__transformer_555_angles.json",
+      "present": true,
+      "bytes": 846,
+      "sha256": "ca25d3a14e8a8d633f4ac4487cd50aae7adc76686499d60ecfe4c6ae1950e551"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/ladder__transformer_552_base.json",
+      "present": true,
+      "bytes": 838,
+      "sha256": "29d0fee8a1716c77102b9c9ec383e8174bb292c203a27ad2e72f950de82ef455"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/ladder__transformer_556_hp.json",
+      "present": true,
+      "bytes": 838,
+      "sha256": "29bbad8b4f0d41cb864d3fbbed2e21fa18ba52977fd97c6fa008be7ed30ded4e"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/posefix__asrf_556_hp.json",
+      "present": true,
+      "bytes": 837,
+      "sha256": "3d6f55df98f6df049fb458c6e02a66ee202a8e716ddbf951ddb2ecaf3aee886a"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/posefix__mstcn_556_hp.json",
+      "present": true,
+      "bytes": 832,
+      "sha256": "050152919e03a10a7cf784a12ddcefbc8c2fdb7ff18a16afb3ae918b29bd7781"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/posefix__transformer_556_hp.json",
+      "present": true,
+      "bytes": 843,
+      "sha256": "0795462c79d54277f29c19ca210b707ac8eb0a0a08e352732a7d06965f429e2d"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/wave2__mstcn_1074_hp_head.json",
+      "present": true,
+      "bytes": 831,
+      "sha256": "f1b72419da1e09bd512eacca9a68cd6888f9213e97309326e8d599d829daf7ca"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/wave2__mstcn_556_hp.json",
+      "present": true,
+      "bytes": 834,
+      "sha256": "7f89d4a3339a1fefb9b8efdc463c2230eb25c01ef9d0372d8c3633757796a655"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/wave2__mstcn_556_hp:proden.json",
+      "present": true,
+      "bytes": 833,
+      "sha256": "be0d0287bd95ef2bbd4fec3979113ed5ed636ef9c092b29a882ceb846d4665ef"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/dashboard/wave2b__mstcn_556_hp:proden.json",
+      "present": true,
+      "bytes": 835,
+      "sha256": "f95e6cd19c0392c48cd338380459b5ebd137168eba2423b97ef624153393f439"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/runtime/model_registry.json",
+      "present": true,
+      "bytes": 52918,
+      "sha256": "12572834da899783242300b1a86281696d910ebfbc606bfa4fb5bd172a01be47"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/wave2/mstcn_556_cue6_s43/checkpoints/best.pth",
+      "present": true,
+      "bytes": 10888118,
+      "sha256": "3c4aec8170ed2151b0998227883516519f9179819055f9198b963ba73f6df08c"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/wave2/mstcn_556_cue6_s43/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11575,
+      "sha256": "133f9fa5785a76f7e2e8fa5aba7fbb4ceb2642a81af02e5449eed44fbdb07503"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/wave2/mstcn_556_cue6_s43/run_record.json",
+      "present": true,
+      "bytes": 29530,
+      "sha256": "8380676f076e1f3c428ef1390aebe0cecdafa4f7b9b44dee9c5034532c02cf16"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/wave2/mstcn_556_pll_s43/checkpoints/best.pth",
+      "present": true,
+      "bytes": 10888118,
+      "sha256": "62dba25b1a97fb6ae5cd6aa542988064adb45999a277c49566b1cbad513e9ed5"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/wave2/mstcn_556_pll_s43/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11369,
+      "sha256": "976b7a1144a8a50fa84ac55a52b8ef94262da64c84faff92bbf446d68368715b"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/wave2/mstcn_556_pll_s43/run_record.json",
+      "present": true,
+      "bytes": 29549,
+      "sha256": "ce071daa8a74fcbdb25b958bfa28684a5be7613b4a1f77f620c2e009e245c728"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/wave2/mstcn_head_s44/checkpoints/best.pth",
+      "present": true,
+      "bytes": 11153334,
+      "sha256": "dac74d2639033184b72daa122ddce2e2b43cd0e107be8d13484d011d797f40f7"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/wave2/mstcn_head_s44/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11572,
+      "sha256": "4f27405dbf6337d796ffa33f48b225df7d41930e7b0f86c37c85dd1a739cc09d"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/wave2/mstcn_head_s44/run_record.json",
+      "present": true,
+      "bytes": 34253,
+      "sha256": "d08dc2135ee5b4170d6a9aa724fdd74b7eac946ebec3c71c849032999fb41656"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/wave2b/mstcn_556_pll_s43/checkpoints/best.pth",
+      "present": true,
+      "bytes": 10888118,
+      "sha256": "b6a75b5ece1d97cb170c7a92c3e594b47b3aca717de5eec407ed9ad86ebb17f9"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/wave2b/mstcn_556_pll_s43/eval_val/metrics.json",
+      "present": true,
+      "bytes": 11366,
+      "sha256": "f73e363d1000672f421770cc8e999a0d84fc23f5d208d744f89079150cc99663"
+    },
+    {
+      "path": "LLMDet/work_dirs/thesis/wave2b/mstcn_556_pll_s43/run_record.json",
+      "present": true,
+      "bytes": 29539,
+      "sha256": "c31e3133b66e0ee564d716127202f40f2f32b04e14e5aa46caf9f14fc6668524"
+    }
+  ],
+  "trees": [
+    {
+      "path": "tools/dashboard/sessions",
+      "what": "precomputed session caches",
+      "present": true,
+      "n_files": 902,
+      "bytes": 80688354
+    },
+    {
+      "path": "huggingface",
+      "what": "detector text encoder + LMM + mediapipe (restricted)",
+      "present": true,
+      "n_files": 337,
+      "bytes": 24710628749
+    }
+  ]
+}

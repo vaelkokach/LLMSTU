@@ -1,4 +1,4 @@
-# Experiment status — 2026-09-10
+# Experiment status — 2026-09-11
 
 Current state and what is in flight. `FINDINGS.md` remains the long-form record;
 this is the short answer to "where are we".
@@ -72,19 +72,66 @@ either way.)
 
 * Space `WaelK/classroom-attention-cues-live` (t4-medium, private), running
   `ff_det/mstcn_553_facefound@s42` — the checkpoint `attention_runtime.yaml` names,
-  T=0.924, display ≥0.46, alert ≥0.66.
+  T=0.924, display ≥0.46, alert ≥0.66. `deploy/hf_space_live/app.py` now DEFAULTS
+  to that id; it previously inherited the phase-1 CPU default `arch/mstcn_556_hp`,
+  so a Space with the variable unset served a different model than the one written
+  up (FINDINGS §14.6).
+* The model dropdown is grouped by what each model was asked to PREDICT. It used
+  to rank a 2-class abstaining model's 0.786 against a 6-class 0.526 and default
+  to it (FINDINGS §14). 24 live-capable variants, all calibrated; the best
+  canonical model `wave2/mstcn_1074_hp_head` (0.5307) is now offered at all.
 * Verified end to end on real video: 300 frames, 6 students, 3.48 fps, calibrated
   abstention visibly gating output.
 * `deploy/hf_space_live/app.py` splits artifacts by shape — weights to durable
   storage, session cache to ephemeral — because the durable mount is a bucket and
   900 small JPEGs stalled a boot.
 
+## 3b. cue9 — `screen_oriented` split four ways (2026-09-11)
+
+`screen_oriented` was 75.7% of the corpus. cue9 replaces it with `writing_notes`,
+`using_laptop`, `reading`, `listening`, keeps the other five cues, and moves
+`gaze == down` to `head_down`. It is a **second label space**, not a taxonomy —
+the split needs the annotation record, which `screen_oriented` has already
+discarded — so it has its own sidecar label build and no sequence rebuild.
+
+**macro-F1 0.4299 ± 0.0140** over 9 classes at 100% coverage, 3 seeds. Not
+comparable to cue6's 0.4838 over 6: averaging over more classes, one of them
+0.75% of the data, is a harder average.
+
+| | F1 |
+|---|---|
+| `listening` | 0.694 |
+| `using_laptop` | 0.641 |
+| `head_down` | 0.630 |
+| `uncertain` | 0.594 (cue6: 0.477) |
+| `phone_use` | 0.452 (cue6: 0.538) |
+| `reading` | 0.365 |
+| `writing_notes` | 0.245 (414 val frames) |
+| `looking_away` | 0.215 (cue6: 0.248) |
+| `turned_to_peer` | 0.171 (cue6: 0.208) |
+
+The split is learnable, `writing_notes` is thin but did not collapse, and the two
+known-bad classes are unchanged — their rules did not change, so that is the
+negative control. **Caveat: 90 epochs selects at the boundary for cue9 AND for
+the cue6 baseline, so all of these are floors** (FINDINGS §15.4).
+
+## 3c. Second gold set — ceiling replicates, threat C does not close
+
+`Gold_annotation_wael`, 1,000 crops, 0 rejected. Ceiling **0.8645** macro-F1 v1 /
+**0.8708** v2, accuracy 87.10% — an independent replication of §5's 87.4%.
+v2 remains ahead model-free.
+
+**It does not give inter-annotator agreement**: it overlaps the Admin gold set on
+3 crops. Threat C stands; closing it needs a re-annotated shared subset.
+
 ## 4. In flight / next
 
 | item | state |
 |---|---|
 | VLM fusion (`attention/fusion.py`, `vlm_grounder.py`) | built and tested, **not wired** into `pipeline_bridge` or the dashboard |
-| Live RTSP/HTTP source | server side done (`693ef37`), **UI control missing** |
+| Live RTSP/HTTP source | server side done (`693ef37`); **browser-camera capture now shipped** (FINDINGS §16) |
+| cue9 convergence | 3 seeds at 90 epochs are a floor; 240-epoch probe under `work_dirs/thesis/cue9_probe/` |
+| cue9 on the coarse/test splits | unspent, like every other taxonomy |
 | Test split for the coarse taxonomies | unspent — the obvious next step for a reportable number |
 | `coarse3_reliable` instability | needs more seeds or dropping |
 | Option-order sensitivity of the VLM scorer | unmeasured; permute and check before quoting any agreement rate |

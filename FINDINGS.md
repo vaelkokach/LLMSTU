@@ -3549,6 +3549,372 @@ now skipped by path in both tests. `attention/tests/` is green at 337 passed.
 
 ---
 
+## 14. Dashboard/Space model registry — the variant key was under-determined (2026-09-11) ★
+
+The dashboard's model dropdown ranked and averaged runs that had been asked
+**different questions**, and one consequence had already reached the default
+model.
+
+### 14.1 The defect
+
+`tools/dashboard/model_registry.py` keyed a "variant" on
+`sweep / architecture / feature_config`. Three sweeps break that key:
+
+| sweep | runs at `mstcn`/`556_hp` | what actually differed |
+|---|---|---|
+| `coarse/` | 7 | taxonomy: `cue6`, `onoff_reliable`, `coarse3_reliable` |
+| `cue_v2/` | 12 | cue ruleset (v1/v2) **x** objective (single/PRODEN) |
+| `wave2/` | 5 | objective (single/PRODEN) |
+
+All seven `coarse/` runs therefore became one entry whose "seed spread" was
+**0.7010 ± 0.1059** — an average over 6-, 3- and 2-class macro-F1 — and whose
+best "seed" was the 2-class `onoff_reliable` model at **0.7860**. Since the
+registry sorted on raw `macro_f1`, that model became the **dashboard default**,
+over the 6-class checkpoint the thesis deploys. `docs/LABELS.md` states the rule
+this broke: *macro-F1 over 2 or 3 classes is not comparable to macro-F1 over 6.*
+
+It was also unrunnable: no calibration had ever been fitted for it, and
+`session_replay.load_model` refuses (correctly) to run an uncalibrated model. So
+the registry's own default was a model the dashboard would have rejected on
+selection.
+
+`cue_v2/mstcn_556_hp` likewise averaged v1 against v2 and single-label against
+PRODEN; `wave2/mstcn_556_hp`'s implausible sd of 0.0697 was base runs averaged
+with PRODEN runs (0.48 against 0.37).
+
+### 14.2 The fix
+
+The variant key now carries everything that changes the target — taxonomy, cue
+ruleset, objective — and `comparable_group` names the triple. Ranking and
+defaulting happen **within** the canonical group (`cue6` / v1 / single-label)
+only; other groups are offered, labelled with class count and coverage, and can
+never win a ranking they are not in. Canonical variant ids are byte-identical to
+before, so `attention_runtime.yaml`, `DASHBOARD_MODEL`, the calibration
+filenames and every id quoted in this log still resolve; only the previously
+*colliding* runs get a longer id (`coarse/mstcn_556_hp:onoff_reliable`).
+
+`_make_entry` now **raises** if a variant ever groups two targets again.
+
+The corrected seed means reproduce the published numbers exactly, which the old
+registry did not:
+
+| variant | registry now | as reported |
+|---|---|---|
+| `coarse/…:onoff_reliable` | 0.7682 ± 0.0158 | 0.768 ± 0.016 |
+| `coarse/…:coarse3_reliable` | 0.7063 ± 0.0550 | 0.706 ± 0.055 |
+| `wave2/mstcn_1074_hp_head` | 0.5147 ± 0.0152 | 0.515 ± 0.015 |
+
+### 14.3 Deployability was judged by column count, hiding the best model
+
+`LIVE_MAX_COL = 556` marked any config reading a column ≥ 556 undeployable. That
+is the wrong test. What a streaming path cannot produce is two **blocks** —
+`express` (needs a second per-crop FER model) and `dynamic` (whole-track
+statistics). The 518-dim `head` block is not one of them: the live extractor
+grows it from `head_stream=True` (`features.py:116`), giving exactly 1074.
+
+So **`wave2/mstcn_1074_hp_head` — the best model on the canonical target, val
+0.5307, mean 0.5147 ± 0.0152 — was excluded from the dashboard for being wide.**
+It is now offered, and `pipeline_bridge` switches the head stream on from the
+checkpoint's own spec. Deployability is split into `live_capable` and
+`replay_capable`, because a session cache stores `base` + head pose only: the
+head-stream model can analyse video or a camera but cannot re-decide a cached
+session. It is not the default for that reason — the dashboard boots into replay.
+
+### 14.4 Runtime was hardcoded to six classes
+
+`runtime.load_runtime_model` built the output layer as `len(CUE_CLASSES)` and
+named predictions `CUE_CLASSES[raw]`. A 2-class checkpoint therefore could not
+load at all (`strict=True` shape mismatch) — the coarse models were unreachable
+from every live path, not merely mis-ranked. Class count and names now come from
+the checkpoint's own `spec.taxonomy`, and the abstention display is a *string*
+(`ABSTAIN_LABEL`), because `onoff_reliable` has no abstention class to point at.
+
+Verified: the deployed checkpoint is unchanged (T 0.9236, display ≥ 0.46, alert
+≥ 0.66; 900-frame replay 78.3% `screen_oriented`), and `onoff_reliable` replays
+at 89.1% `on_task` / 1.7% `off_task` / 9.2% abstained.
+
+### 14.5 The per-cue dashboard policy did not survive a regrouping
+
+`ALERT_AFTER_S` and the off-task share are keyed on the six cue classes. A model
+predicting `on_task`/`off_task` matched neither, so **the off-task share read 0%
+and no alert could fire** — a two-class model would have shown a calm room full
+of phones. `attention.taxonomy` now projects both, with deliberately different
+rules:
+
+* **off-task share** — a merged class counts when it contains an off-task cue and
+  no on-task one;
+* **alert dwell** — a merged class may alert only when *every* cue it merges is
+  independently alertable, and then waits as long as the slowest.
+
+The consequence is the honest one: `onoff_reliable`'s `off_task` merges
+`head_down` and `phone_use` with `uncertain`, so it contributes to the off-task
+share and **may raise no alert at all** — a student who cannot be seen is not
+evidence of being off task. `coarse3_reliable` keeps `phone_use` pure and alerts
+on it at 15 s; `down_or_hidden` cannot. The UI states this, and states that an
+`off_task` percentage including `uncertain` is not comparable to the six-cue one.
+
+### 14.6 Calibration coverage, and the Space
+
+Ten of the 24 live-capable variants had no fitted thresholds (`coarse/*`,
+`cue_v2/*`, `wave2*`, the head stream). All 24 are now calibrated on validation
+only. Two notes:
+
+* both coarse models fit `alert_threshold = 0.00`, because a 2-/3-class task
+  already exceeds the 85% selective-accuracy bar at full coverage. Under §14.5
+  they alert on nothing anyway (`onoff_reliable`) or on `phone_use` only
+  (`coarse3_reliable`), so the degenerate threshold has no effect.
+* `deploy/hf_space_live/app.py` defaulted `DASHBOARD_MODEL` to
+  `arch/mstcn_556_hp`, inherited from the phase-1 **CPU** Space where that choice
+  is argued explicitly (best test macro-F1 among deployable variants, ~4.6x
+  faster CPU replay). Neither half holds on the GPU Space, which the thesis
+  describes as running `ff_det/mstcn_553_ff_s42`. A live Space with the variable
+  unset therefore served a different model than the one written up — trained on
+  the FaceLandmarker mesh rather than the BlazeFace detector, so it also gave up
+  the +30% FPS of FINDINGS 11.16 — while presenting itself as the deployed
+  system. The live app now defaults to `ff_det/mstcn_553_facefound@s42`.
+
+The artifact repo itself cannot be checked from the HPC (no outbound network).
+`tools/dashboard/artifact_manifest.py` emits the exact file list the Space needs
+(98 files, 565 MB, plus the session and detector trees) with sizes and sha256,
+and verifies a copy against it. Current manifest:
+`reports/hf_space_artifacts_manifest.json`.
+
+Guards: `attention/tests/test_model_registry.py` (15) and
+`attention/tests/test_taxonomy_policy.py` (15). Suite 348 → 378 passing.
+
+---
+
+## 15. cue9 — splitting `screen_oriented` into four on-task cues (2026-09-11) ★
+
+`screen_oriented` was 75.7% of the corpus and covered four visibly different
+behaviours. cue9 replaces it with `writing_notes`, `using_laptop`, `reading` and
+`listening`, keeps the other five cue names unchanged, and adds
+`gaze_direction == down` to `head_down`.
+
+### 15.1 It is a second label space, not a taxonomy
+
+Every entry in `TAXONOMIES` regroups the six cue ids, and by the time a record is
+`screen_oriented` the fields that separate writing from reading are gone. So cue9
+is a **second projection of the same Layer-1 schema**, with its own precedence
+list — and it needs its own label build. It does not need a sequence rebuild:
+`build_cue_labels --label-space cue9` writes a 9-class sidecar next to the
+existing features, so cue6-vs-cue9 differs in the target and in nothing else.
+
+`data.load_split` now refuses to mix a label set with a taxonomy over a different
+space. Both are plain integer ids, so a cue9 `7` (`phone_use`) read as cue6 would
+land inside range and train on a systematically wrong target — the same silent
+class of failure the named column `LAYOUTS` exist to prevent.
+
+The build's v1 six-class self-check still runs, and **passed on all 271,485
+frames**. It cannot validate the cue9 labels directly (they are new), but it
+proves the replay is aligned and that the shared rules read the same as the
+builder's — the precondition for the cue9 labels being about the right frames.
+
+### 15.2 What the split does to the label distribution
+
+All 283,913 `labels_tracked.jsonl` records:
+
+| cue6 | share | → | cue9 | share |
+|---|---|---|---|---|
+| `screen_oriented` | 75.68% | → | `using_laptop` | 31.62% |
+| | | | `listening` | 30.41% |
+| | | | `reading` | 11.93% |
+| | | | `writing_notes` | 0.75% |
+| `looking_away` | 6.72% | | `looking_away` | 6.03% |
+| `head_down` | 5.20% | | `head_down` | 6.87% |
+| `uncertain` | 5.03% | | `uncertain` | 5.03% |
+| `phone_use` | 4.78% | | `phone_use` | 4.78% |
+| `turned_to_peer` | 2.60% | | `turned_to_peer` | 2.59% |
+
+**The largest class falls 75.7% → 31.6%.** `head_down` gains 4,720 records, 1,934
+of them from `looking_away` — this is the `RULESET_V2_RATIONALE` repair applied
+where it belongs, and because `head_down` outranks `looking_away` it works
+directly rather than through the field v2 tried to delete.
+
+### 15.3 Result — MS-TCN, 556_hp, 3 seeds, validation
+
+**macro-F1 0.4299 ± 0.0140** over 9 classes at 100% coverage (0.4267 / 0.4452 /
+0.4179). Best seed s43, against the matched cue6 baseline in the same sweep
+(`coarse/mstcn_556_cue6_s42`, 0.4838 over 6 classes):
+
+| cue6 class | F1 | → | cue9 class | F1 | support |
+|---|---|---|---|---|---|
+| `screen_oriented` | 0.811 | → | `listening` | **0.694** | 13,730 |
+| | | | `using_laptop` | **0.641** | 13,490 |
+| | | | `reading` | 0.365 | 4,593 |
+| | | | `writing_notes` | 0.245 | 414 |
+| `head_down` | 0.621 | | `head_down` | 0.630 | 3,455 |
+| `uncertain` | 0.477 | | `uncertain` | **0.594** | 2,038 |
+| `phone_use` | 0.538 | | `phone_use` | 0.452 | 1,313 |
+| `looking_away` | 0.248 | | `looking_away` | 0.215 | 2,745 |
+| `turned_to_peer` | 0.208 | | `turned_to_peer` | 0.171 | 924 |
+
+**0.4299 over 9 classes is NOT comparable to 0.4838 over 6.** Averaging over more
+classes, one of which is 0.75% of the data, is a harder average — the same rule
+`docs/LABELS.md` states for the coarse taxonomies, in the opposite direction. The
+registry puts cue9 in its own comparability group for exactly this reason.
+
+What the table does say, and this is the point:
+
+* **The split is learnable.** The two large new classes reach 0.694 and 0.641.
+  The single 0.811 they came from was close to its own base rate; four classes at
+  0.69/0.64/0.37/0.25 carry far more information than one at 0.81.
+* **`writing_notes` did not collapse.** 0.245 on 414 validation frames — thin, as
+  0.75% prevalence predicts, but nothing like PRODEN's `head_down` = 0.000. The
+  `sqrt` inverse-frequency weighting is doing its job.
+* **The two known-bad classes are unchanged** (0.215, 0.171 against 0.248, 0.208).
+  Their rules did not change, so this is the expected result and a useful
+  negative control: the split did not disturb them.
+* **`uncertain` improves**, 0.477 → 0.594, which is consistent with `gaze == down`
+  no longer being scattered across `looking_away`.
+* **`phone_use` drops**, 0.538 → 0.452, the one cost. Its rule is unchanged, so
+  this is competition from eight other classes rather than a labelling change.
+
+Live, the difference is the whole point. Replaying the same 900-frame session:
+cue6 reports `screen_oriented` on 78.3% of student-frames; cue9 reports
+`listening` 59.1%, `using_laptop` 18.5%, `reading` 15.7%.
+
+### 15.4 Caveat: 90 epochs is marginal for every taxonomy, not just cue9
+
+All three cue9 seeds selected epochs 82–89 of 90, with training loss still
+falling. So is the matched cue6 baseline (`mstcn_556_cue6_s42`, selected epoch
+**89**), and so are 2 of 3 `coarse3_reliable` seeds. **The 90-epoch budget in this
+sweep family selects at or near the boundary regardless of taxonomy.**
+
+cue9 was therefore left at 90 epochs — matching the protocol is what makes it
+comparable to the rest of the family — and a separate 240-epoch single-seed
+**convergence probe** is recorded under `work_dirs/thesis/cue9_probe/` to
+quantify what the budget costs. Every number in §15.3 should be read as a
+**floor**.
+
+This is a finding about the protocol, and it applies to the published cue6
+numbers too.
+
+### 15.5 Plumbing
+
+`taxonomy.py` gains `CUE9_CLASSES`, `cue9_conditions`, `map_record_cue9`,
+`candidate_set_cue9`, `LABEL_SPACES` and `taxonomy_space`; `TAXONOMIES`
+entries declare their `space` and `taxonomy_lut` is built against it.
+`docs/LABELS.md` gains Layer 2b and is enforced by `test_labels_doc.py`.
+Candidate sets are much denser than cue6's — **48.2% of records fire more than
+one cue9 rule against 13.7%** — so the PRODEN identifiability argument would have
+to be re-derived before trying a partial-label objective here.
+
+---
+
+## 16. Live camera from the browser (2026-09-11)
+
+`docs/EXPERIMENT_STATUS.md` listed "Live RTSP/HTTP source — server side done, UI
+control missing". The UI control alone would not have been enough: the missing
+piece was whose camera.
+
+`cv2.VideoCapture(0)` opens a device on the machine running the server. On the
+Hugging Face Space no camera is attached to it; on the shared GPU box device 0
+belongs to whoever plugged it in. Neither is what a viewer means by "my camera".
+
+So the page captures with `getUserMedia` and POSTs JPEG frames to
+`/api/camera/frame`; `PushedFrames` stands in for the capture, and the analysed
+frame — boxes and cue labels drawn on — returns through the same `/api/state` the
+page already polls. `--video 0` is kept for running the dashboard locally; the
+two are different things and both are documented.
+
+Verified end to end on CPU with the deployed checkpoint: **539 frames pushed, 97
+analysed, 442 skipped (82%), 6 students tracked, boxes and per-student cues
+drawn, one student correctly abstained** (`uncertain`, confidence 0.37 against the
+0.46 display threshold).
+
+Two bugs in `PushedFrames` were caught by writing its tests rather than by
+running it, and both are the silent kind:
+
+* **A frame could be handed out twice.** `LatestFrame` keeps a per-call `last`, so
+  with no new frame it re-returns the current one. For RTSP that barely matters.
+  Here the browser can stall for seconds while a tab is backgrounded, and
+  re-analysing one stale frame advances every student's dwell on evidence that is
+  no longer true — which is how an alert fires on a frozen image. `last_seq` is
+  now instance state.
+* **A dead buffer still served its last frame.** `read()` returned the held frame
+  before checking liveness, so a closed tab's final frame could be analysed as
+  live. Liveness is now checked first.
+
+A closed or crashed tab sends no event, so the run ends on an idle timeout —
+which is also what the Stop button relies on, so the crash path is the tested
+one. Skipped frames are reported to the page, because skipping is the mechanism
+that keeps the overlay current rather than a fault.
+
+---
+
+## 17. Second gold set (`Gold_annotation_wael`) — the ceiling replicates, threat C does not close (2026-09-11) ★
+
+1,000 human-annotated crops, every one `status: ok`. Full report:
+`reports/gold_wael/README.md`.
+
+### 17.1 The ceiling replicates on a fresh sample
+
+| ruleset | macro-F1 | 95% CI | accuracy |
+|---|---|---|---|
+| v1 | **0.8645** | [0.8354, 0.8885] | 0.8710 |
+| v2 | **0.8708** | [0.8466, 0.8924] | 0.8730 |
+
+§5 reports 87.4% frame agreement from the earlier Admin pairing; this is 87.10%
+accuracy on a **different** 1,000-crop sample. An independent replication, not a
+re-measurement.
+
+Sample quality is much better than the Admin round: **0 crops rejected as
+unusable against 230 (23.4%)**, and 1,000/1,000 join the candidate manifest
+against 3/984. The ceiling is no longer conditional on a 23% reject rate.
+
+**v2 is still ahead model-free**: +0.0063 macro-F1, with `uncertain` recall
+0.710 → 0.812 (support 31 → 48) and `looking_away` support 120 → 88 — the
+direction the rule repair predicts. The v2 *training* intervention failed
+(§`docs/CUE_RULES_V2.md`); the v2 *diagnosis* is now confirmed by a second,
+independent set of human labels. This is also the evidence behind cue9's
+`head_down` rule (§15.2).
+
+### 17.2 Threat C is NOT closed by this set
+
+```
+Admin gold : 984 unique crops
+wael  gold : 1,000 unique crops
+overlap    :     3 crops  (2 usable)
+```
+
+The candidate manifest was regenerated between rounds, so the two gold files
+annotate **essentially disjoint samples**. `compute_agreement.py` returns
+κ = 1.000 over n = 2, which measures nothing.
+
+So this is a second, better, independent gold **sample** — not a second
+annotation of the first. No inter-annotator κ can be quoted from the pair, and
+`THESIS_DEFENSIBILITY_REVIEW.md` threat C stands. Closing it needs one annotator
+to re-annotate a shared subset of `gold_candidates.jsonl`, which both existing
+gold files already index; nothing in the pipeline has to change.
+
+### 17.3 A measurement bug in the ceiling tool, which was a no-op here
+
+`measure_ceiling.py` ran `map_record()` on the human record, and the gold tool
+does not collect `face_kpts`. It therefore defaulted to 3 on the human side, so
+the `uncertain` gate (`occluded AND face_kpts <= 2`) could fire **only on the
+pseudo side** — under-counting human `uncertain` and scoring every pseudo
+`uncertain` over an occluded crop as a false positive it had not committed.
+
+`join_measured_fields()` recovers `face_kpts` from the crop's own record by
+`file_name`. It is a measurement of the image, not an annotator judgement, so it
+leaks nothing.
+
+**It filled 1,000 records and changed 0 labels**: wherever this annotator marked
+`occluded`, the detector had found more than two keypoints. The numbers above are
+unaffected. Recorded as a no-op rather than implied to be a correction.
+
+### 17.4 Where the pseudo-labeller is weakest, and what it means for cue9
+
+Field-exact on all 10 fields: 73.9%. `activity` is the weakest field at **75.8%**
+(gaze 86.9%, target 89.3%, posture 97.1%, booleans ≥99%).
+
+cue9 keys `writing_notes` and `using_laptop` on `activity`. **75.8% is therefore
+the honest ceiling on those two classes**, and it is the first thing to quote
+against `writing_notes` = 0.245.
+
+---
+
 ## 10. Changelog
 
 **2026-08-08**

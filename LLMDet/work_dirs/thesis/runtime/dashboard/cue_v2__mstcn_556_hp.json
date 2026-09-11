@@ -1,0 +1,17 @@
+{
+  "evaluator_version": "thesis_eval/1.0.0",
+  "fitted_on": "LLMDet/work_dirs/thesis/cue_v2/v1_base_s42/eval_val/predictions.npz",
+  "temperature": 0.9260635120576023,
+  "display_threshold": 0.46,
+  "display_rule": "highest threshold retaining >= 90% coverage",
+  "display_coverage": 0.9080370942812983,
+  "display_selective_accuracy": 0.7495293359123146,
+  "alert_threshold": 0.66,
+  "alert_rule": "lowest threshold with selective accuracy >= 85%",
+  "alert_coverage": 0.6139525080792468,
+  "alert_selective_accuracy": 0.8557424571842698,
+  "alerts_enabled": true,
+  "alerts_disabled_reason": "",
+  "uncalibrated_accuracy_at_full_coverage": 0.7174371223830266,
+  "note": "Validation split only, then frozen. Temperature scaling moves no argmax, so accuracy at full coverage is unchanged; only confidence and abstention move."
+}

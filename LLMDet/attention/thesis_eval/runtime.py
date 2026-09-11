@@ -52,21 +52,72 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import torch
 
-from attention.taxonomy import CUE_CLASSES
+from attention.taxonomy import CUE_CLASSES, taxonomy_classes
 from attention.thesis_eval import EVALUATOR_VERSION
 from attention.thesis_eval import data as D
 from attention.thesis_eval.models import build_model
 
 UNCERTAIN = CUE_CLASSES.index("uncertain")
 
+#: What the live chip reads when confidence is below ``display_threshold``.
+#: A string, not a class id, because not every taxonomy HAS an abstention
+#: class: ``onoff_reliable`` predicts on_task/off_task only. Using the word
+#: keeps the UI's grey chip and its "never alert on this" rule working for
+#: every taxonomy, and keeps an abstention distinguishable from a prediction
+#: (the ``abstained`` flag says which).
+ABSTAIN_LABEL = "uncertain"
 
-#: Feature configs the live extractor can serve. The live vector is laid out
-#: [base(552) | yaw, pitch, roll, face_found], i.e. the first 556 columns of the
-#: offline layout, so any config drawing only on those blocks is deployable.
-#: 563_* and 570_full are NOT: the expression block needs a second GPU model per
-#: crop and the dynamic block is a whole-track statistic that a streaming path
-#: cannot produce faithfully.
-LIVE_MAX_COL = 556
+#: Width of the vector the live extractor produces, by whether the head stream
+#: is switched on. ``StudentFeatureExtractor`` emits
+#: [base(552) | yaw, pitch, roll, face_found] = 556, and a further 518 columns
+#: (512 CLIP over the head crop + 6 head-box geometry) when
+#: ``head_stream=True`` (features.py:116).
+LIVE_WIDTH_BASE = 556
+LIVE_WIDTH_HEAD = 1074
+
+#: Kept for callers that imported it. It is the width of the DEFAULT live
+#: vector, not a ceiling on deployability — see :func:`live_input_width`.
+LIVE_MAX_COL = LIVE_WIDTH_BASE
+
+#: Blocks no streaming path can produce, and why. These, not a column count,
+#: are what makes a feature config undeployable: ``1074_hp_head`` reads column
+#: 1073 and is perfectly live-servable, while ``563_expr`` reads column 562 and
+#: is not.
+UNDEPLOYABLE_BLOCKS = {
+    "express": "the 7 expression dims need a second per-crop FER model",
+    "dynamic": "the 7 dynamic dims are whole-track statistics (fidget variance, "
+               "a personalised gaze baseline), not per-frame quantities",
+}
+
+
+def live_input_width(feature_config: str) -> int:
+    """How many columns the live extractor must produce for this config.
+
+    Raises for a config that reads a block a streaming path cannot produce, so
+    an undeployable checkpoint fails here rather than at the width assert with
+    a message about padding.
+    """
+    blocks = D.FEATURE_CONFIGS[feature_config]
+    bad = [b for b in blocks if b in UNDEPLOYABLE_BLOCKS]
+    if bad:
+        raise SystemExit(
+            f"feature config {feature_config!r} reads {bad}, which a streaming "
+            f"path cannot produce: "
+            + "; ".join(UNDEPLOYABLE_BLOCKS[b] for b in bad)
+            + ". This checkpoint is not deployable in a streaming path.")
+    return LIVE_WIDTH_HEAD if "head" in blocks else LIVE_WIDTH_BASE
+
+
+def bundle_classes(spec: dict) -> "List[str]":
+    """The class names this checkpoint predicts, from its own recorded spec.
+
+    A checkpoint trained on ``onoff_reliable`` has a 2-unit output layer. Building
+    a 6-class head for it and loading with ``strict=True`` raises a shape error;
+    building one without strict would run it on a randomly initialised layer.
+    Reading the taxonomy is the only way to get this right, and it is recorded
+    in every run the unified trainer produced.
+    """
+    return taxonomy_classes(str(spec.get("taxonomy", "cue6") or "cue6"))
 
 
 @dataclass
@@ -84,15 +135,23 @@ class RuntimeBundle:
     display_threshold: float = 0.0
     alert_threshold: float = 0.0
     calibration_evidence: str = ""
-    #: columns to take from the live 556-wide vector, or None when the config
-    #: already equals the full live vector
+    #: columns to take from the live vector, or None when the config already
+    #: equals the full live vector
     live_columns: Optional[np.ndarray] = None
     live_input_width: int = LIVE_MAX_COL
+    #: What this checkpoint predicts. Read from the checkpoint's own
+    #: ``spec.taxonomy``, never assumed to be the 6 cue classes.
+    taxonomy: str = "cue6"
+    class_names: List[str] = field(default_factory=lambda: list(CUE_CLASSES))
+    #: True when the live extractor must be built with ``head_stream=True``.
+    needs_head_stream: bool = False
 
     def describe(self) -> str:
         sel = "" if self.live_columns is None else \
             f", selecting {self.input_dim} of {self.live_input_width} live columns"
-        return (f"{self.experiment_id} ({self.model_name}, {self.input_dim}-dim{sel}, "
+        tax = "" if self.taxonomy == "cue6" else \
+            f", taxonomy {self.taxonomy} ({len(self.class_names)} classes)"
+        return (f"{self.experiment_id} ({self.model_name}, {self.input_dim}-dim{sel}{tax}, "
                 f"T={self.temperature:.3f}, display>={self.display_threshold:.2f}, "
                 f"alert>={self.alert_threshold:.2f})")
 
@@ -109,19 +168,15 @@ def load_runtime_model(ckpt_path: str, device: str = "cuda:0",
             "its feature layout cannot be recovered from the file. Retrain with "
             "attention.thesis_eval.train, or load it with the legacy runtime and "
             "label every number it produces as legacy.")
-    dim = D.config_dim(spec["feature_config"])
-    cols = D.column_index(spec["feature_config"])
-    if cols.max() >= LIVE_MAX_COL:
-        raise SystemExit(
-            f"{ckpt_path} uses feature config {spec['feature_config']!r}, which "
-            f"needs column {int(cols.max())}. The live extractor produces only "
-            f"{LIVE_MAX_COL} columns: the expression block needs a per-crop FER "
-            f"model and the dynamic block is a whole-track statistic. This "
-            f"checkpoint is not deployable in a streaming path.")
+    fc = spec["feature_config"]
+    dim = D.config_dim(fc)
+    cols = D.column_index(fc)
+    width = live_input_width(fc)            # raises for express/dynamic configs
+    classes = bundle_classes(spec)
     kw = dict(spec.get("model_kwargs") or {})
     if spec["model"] == "transformer":
         kw.setdefault("dropout", spec.get("dropout", 0.1))
-    model = build_model(spec["model"], dim, len(CUE_CLASSES), **kw).to(dev)
+    model = build_model(spec["model"], dim, len(classes), **kw).to(dev)
     # strict=True on purpose: a mismatch must stop the process, not print a line
     # and continue on random weights.
     model.load_state_dict(ck["model"], strict=True)
@@ -129,10 +184,13 @@ def load_runtime_model(ckpt_path: str, device: str = "cuda:0",
 
     b = RuntimeBundle(
         model=model, experiment_id=spec.get("experiment_id", "unknown"),
-        model_name=spec["model"], feature_config=spec["feature_config"],
+        model_name=spec["model"], feature_config=fc,
         input_dim=dim, seed=spec.get("seed"), checkpoint=str(ckpt_path), device=dev,
-        live_columns=None if dim == LIVE_MAX_COL else cols,
-        live_input_width=LIVE_MAX_COL)
+        live_columns=None if dim == width else cols,
+        live_input_width=width,
+        taxonomy=str(spec.get("taxonomy", "cue6") or "cue6"),
+        class_names=classes,
+        needs_head_stream="head" in D.FEATURE_CONFIGS[fc])
 
     if calibration:
         c = json.loads(Path(calibration).read_text())
@@ -155,9 +213,11 @@ def predict_window(bundle: RuntimeBundle, window: np.ndarray) -> Dict:
     if window.ndim != 2 or window.shape[1] != bundle.live_input_width:
         raise RuntimeError(
             f"live features are {window.shape[-1]}-dim but the extractor must "
-            f"produce {bundle.live_input_width} (base + head-pose block) for "
-            f"{bundle.experiment_id}. Fix the feature extractor — do NOT pad, a "
-            f"zero block is indistinguishable from a real measurement.")
+            f"produce {bundle.live_input_width} for {bundle.experiment_id} "
+            f"({bundle.feature_config}"
+            + (", head_stream=True" if bundle.needs_head_stream else "")
+            + "). Fix the feature extractor — do NOT pad, a zero block is "
+            "indistinguishable from a real measurement.")
     if bundle.live_columns is not None:
         # SELECT the columns the checkpoint was trained on. A detector-only
         # backend still emits 4 head-pose columns, three of them zero; a
@@ -171,15 +231,20 @@ def predict_window(bundle: RuntimeBundle, window: np.ndarray) -> Dict:
     probs = torch.softmax(logits, dim=-1).cpu().numpy()
     raw = int(probs.argmax())
     conf = float(probs[raw])
+    names = bundle.class_names
     return {
-        "cue": CUE_CLASSES[raw],
+        "cue": names[raw],
         "cue_id": raw,
         "confidence": conf,
-        "displayed_cue": CUE_CLASSES[raw] if conf >= bundle.display_threshold
-                         else CUE_CLASSES[UNCERTAIN],
+        # ABSTAIN_LABEL rather than a class id: onoff_reliable has no
+        # abstention class of its own, and inventing one would put a label the
+        # model cannot predict into the same field as its predictions.
+        "displayed_cue": names[raw] if conf >= bundle.display_threshold
+                         else ABSTAIN_LABEL,
         "abstained": conf < bundle.display_threshold,
         "alert_allowed": conf >= bundle.alert_threshold,
         "probs": probs.tolist(),
+        "taxonomy": bundle.taxonomy,
     }
 
 

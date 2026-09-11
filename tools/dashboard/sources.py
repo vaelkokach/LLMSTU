@@ -257,6 +257,12 @@ def validate_stream_url(url: str) -> str:
     return url
 
 
+#: The browser-camera source id. One fixed value rather than a path: the frames
+#: arrive over HTTP from whoever has the page open, so there is nothing on this
+#: machine to name.
+BROWSER_CAMERA_ID = "camera:browser"
+
+
 def parse_id(source_id: str):
     """``"session:/abs/path"`` -> ``("session", Path(...))``.
 
@@ -269,6 +275,16 @@ def parse_id(source_id: str):
     kind, _, path = str(source_id).partition(":")
     if kind == "stream":
         return kind, validate_stream_url(path)
+    if kind == "camera":
+        # "browser" = frames POSTed by the page. A bare integer is a capture
+        # device ON THIS MACHINE, which is useful when the dashboard is run
+        # locally and is never what a remote viewer means.
+        if path == "browser":
+            return kind, path
+        if path.isdigit():
+            return kind, path
+        raise ValueError(
+            f"camera source must be 'browser' or a device index, not {path!r}")
     if kind not in ("session", "video") or not path:
         raise ValueError(f"malformed source id {source_id!r}")
     return kind, Path(path)

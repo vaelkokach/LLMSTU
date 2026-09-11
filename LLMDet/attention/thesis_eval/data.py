@@ -195,6 +195,11 @@ class CueLabels:
         off = d["offsets"].astype(np.int64)
         self.path = Path(path)
         self.ruleset = str(d["ruleset"])
+        # Which label space the ids index. Sidecars built before cue9 existed
+        # carry no such key and are cue6 by construction.
+        self.label_space = (str(d["label_space"])
+                            if "label_space" in getattr(d, "files", [])
+                            else "cue6")
         self._y = d["y"].astype(np.int64)
         self._cand = d["y_cand"].astype(bool)
         self._span = {k: (int(off[i]), int(off[i + 1])) for i, k in enumerate(keys)}
@@ -260,9 +265,34 @@ def load_split(
     overrides = CueLabels(Path(cue_labels)) if cue_labels else None
     want_layout = config_layout(feature_config)
     want_blocks = FEATURE_CONFIGS[feature_config]
-    from attention.taxonomy import CUE_CLASSES, taxonomy_classes, taxonomy_lut
+    from attention.taxonomy import (CUE_CLASSES, DEFAULT_LABEL_SPACE,
+                                    label_space_classes, taxonomy_classes,
+                                    taxonomy_lut, taxonomy_space)
     tax_lut = np.array(taxonomy_lut(taxonomy), dtype=np.int64)
     n_tax_classes = len(taxonomy_classes(taxonomy))
+    space = taxonomy_space(taxonomy)
+    n_src_classes = len(label_space_classes(space))
+
+    # The taxonomy's source space and the override's space must agree. They are
+    # both just integer ids, so a mismatch would not crash -- a cue9 label of 7
+    # (phone_use) read as cue6 would silently become an out-of-range index or,
+    # worse, land inside range and train on a systematically wrong target. This
+    # is the same class of failure the named column LAYOUTS exist to prevent.
+    if overrides is not None and overrides.label_space != space:
+        raise RuntimeError(
+            f"{cue_labels} holds {overrides.label_space!r} labels but taxonomy "
+            f"{taxonomy!r} is defined over {space!r}. Their ids mean different "
+            f"classes; refusing to mix them. Build the label set for this space "
+            f"(build_cue_labels --label-space {space}) or pick a taxonomy over "
+            f"{overrides.label_space!r}.")
+    if overrides is None and space != DEFAULT_LABEL_SPACE:
+        raise RuntimeError(
+            f"taxonomy {taxonomy!r} is defined over the {space!r} label space, "
+            f"but no --cue-labels was given. The sequences store {DEFAULT_LABEL_SPACE} "
+            f"ids and {space!r} is a different projection of the annotation "
+            f"schema, not a regrouping of them, so it cannot be derived from "
+            f"what is stored. Build it with "
+            f"`build_cue_labels --label-space {space}` and pass --cue-labels.")
     rows = [r for r in load_manifest(manifest_path) if r["split"] == split]
     rows.sort(key=lambda r: r["file"])
     if limit is not None:
@@ -298,11 +328,23 @@ def load_split(
         else:
             cand6 = np.zeros((len(y), len(CUE_CLASSES)), dtype=bool)
             cand6[np.arange(len(y)), y] = True
+        if cand6.shape[1] != len(CUE_CLASSES):
+            raise RuntimeError(
+                f"{r['file']} stores {cand6.shape[1]} candidate columns, not "
+                f"{len(CUE_CLASSES)}. The stored candidates are cue6 by "
+                f"construction.")
 
         # Override with a recomputed rule version, in 6-class space, before
         # anything else reads them.
         if overrides is not None:
             y, cand6 = overrides.get(r["file"], len(y))
+
+        # After the override, the candidate array is in the OVERRIDE's space,
+        # which may be wider than cue6.
+        if cand6.shape[1] != n_src_classes:
+            raise RuntimeError(
+                f"{r['file']}: {cand6.shape[1]} candidate columns against "
+                f"{n_src_classes} classes in label space {space!r}.")
 
         # Collapse the candidate columns the same way as the labels, so a
         # taxonomy that merges two classes merges their candidacy too.

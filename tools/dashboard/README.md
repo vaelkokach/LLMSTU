@@ -263,6 +263,49 @@ python tools/dashboard/session_replay.py --cache tools/dashboard/sessions/0325 \
 Same frames, same boxes, same features — the only difference is the temporal
 head, so any disagreement is attributable to the model.
 
+### Live: the viewer's own camera, from the page
+
+The **Live camera** panel captures with `getUserMedia` in the browser and POSTs
+JPEG frames to `/api/camera/frame`. The server runs the detector, the tracker and
+the selected model on each one and returns the frame with boxes and cue labels
+drawn on it, through the same `/api/state` the rest of the page already polls.
+
+```bash
+python tools/dashboard/server.py --config LLMDet/configs/attention_runtime.yaml \
+    --session tools/dashboard/sessions/0325 --device cuda:0
+#  -> open the page, press "Start camera"
+```
+
+The panel only appears when the server was started with `--config`; without a
+detector there is nothing to run on the frames.
+
+**Why the capture is in the browser and not `--video 0`.** `--video 0` opens a
+capture device *on the machine running the server*. On a Hugging Face Space no
+camera is attached to that machine, and on a shared GPU box device 0 belongs to
+whoever plugged it in. Neither is what a viewer means by "my camera". The two
+modes are both kept, and they are different things: `--video 0` is for running
+the dashboard locally, the panel is for everyone else.
+
+Three consequences worth stating plainly:
+
+* **Video leaves the viewer's machine.** Frames are sent to the server, held
+  only long enough to analyse, and not written to disk — but they are sent. The
+  server binds `0.0.0.0` and has no authentication (see the exposure note in
+  `server.py`), so use `--host 127.0.0.1`, or put it behind something, before
+  pointing a real classroom at it. `--blur-faces` applies here as everywhere.
+* **`getUserMedia` needs a secure context**: `https`, or `http` on `localhost`.
+  On plain `http` to a remote host the browser exposes no camera API at all, and
+  the panel says so rather than failing silently.
+* **Most frames are dropped, and that is the mechanism.** The browser pushes at
+  up to 10/s; the pipeline manages ~1 fps on CPU and a few on a GPU. Measured on
+  a T4-class CPU run: 539 pushed, 97 analysed, 442 skipped (82%). Skipping is
+  what keeps the overlay current — see the next section — and the panel reports
+  all three counts rather than showing a frame rate that looks healthy.
+
+The page pushes one frame at a time and schedules the next only after the
+previous POST returns, so it self-paces to whatever the server can absorb
+instead of queueing frames the pipeline would drop anyway.
+
 ### Live: a webcam, an IP camera, or a video file
 
 ```bash

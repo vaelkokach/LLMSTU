@@ -13,6 +13,7 @@ disagree. Change the code, not this document, and re-run the test.
 | 0 | detector target | `LLMDet/configs/attention_runtime.yaml` |
 | 1 | annotation schema (the actual dataset labels) | `tools/gold_annotator/vocab.py` |
 | 2 | six cue classes (derived) | `LLMDet/attention/taxonomy.py` |
+| 2b | nine cue classes (derived, a **second** projection) | `LLMDet/attention/taxonomy.py` |
 | 3 | regrouped taxonomies | `LLMDet/attention/taxonomy.py` |
 
 ---
@@ -179,6 +180,83 @@ anchor and collapses to F1 0.000.
 
 ---
 
+## Layer 2b — The nine cue classes (`cue9`)
+
+**Derived, never annotated**, like Layer 2 — and a *sibling* of it, not a
+refinement. `CUE9_CLASSES` in `attention/taxonomy.py` is a **second projection
+of Layer 1** with its own precedence list.
+
+Why it cannot be a Layer-3 taxonomy: every entry in `TAXONOMIES` regroups the
+six cue ids, and `screen_oriented` has already discarded the fields that tell
+writing from reading. A split needs the annotation record, so it needs its own
+label build (`build_cue_labels --label-space cue9`). Features are untouched, so a
+cue6-vs-cue9 comparison differs in the target and in nothing else.
+
+`screen_oriented` is replaced by four classes; the other five cue names are kept
+unchanged, so every statement about `phone_use` or `turned_to_peer` still means
+the same thing. One kept rule changes: **`head_down` also fires on
+`gaze_direction == down`**.
+
+| id | cue | fires when |
+|---|---|---|
+| 0 | `writing_notes` | `activity == writing_notes` |
+| 1 | `using_laptop` | `activity == using_laptop` AND `attention_target` in {`device`, `instruction`, `own_work`} |
+| 2 | `reading` | `gaze_direction` in {`laptop`, `own_desk`} OR `activity == reading` |
+| 3 | `listening` | `gaze_direction == teacher_or_board` OR `activity == listening` |
+| 4 | `looking_away` | unchanged from Layer 2 |
+| 5 | `head_down` | Layer 2 **plus** `gaze_direction == down` |
+| 6 | `turned_to_peer` | unchanged from Layer 2 |
+| 7 | `phone_use` | unchanged from Layer 2 |
+| 8 | `uncertain` | unchanged from Layer 2, and still the fallback |
+
+Precedence is the Layer-2 order with the four on-task rules in place of
+`screen_oriented`: `uncertain` -> `phone_use` -> `head_down` -> `turned_to_peer`
+-> `looking_away` -> `writing_notes` -> `using_laptop` -> `reading` ->
+`listening`.
+
+### Why `head_down` gains `gaze == down`
+
+This is the repair `RULESET_V2_RATIONALE` argues for, applied where it belongs.
+`gaze == down` used to reach `looking_away` through
+`attention_target == distracted`, so *looking down* fired *looking away*. Because
+`head_down` outranks `looking_away`, moving the condition up fixes it directly;
+and `gaze == down` simultaneously leaves the on-task gaze set (`reading` is
+{`laptop`, `own_desk`}, not {..., `down`}), so the two changes agree rather than
+compete.
+
+### Prevalence
+
+All 283,913 records of `labels_tracked.jsonl`, measured — not estimated.
+
+| cue6 | share | | cue9 | share |
+|---|---|---|---|---|
+| `screen_oriented` | 75.68% | -> | `using_laptop` | 31.62% |
+| | | | `listening` | 30.41% |
+| | | | `reading` | 11.93% |
+| | | | `writing_notes` | 0.75% |
+| `looking_away` | 6.72% | | `looking_away` | 6.03% |
+| `head_down` | 5.20% | | `head_down` | 6.87% |
+| `uncertain` | 5.03% | | `uncertain` | 5.03% |
+| `phone_use` | 4.78% | | `phone_use` | 4.78% |
+| `turned_to_peer` | 2.60% | | `turned_to_peer` | 2.59% |
+
+**The largest class falls from 75.7% to 31.6%**, which is the point of the split.
+`head_down` gains 4,720 records — 1,934 from `looking_away` and 2,786 from
+`screen_oriented` (frames whose gaze was `down` with a task-consistent target).
+
+Two things to watch in any cue9 result:
+
+* **`writing_notes` is 0.75%** — 2,119 records, ~1,187 after dedup. `idle_other`
+  was retired at 16 records because its inverse-frequency weight destabilised
+  training; this is 130x larger, but it is still the thin class.
+* **48.2% of records fire more than one cue9 rule**, against 13.7% for cue6,
+  because the four on-task classes genuinely overlap (gaze on the laptop fires
+  both `using_laptop` and `reading`). A partial-label objective over cue9 is
+  therefore a different proposition from one over cue6, and the PRODEN
+  identifiability argument would have to be re-checked before trying it.
+
+---
+
 ## Layer 3 — Regrouped taxonomies
 
 `TAXONOMIES` in `attention/taxonomy.py`. Each regroups the six cues; classes a
@@ -191,6 +269,7 @@ the loss **and** from the metrics.
 | `onoff` | `on_task`, `off_task` | |
 | `onoff_reliable` | `on_task`, `off_task` | `looking_away`, `turned_to_peer` |
 | `coarse3_reliable` | `screen_oriented`, `down_or_hidden`, `phone_use` | `looking_away`, `turned_to_peer` |
+| `cue9` | `writing_notes`, `using_laptop`, `reading`, `listening`, `looking_away`, `head_down`, `turned_to_peer`, `phone_use`, `uncertain` | |
 
 Groupings:
 
@@ -199,6 +278,12 @@ Groupings:
   {`head_down`, `phone_use`, `uncertain`}.
 * `coarse3_reliable` — `down_or_hidden` = {`head_down`, `uncertain`}; the other
   two are singletons.
+* `cue9` — a **passthrough of Layer 2b**, not a regrouping of Layer 2. It is
+  listed here only because `--taxonomy cue9` is how a run selects it; its
+  `space` key is what tells the loader its ids index `CUE9_CLASSES`. Training or
+  evaluating it **requires** `--cue-labels` pointing at a cue9 label build, and
+  `data.load_split` refuses to mix a label set with a taxonomy over a different
+  space — the ids would silently mean different classes.
 
 **Any number from an abstaining taxonomy must be quoted with its coverage, and
 macro-F1 over 2 or 3 classes is not comparable to macro-F1 over 6.**
@@ -236,6 +321,23 @@ single frames, and also require the model's own calibrated confidence.
 | `turned_to_peer` | 30 |
 
 `screen_oriented` and `uncertain` never alert.
+
+This table and the off-task share are keyed on the **six** cue classes, so they
+have to be projected onto whichever taxonomy is running
+(`taxonomy_alert_dwell`, `taxonomy_off_task_classes`). The two projections use
+deliberately different rules, because the questions differ:
+
+* **off-task share** — a merged class counts when it contains an off-task cue and
+  no on-task one;
+* **alert dwell** — a merged class may alert only when *every* cue it merges is
+  independently alertable, and then waits as long as the slowest of them.
+
+So `onoff_reliable`'s `off_task` (which merges `head_down`, `phone_use` **and**
+`uncertain`) contributes to the off-task share and **may raise no alert at all**;
+`coarse3_reliable` alerts on `phone_use` only. An `off_task` percentage that
+includes `uncertain` is not comparable to the six-cue one, and the dashboard
+says so. `cue9` splits only the on-task side, so its off-task four and their
+dwells are identical to cue6's.
 
 ### `CUE_PHRASES` — `attention/cue_phrases.py`
 

@@ -96,20 +96,20 @@ def fit_one(val_predictions: Path) -> dict:
 def main():
     entries = MR.scan()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    print(f"{'variant':34} {'T':>6} {'display':>8} {'cov':>6} "
+    print(f"{'variant':46} {'T':>6} {'display':>8} {'cov':>6} "
           f"{'alert':>7} {'sel.acc':>8}  alerts")
-    print("-" * 84)
+    print("-" * 96)
     for e in entries:
         if not e.deployable:
             continue
         pred = REPO / e.val_predictions
         if not pred.exists():
-            print(f"{e.variant_id:34}  no eval_val/predictions.npz — skipped")
+            print(f"{e.variant_id:46}  no eval_val/predictions.npz — skipped")
             continue
         r = fit_one(pred)
         out = OUT_DIR / f"{e.variant_id.replace('/', '__')}.json"
         out.write_text(json.dumps(r, indent=2))
-        print(f"{e.variant_id:34} {r['temperature']:6.3f} "
+        print(f"{e.variant_id:46} {r['temperature']:6.3f} "
               f"{r['display_threshold']:8.2f} {r['display_coverage']:6.3f} "
               f"{r['alert_threshold']:7.2f} {r['alert_selective_accuracy']:8.3f}  "
               f"{'on' if r['alerts_enabled'] else 'DISABLED'}")

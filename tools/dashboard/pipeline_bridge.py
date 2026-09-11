@@ -105,9 +105,111 @@ class LatestFrame:
         self.cap.release()
 
 
+class PushedFrames:
+    """Frames arriving from somewhere that is not a `cv2.VideoCapture`.
+
+    The dashboard runs on the GPU box; the camera is in front of whoever opened
+    the page. `cv2.VideoCapture(0)` would open the *server's* camera, which on a
+    Hugging Face Space does not exist, and on a shared machine belongs to
+    somebody else. So the browser captures with `getUserMedia` and POSTs JPEGs,
+    and this stands in for the reader.
+
+    It deliberately implements the same contract as :class:`LatestFrame` —
+    `read()`, `dropped`, `release()` — including the part that matters: keep only
+    the NEWEST frame. The browser pushes on its own clock and the pipeline
+    consumes at a few per second, so buffering would put the overlay further
+    behind the room the longer it ran, with nothing on screen to say so.
+
+    `alive` is driven by a timeout rather than by end-of-stream: a browser tab
+    that is closed, backgrounded or loses its permission simply stops posting,
+    and there is no event to observe. Without the timeout the worker thread
+    would block on an empty queue forever, holding the GPU and leaving the page
+    reporting "running".
+    """
+
+    def __init__(self, idle_timeout=10.0, fps=15.0):
+        import threading
+        self.lock = threading.Lock()
+        self.frame = None
+        self.seq = 0
+        self.taken = 0
+        #: seq of the frame last handed out. Instance state, not a local, so a
+        #: frame is analysed ONCE -- see read().
+        self.last_seq = -1
+        self.fps = float(fps)
+        self.idle_timeout = float(idle_timeout)
+        self.last_push = time.time()
+        self.closed = False
+
+    def put(self, frame_bgr):
+        """Called from the HTTP thread with a decoded frame."""
+        with self.lock:
+            self.frame = frame_bgr
+            self.seq += 1
+            self.last_push = time.time()
+
+    @property
+    def alive(self):
+        with self.lock:
+            return not self.closed and \
+                (time.time() - self.last_push) < self.idle_timeout
+
+    def read(self, timeout=5.0):
+        """The newest UNSEEN frame, or (False, None) once the pusher is gone.
+
+        Two deliberate differences from :class:`LatestFrame`, both because this
+        source can stall in a way a camera cannot:
+
+        **A frame is handed out once.** `LatestFrame` keeps a per-call `last`, so
+        if nothing new has arrived it returns the current frame again. For an
+        RTSP camera that barely matters — frames keep coming. Here the browser
+        can stop for seconds while the tab is backgrounded, and re-analysing one
+        stale frame would advance each student's dwell on evidence that is no
+        longer true, which is how an alert fires on a frozen image. `last_seq` is
+        instance state so that cannot happen.
+
+        **Death is checked first.** A buffer whose last push was longer ago than
+        `idle_timeout` has no live frame to offer, even if it still holds one.
+        """
+        deadline = time.time() + timeout
+        while True:
+            if not self.alive:
+                return False, None
+            with self.lock:
+                if self.frame is not None and self.seq != self.last_seq:
+                    self.last_seq = self.seq
+                    self.taken += 1
+                    return True, self.frame
+            if time.time() >= deadline:
+                break
+            time.sleep(0.005)
+        # Not a failure: the browser may just be posting slowly. Returning
+        # (alive, None) matches LatestFrame and lets run_live keep waiting.
+        return self.alive, None
+
+    @property
+    def dropped(self):
+        with self.lock:
+            return max(0, self.seq - self.taken)
+
+    def release(self):
+        with self.lock:
+            self.closed = True
+            self.frame = None
+
+    def reopen(self):
+        """Ready this buffer for a new capture session."""
+        with self.lock:
+            self.closed = False
+            self.frame = None
+            self.seq = self.taken = 0
+            self.last_seq = -1
+            self.last_push = time.time()
+
+
 def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
              record=None, device=None, entry=None, should_stop=None,
-             stats_fn=None):
+             stats_fn=None, frame_source=None):
     """Detector -> tracker -> features -> temporal model over a live video.
 
     ``entry`` is an optional ``model_registry.ModelEntry``. When given, its
@@ -122,6 +224,11 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
     processed frame rate and the drop rate. A live dashboard that cannot keep up
     with the camera is still useful, but only if it says so — an overlay that
     looks current and is thirty seconds stale is worse than one labelled stale.
+
+    ``frame_source`` replaces the capture entirely: a :class:`PushedFrames` fed
+    by the browser's own webcam over HTTP. ``video`` is then only a label. This
+    is the only way a Space can analyse "the camera", since the process runs on
+    a GPU host with no camera attached to it.
     """
     import cv2
     import numpy as np
@@ -133,8 +240,8 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
     from attention.head_pose import HeadPoseEstimator
     from attention.thesis_eval.runtime import load_runtime_model, predict_window
     from attention.tracking import IoUTracker
-    from attention.taxonomy import CUE_CLASSES
     from attention.realtime_infer import _det_appearance_feature
+    from session_replay import calibration_path, colour_for
 
     cfg = yaml.safe_load(open(config_path))
     # Config paths (detector config/checkpoint, CLIP dirs) are written relative
@@ -188,20 +295,29 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
             f"head-pose backend {backend!r} is unavailable, but the deployed "
             "model needs its 4 dims. Install it or point --config at a "
             "checkpoint trained without head pose.")
-    feat = StudentFeatureExtractor(
-        clip_model_name=cfg["features"].get("clip_model_name",
-                                            "openai/clip-vit-base-patch32"),
-        device=dev, head_pose=hp)
-
     # Build from the CHECKPOINT's own spec. A YAML/checkpoint disagreement used
     # to raise inside a bare except and run the dashboard on random weights.
+    #
+    # Loaded BEFORE the extractor on purpose: whether the 518-dim head stream is
+    # switched on is a property of the checkpoint (``1074_hp_head`` reads it),
+    # and it changes what the extractor produces. Building the extractor first
+    # and asking afterwards would leave the best validation model in the
+    # registry permanently unservable — the width assert below would reject it
+    # with a message about padding.
     if entry is not None:
-        from session_replay import calibration_path
         ckpt = str(Path(__file__).resolve().parents[2] / entry.checkpoint)
         cal = str(calibration_path(entry.variant_id))
     else:
         ckpt, cal = cfg["temporal_checkpoint"], cfg.get("calibration")
     bundle = load_runtime_model(ckpt, device=dev, calibration=cal)
+
+    feat = StudentFeatureExtractor(
+        clip_model_name=cfg["features"].get("clip_model_name",
+                                            "openai/clip-vit-base-patch32"),
+        device=dev, head_pose=hp, head_stream=bundle.needs_head_stream)
+    if bundle.needs_head_stream:
+        print(f"[dashboard] head stream ON — a second CLIP pass over the head "
+              f"crop, {feat.HEAD_STREAM_DIM} extra dims per student")
     # The extractor always emits base + the 4 head-pose columns; a checkpoint
     # trained on a subset (e.g. 553_facefound) selects its columns inside
     # predict_window. Assert the EXTRACTOR width, not the model width.
@@ -213,6 +329,9 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
             f"({bundle.feature_config}). Refusing to pad — a zero block is "
             "indistinguishable from a real measurement.")
     print(f"[dashboard] temporal model: {bundle.describe()}")
+    #: The names this checkpoint predicts. Not CUE_CLASSES: a coarse-taxonomy
+    #: model has two or three of them, and the UI renders whatever it is sent.
+    class_names = list(bundle.class_names)
 
     from attention.thesis_eval.runtime import StrideController
     stride = StrideController(
@@ -224,18 +343,28 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
     dwell = {}
     rec = open(record, "w") if record else None
 
-    cap = cv2.VideoCapture(source)
-    if not cap.isOpened():
-        raise RuntimeError(
-            f"cannot open {kind} source {source!r}. For a webcam pass the "
-            f"device index (--video 0); for an IP camera pass the full URL "
-            f"(--video rtsp://user:pass@host/stream).")
-    live = kind in ("camera", "stream")
-    # A live source is drained by a reader thread so the pipeline always gets
-    # the newest frame; a file is read sequentially, since every frame matters
-    # and none of them are going stale.
-    reader = LatestFrame(cap) if live else cap
-    fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
+    if frame_source is not None:
+        # Frames are being POSTed to us; there is nothing to open.
+        cap = None
+        kind, source = "camera", "browser"
+        live = True
+        reader = frame_source
+        fps = float(getattr(frame_source, "fps", 15.0))
+    else:
+        cap = cv2.VideoCapture(source)
+        if not cap.isOpened():
+            raise RuntimeError(
+                f"cannot open {kind} source {source!r}. For a webcam pass the "
+                f"device index (--video 0); for an IP camera pass the full URL "
+                f"(--video rtsp://user:pass@host/stream). To use the camera of "
+                f"the machine viewing the page, pick the browser camera in the "
+                f"UI instead — this process cannot reach it.")
+        live = kind in ("camera", "stream")
+        # A live source is drained by a reader thread so the pipeline always gets
+        # the newest frame; a file is read sequentially, since every frame matters
+        # and none of them are going stale.
+        reader = LatestFrame(cap) if live else cap
+        fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
     n = 0
     t_prev = time.time()
     t_start = time.time()
@@ -311,10 +440,7 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
             x1, y1, x2, y2 = [int(v) for v in tr.bbox_xyxy]
             s = students.get(str(tr.track_id))
             cue = s["cue"] if s else "…"
-            col = (61, 220, 132) if cue == "screen_oriented" else \
-                  (86, 95, 255) if cue in ("head_down", "phone_use") else \
-                  (84, 180, 255) if cue in ("looking_away", "turned_to_peer") else \
-                  (160, 160, 160)
+            col = colour_for(cue)
             if blur_faces:
                 hh = max(1, int(0.35 * (y2 - y1)))
                 roi = vis[y1:y1 + hh, x1:x2]
@@ -326,11 +452,11 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
 
         small = cv2.resize(vis, (960, int(960 * vis.shape[0] / vis.shape[1])))
         ok2, buf = cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, 70])
-        push_fn(t, buf.tobytes() if ok2 else None, students, CUE_CLASSES)
+        push_fn(t, buf.tobytes() if ok2 else None, students, class_names)
         if rec:
             rec.write(json.dumps({"t": t, "students": students,
                                   "dt": time.time() - t_prev,
-                                  "cue_names": CUE_CLASSES}) + "\n")
+                                  "cue_names": class_names}) + "\n")
         t_prev = time.time()
         n += 1
 
@@ -355,6 +481,8 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=100000,
         print(f"[dashboard] live source: processed {n}, dropped {dropped} "
               f"({100 * dropped / max(total, 1):.0f}% of {total}), "
               f"{n / max(time.time() - t_start, 1e-9):.2f} processed fps")
+    # Both live readers own their own teardown (a reader thread, or the frame
+    # buffer); only the sequential file path hands back a bare capture.
     reader.release() if live else cap.release()
     os.chdir(cwd0)
     if rec:

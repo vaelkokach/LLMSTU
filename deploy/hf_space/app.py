@@ -21,6 +21,11 @@ Environment (set these as Space secrets/variables, not in the Dockerfile):
     ARTIFACT_REPO    e.g. "WaelK/llmstu-dashboard-artifacts"    (variable)
     ARTIFACT_TYPE    "model" (default) or "dataset"             (variable)
     DASHBOARD_MODEL  registry id, default arch/mstcn_556_hp     (variable)
+                     CPU phase-1 default, argued in README_DEPLOY.md: best
+                     test macro-F1 among deployable variants and ~4.6x faster
+                     to replay on CPU. The GPU Space (deploy/hf_space_live)
+                     defaults to the DEPLOYED checkpoint instead, because
+                     neither half of that argument applies there.
     SESSION          session dir name under sessions/, default 0325
 """
 

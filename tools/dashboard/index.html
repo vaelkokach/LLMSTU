@@ -150,6 +150,21 @@
       <p class="note" id="sourcenote"></p>
     </div>
 
+    <div class="card" id="cameracard" style="display:none">
+      <h2>Live camera</h2>
+      <div class="row">
+        <button id="btn-cam-start" class="primary">Start camera</button>
+        <button id="btn-cam-stop" disabled>Stop</button>
+      </div>
+      <video id="campreview" playsinline muted
+             style="width:100%;border-radius:8px;margin-top:10px;display:none;
+                    transform:scaleX(-1)"></video>
+      <canvas id="camcanvas" hidden></canvas>
+      <table class="spec"><tbody id="camstats"></tbody></table>
+      <div id="camerabanner"></div>
+      <p class="note" id="cameranote"></p>
+    </div>
+
     <div class="card" id="modelcard">
       <h2>Model</h2>
       <select id="modelsel" disabled><option>loading…</option></select>
@@ -275,6 +290,21 @@ async function loadSources(){
   if(!SOURCES.sources.length){
     sel.innerHTML = "<option>no recordings yet</option>";
   }
+
+  // The camera card needs the detector, and nothing else — the frames come from
+  // the viewer, not from this machine, so there is no device to discover.
+  const camOk = !!SOURCES.camera_enabled;
+  $("cameracard").style.display = camOk ? "" : "none";
+  if(camOk){
+    $("cameranote").innerHTML =
+      "Captured in <strong>your browser</strong> and sent frame by frame to the "
+      + "server, which runs the detector, the tracker and the selected model, and "
+      + "sends the frame back with the boxes drawn on it. The panel on the left is "
+      + "that analysed feed; the small preview is your raw camera. "
+      + "<strong>Video leaves your machine.</strong> Frames are held only long "
+      + "enough to analyse and are not written to disk. Needs https, or "
+      + "http on localhost.";
+  }
   sel.value = SOURCES.active || keep || sel.value;
 
   $("dropzone").style.display = SOURCES.upload_enabled ? "" : "none";
@@ -375,14 +405,159 @@ function renderJob(job){
   }
 }
 
+/* ---------------- live camera ----------------
+
+   The dashboard runs on the GPU host; the camera is in front of whoever has
+   this page open. So the capture happens HERE, in the browser, and frames are
+   POSTed one at a time to /api/camera/frame. The analysed frame — boxes, cue
+   labels and all — comes back through the same /api/state the rest of the page
+   already polls, so the video panel needs no special case.
+
+   The small preview is the RAW camera, mirrored the way a mirror is, purely so
+   the user can see they are in shot. The panel above it is the analysed feed
+   and is not mirrored, because the boxes are in source coordinates.
+
+   Pacing: one frame in flight at a time, and the next capture is scheduled only
+   after the previous POST returns. That makes the browser push at exactly the
+   rate the server can absorb, instead of queueing frames the pipeline will drop
+   anyway. `CAM_TARGET_MS` is a floor, not a rate.                          */
+
+let CAM_STREAM=null, CAM_TIMER=null, CAM_BUSY=false;
+const CAM_TARGET_MS = 100;        // never faster than 10/s
+const CAM_WIDTH = 960;            // matches the width the server re-encodes to
+
+function camBanner(text, isError){
+  const b=$("camerabanner");
+  b.innerHTML = text ? `<div class="banner${isError?" err":""}">${text}</div>` : "";
+}
+
+function camStats(o){
+  $("camstats").innerHTML = Object.entries(o)
+    .map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join("");
+}
+
+async function camStart(){
+  camBanner("");
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    camBanner("This browser exposes no camera API. Camera capture needs a "
+      + "secure context — https, or http on localhost.", true);
+    return;
+  }
+  try{
+    CAM_STREAM = await navigator.mediaDevices.getUserMedia({
+      video:{width:{ideal:1280}, height:{ideal:720}}, audio:false});
+  }catch(e){
+    // The three real causes, named, because "NotAllowedError" tells the user
+    // nothing about which one they hit.
+    camBanner("Camera unavailable: " + e.name + ". Either permission was "
+      + "denied, no camera is attached, or the page is not on a secure origin "
+      + "(https or localhost).", true);
+    return;
+  }
+  const v=$("campreview");
+  v.srcObject = CAM_STREAM; v.style.display="block";
+  await v.play().catch(()=>{});
+
+  // Point the server at the browser camera. It starts the pipeline, which then
+  // waits on the first pushed frame.
+  try{
+    const r = await fetch(api("api/source"),{method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({source_id: SOURCES?.camera_id || "camera:browser"})});
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.error||r.statusText);
+  }catch(e){
+    camBanner("Could not start the pipeline: "+e.message, true);
+    camStop(); return;
+  }
+
+  $("btn-cam-start").disabled=true; $("btn-cam-stop").disabled=false;
+  camStats({status:"streaming", sent:0, dropped:0});
+  camLoop();
+}
+
+function camStop(){
+  if(CAM_TIMER){ clearTimeout(CAM_TIMER); CAM_TIMER=null; }
+  if(CAM_STREAM){ CAM_STREAM.getTracks().forEach(t=>t.stop()); CAM_STREAM=null; }
+  const v=$("campreview"); v.srcObject=null; v.style.display="none";
+  $("btn-cam-start").disabled=false; $("btn-cam-stop").disabled=true;
+  // No "stop" call to the server: it notices the frames stopped and ends the
+  // run on its own idle timeout, which is also what happens if this tab is
+  // closed or crashes. One path, so the crash case is the tested one.
+  camStats({status:"stopped — the server ends the run when frames stop"});
+}
+
+function camLoop(){
+  if(!CAM_STREAM) return;
+  CAM_TIMER = setTimeout(async ()=>{
+    if(!CAM_BUSY) await camSend();
+    camLoop();
+  }, CAM_TARGET_MS);
+}
+
+async function camSend(){
+  const v=$("campreview");
+  if(!v.videoWidth) return;                  // not ready yet
+  CAM_BUSY=true;
+  try{
+    const c=$("camcanvas");
+    const w=Math.min(CAM_WIDTH, v.videoWidth);
+    c.width=w; c.height=Math.round(w * v.videoHeight / v.videoWidth);
+    c.getContext("2d").drawImage(v,0,0,c.width,c.height);
+    const blob = await new Promise(res=>c.toBlob(res,"image/jpeg",0.7));
+    if(!blob) return;
+    const r = await fetch(api("api/camera/frame"),
+      {method:"POST", headers:{"Content-Type":"image/jpeg"}, body:blob});
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.error||r.statusText);
+    camStats({status:"streaming",
+              sent:j.received, analysed:j.processed,
+              // Dropped frames are NORMAL and are the mechanism that keeps the
+              // overlay current: the pipeline is slower than the camera, so it
+              // skips rather than falls behind.
+              "skipped (kept current)":j.dropped});
+    camBanner("");
+  }catch(e){
+    camBanner("Camera frame rejected: "+e.message, true);
+  }finally{ CAM_BUSY=false; }
+}
+
+$("btn-cam-start").addEventListener("click", camStart);
+$("btn-cam-stop").addEventListener("click", camStop);
+window.addEventListener("pagehide", camStop);
+
 /* ---------------- model selector ---------------- */
 
 let MODELS=null, SWITCHING=false;
 
 function optionLabel(m){
   const val = f4(m.val && m.val.macro_f1);
-  return `${m.label}  ·  val macro-F1 ${val}  ·  ${m.sweep_label}`;
+  // The class count and the coverage travel WITH the number, always. A bare
+  // "0.786" next to a bare "0.526" invites exactly the comparison
+  // docs/LABELS.md forbids: the first is 2 classes at 91% coverage, the second
+  // is 6 at 100%.
+  const scope = `${m.n_classes||6} cls`
+      + (m.coverage!=null && m.coverage<0.999
+         ? ` @ ${(100*m.coverage).toFixed(0)}% cov` : "");
+  return `${m.label}  ·  val macro-F1 ${val} (${scope})  ·  ${m.sweep_label}`;
 }
+
+/* Groups, in the order they are offered. The canonical 6-cue target comes
+   first and is the only group the server will default to; the others are
+   offered but can never win a ranking they are not in. */
+const MODEL_GROUPS = [
+  {key:"canonical",
+   test:m=>m.is_canonical,
+   label:"Six visible cues — the thesis target, ranked by validation macro-F1"},
+  {key:"coarse",
+   test:m=>!m.is_canonical && m.taxonomy!=="cue6",
+   label:"Coarser taxonomies — a DIFFERENT, easier task: fewer classes and "
+        +"abstention. Not comparable to the six-cue numbers above"},
+  {key:"alttarget",
+   test:m=>!m.is_canonical && m.taxonomy==="cue6",
+   label:"Same six cues, different training target (cue ruleset v2 / "
+        +"partial labels) — comparable to each other, not to the group above"},
+];
 
 async function loadModels(){
   const r = await fetch(api("api/models"),{cache:"no-store"});
@@ -398,17 +573,28 @@ async function loadModels(){
     return;
   }
 
-  const live = MODELS.models.filter(m=>m.deployable);
-  const dead = MODELS.models.filter(m=>!m.deployable);
+  const live = MODELS.models.filter(m=>m.live_capable!==false);
+  const dead = MODELS.models.filter(m=>m.live_capable===false);
+  // On a cached session a model reading the head block cannot run: the cache
+  // holds base + head pose only. Disable it here rather than let the switch
+  // fail server-side.
+  const onSession = MODELS.source_kind==="session";
 
-  const g1=document.createElement("optgroup");
-  g1.label="Deployable — ranked by validation macro-F1";
-  live.forEach(m=>{
-    const o=document.createElement("option");
-    o.value=m.variant_id; o.textContent=optionLabel(m);
-    g1.appendChild(o);
+  MODEL_GROUPS.forEach(g=>{
+    const rows = live.filter(g.test);
+    if(!rows.length) return;
+    const og=document.createElement("optgroup");
+    og.label=g.label;
+    rows.forEach(m=>{
+      const o=document.createElement("option");
+      o.value=m.variant_id;
+      const blocked = onSession && m.replay_capable===false;
+      o.textContent=optionLabel(m) + (blocked ? "  — needs live video" : "");
+      if(blocked){ o.disabled=true; o.title=m.blocked_reason; }
+      og.appendChild(o);
+    });
+    sel.appendChild(og);
   });
-  sel.appendChild(g1);
 
   if(dead.length){
     const g2=document.createElement("optgroup");
@@ -430,7 +616,9 @@ async function loadModels(){
       ? `Switching restarts the session under the selected checkpoint — ${MODELS.switch_cost}. `
       : "This source cannot switch models. ") +
     "Each entry is the <strong>best validation seed</strong> of its variant; " +
-    "the test column is shown but never ranks anything.";
+    "the test column is shown but never ranks anything. Models are grouped by " +
+    "what they were <strong>asked to predict</strong> — macro-F1 is only " +
+    "comparable inside a group.";
 }
 
 document.getElementById("modelsel").addEventListener("change", async (ev)=>{
@@ -468,8 +656,22 @@ function renderModelSpec(m, notice){
   const seedMean=(o)=> o.macro_f1==null ? "—"
       : `${f4(o.macro_f1)} ± ${f4(o.macro_f1_sd)} (${o.n} seeds)`;
 
+  const nCls = m.n_classes || 6;
+  const cov = m.taxonomy_coverage==null ? 1 : m.taxonomy_coverage;
+  const impure = m.off_task_impure || {};
+  const impureNames = Object.keys(impure);
+
   const rows=[
     ["checkpoint", `${m.experiment_id} · seed ${m.seed} of ${m.n_seeds}`],
+    // What it predicts, before any number about how well. A macro-F1 with no
+    // class count beside it is the comparison docs/LABELS.md warns against.
+    ["predicts", `<strong>${nCls}</strong> classes (${m.taxonomy||"cue6"})`
+        + (m.class_names && m.class_names.length
+           ? `: ${m.class_names.join(", ").replace(/_/g," ")}` : "")],
+    ...(cov < 0.999 ? [["coverage",
+        `<strong>${(100*cov).toFixed(1)}%</strong> of validation frames — this `
+      + `taxonomy abstains on ${(m.abstains_on||[]).join(", ").replace(/_/g," ")}`
+      + `, so its macro-F1 is over ${nCls} classes on the easier ${(100*cov).toFixed(0)}%`]] : []),
     ["macro-F1, val", `<strong>${f4(m.val_macro_f1)}</strong> &nbsp; this seed`],
     ["", `${seedMean(vm)} &nbsp; variant mean, as reported`],
     ["macro-F1, test", m.test_macro_f1==null ? "not evaluated on test"
@@ -487,6 +689,19 @@ function renderModelSpec(m, notice){
     ["alert coverage", m.alert_coverage==null ? "—"
         : `<strong>${(100*m.alert_coverage).toFixed(1)}%</strong> of frames, at `
         + `${(100*(m.alert_selective_accuracy??0)).toFixed(1)}% precision`],
+    // A merged class may alert only when every cue it merges is independently
+    // alertable, so a class mixing an actionable cue with `uncertain` pages
+    // nobody. Say which classes can, rather than leaving it to be discovered.
+    ...(m.alert_dwell ? [["alerts on",
+        Object.keys(m.alert_dwell).length
+          ? Object.entries(m.alert_dwell)
+              .map(([k,v])=>`${k.replace(/_/g," ")} after ${v}s`).join(", ")
+          : "<strong>no class</strong> — every off-task class of this taxonomy "
+            + "merges “uncertain”, which is not evidence of being off task"]] : []),
+    ...(impureNames.length ? [["off-task %",
+        `counts <strong>${impureNames.join(", ").replace(/_/g," ")}</strong>, which merges `
+      + `${Object.values(impure)[0].join(", ").replace(/_/g," ")} — it includes students `
+      + `who could not be seen, so this percentage is not comparable to the six-cue one`]] : []),
   ];
   tb.innerHTML = rows.map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join("");
   if(notice && !SWITCHING) banner(notice, false);

@@ -301,6 +301,196 @@ def parse_stem_time(stem: str) -> Optional[float]:
 
 
 # ---------------------------------------------------------------------------
+# cue9 — a SECOND projection of Layer 1, not a regrouping of cue6
+# ---------------------------------------------------------------------------
+#
+# `screen_oriented` is 75.7% of the corpus and covers four visibly different
+# behaviours: writing, working on a laptop, reading off the desk, and watching
+# the teacher or board. As one class it is too general to be worth reporting --
+# "the student is oriented at a task" is nearly the base rate of the room.
+#
+# Splitting it CANNOT be done with a taxonomy. Every entry in TAXONOMIES is a
+# regrouping of the six cue ids, and by the time a record is `screen_oriented`
+# the fields that distinguish writing from reading are gone. cue9 is therefore a
+# second projection of the SAME Layer-1 schema, with its own precedence list, and
+# it needs its own label build (`build_cue_labels --label-space cue9`). Features
+# are untouched: only the target changes.
+#
+# The four on-task rules, in precedence order, and the one change to the rest:
+#
+#   writing_notes   activity == writing_notes
+#   using_laptop    activity == using_laptop AND target in TASK_TARGETS
+#   reading         gaze in {laptop, own_desk}
+#   listening       gaze == teacher_or_board
+#   head_down       ALSO fires on gaze == down   <- the only change to a kept rule
+#
+# `head_down` gaining `gaze == down` is the repair RULESET_V2_RATIONALE argues
+# for, applied where it belongs. Because `head_down` sits ABOVE `looking_away` in
+# precedence, a student looking down is now `head_down` rather than
+# `looking_away` -- and `gaze == down` simultaneously leaves the on-task gaze set
+# (`reading` is {laptop, own_desk}, not {..., down}), so the two changes agree
+# instead of competing.
+#
+# Measured on all 283,913 labels_tracked.jsonl records:
+#
+#   cue6                    cue9
+#   screen_oriented 75.68%  using_laptop  31.62%   <- the 75.68% splits four ways
+#                           listening     30.41%
+#                           reading       11.93%
+#                           writing_notes  0.75%
+#   looking_away     6.72%  looking_away   6.03%   <- loses gaze==down to head_down
+#   head_down        5.20%  head_down      6.87%   <- +1,934 from looking_away,
+#                                                     +2,786 from screen_oriented
+#   uncertain        5.03%  uncertain      5.03%
+#   phone_use        4.78%  phone_use      4.78%
+#   turned_to_peer   2.60%  turned_to_peer 2.59%
+#
+# Two consequences a reader needs:
+#
+#   * the largest class falls 75.7% -> 31.6%, which is the point of the split;
+#   * `writing_notes` is 0.75% of records (2,119, and ~1,187 after dedup). That is
+#     thin. `idle_other` was retired at 16 records because its inverse-frequency
+#     weight destabilised training, and writing_notes is 130x larger than that,
+#     but it is still the class to watch in any cue9 result.
+#
+# Candidate sets are much denser than cue6's: 48.2% of records fire more than one
+# cue9 rule against 13.7% for cue6, because the four on-task classes genuinely
+# overlap (a laptop user whose gaze is on the laptop fires `using_laptop` AND
+# `reading`). That is a property of the split, not a defect — but it means a
+# partial-label objective over cue9 is a different proposition from one over
+# cue6, and the PRODEN identifiability argument in `candidate_set` would have to
+# be re-checked before trying it.
+#
+# The `reading`/`listening` rules are gaze-only as specified. An earlier reading
+# that also fell back to `activity in {reading, listening}` was measured and
+# differs on 88 records of 283,913 (0.03%), all of them `uncertain` vs
+# `listening`; the fallback is kept because it leaves nothing to the fallback
+# class, and it is recorded here because the choice is immaterial either way.
+
+CUE9_CLASSES: List[str] = [
+    "writing_notes",
+    "using_laptop",
+    "reading",
+    "listening",
+    "looking_away",
+    "head_down",
+    "turned_to_peer",
+    "phone_use",
+    "uncertain",
+]
+CUE9_TO_ID: Dict[str, int] = {c: i for i, c in enumerate(CUE9_CLASSES)}
+
+#: The on-task classes cue9 replaces `screen_oriented` with.
+CUE9_ON_TASK: Tuple[str, ...] = ("writing_notes", "using_laptop", "reading",
+                                 "listening")
+
+#: Aggregate overlay score per cue9 class. The four on-task classes inherit
+#: `screen_oriented`'s 1.0 -- the split is about what is VISIBLE, not about
+#: ranking one on-task behaviour above another. Not a claim about any
+#: individual's mental state.
+CUE9_TASK_SCORE: Dict[str, float] = {
+    **{c: 1.0 for c in CUE9_ON_TASK},
+    "uncertain": 0.5,
+    "looking_away": 0.3,
+    "turned_to_peer": 0.3,
+    "head_down": 0.15,
+    "phone_use": 0.1,
+}
+
+_READING_GAZES = {"laptop", "own_desk"}
+
+
+def cue9_conditions(rec: Dict) -> "List[Tuple[str, bool]]":
+    """Every cue9 rule and whether it fires, in precedence order.
+
+    Same contract as :func:`cue_conditions`: the single source of truth for both
+    :func:`map_record_cue9` (first match wins) and :func:`candidate_set_cue9`
+    (all matches), so the label a frame is given can never drift from the set it
+    is credited for. ``("uncertain", True)`` in first position is a GATE.
+    """
+    activity = rec.get("activity", "other")
+    gaze = rec.get("gaze_direction", "unknown")
+    target = rec.get("attention_target", "unknown")
+    posture = rec.get("posture", "unknown")
+    hand = rec.get("hand_state", "unknown")
+    occluded = bool(rec.get("occluded", False))
+    face_kpts = int(rec.get("face_kpts", 3))
+    phone_visible = bool(rec.get("phone_visible", False))
+    talking = bool(rec.get("talking", False))
+    engagement = rec.get("engagement_level", "unknown")
+
+    unverifiable = occluded and face_kpts <= UNCERTAIN_FACE_KPTS
+    no_signal = (gaze == "unknown" and target == "unknown"
+                 and engagement == "unknown" and activity == "other")
+
+    return [
+        ("uncertain", unverifiable or no_signal),
+        ("phone_use", activity == "using_phone" or phone_visible
+         or gaze == "phone" or hand == "on_phone"),
+        # the one changed rule: gaze == down is a head down, not a look away
+        ("head_down", activity == "head_down_sleeping"
+         or posture in ("head_down", "slumped") or gaze == "down"),
+        ("turned_to_peer", activity == "talking_to_peer" or talking
+         or gaze == "peer" or target == "peer"),
+        ("looking_away", gaze == "away_or_window" or activity == "looking_away"
+         or target == "distracted"),
+        # screen_oriented, split four ways. Two are keyed on `activity`, two on
+        # `gaze`, exactly as specified; the `activity` disjuncts on reading and
+        # listening are a fallback for a record whose gaze is unreadable, and
+        # they change 88 records of 283,913 because nearly every such record
+        # fires an earlier rule first.
+        ("writing_notes", activity == "writing_notes"),
+        ("using_laptop", activity == "using_laptop" and target in _TASK_TARGETS),
+        ("reading", gaze in _READING_GAZES or activity == "reading"),
+        ("listening", gaze == "teacher_or_board" or activity == "listening"),
+    ]
+
+
+def map_record_cue9(rec: Dict) -> int:
+    """Map one LLMSTU label record to a cue9 class id. First rule wins."""
+    for name, hit in cue9_conditions(rec):
+        if hit:
+            return CUE9_TO_ID[name]
+    return CUE9_TO_ID["uncertain"]
+
+
+def candidate_set_cue9(rec: Dict) -> "List[int]":
+    """Every cue9 class this record supports -- the PARTIAL label."""
+    conds = cue9_conditions(rec)
+    if conds[0][1]:                      # the unverifiable/no-signal gate
+        return [CUE9_TO_ID["uncertain"]]
+    fired = [CUE9_TO_ID[name] for name, hit in conds[1:] if hit]
+    return fired or [CUE9_TO_ID["uncertain"]]
+
+
+#: The label spaces a taxonomy may be defined over. A taxonomy regroups the
+#: classes of ONE of these; a sidecar label set built by `build_cue_labels`
+#: records which one it holds, and `data.load_split` refuses a mismatch.
+LABEL_SPACES: Dict[str, List[str]] = {
+    "cue6": CUE_CLASSES,
+    "cue9": CUE9_CLASSES,
+}
+DEFAULT_LABEL_SPACE: str = "cue6"
+
+#: Per-space mappers, so a caller can build either label set by name.
+LABEL_SPACE_MAPPER = {
+    "cue6": map_record,
+    "cue9": lambda rec, ruleset=None: map_record_cue9(rec),
+}
+LABEL_SPACE_CANDIDATES = {
+    "cue6": candidate_set,
+    "cue9": lambda rec, ruleset=None: candidate_set_cue9(rec),
+}
+
+
+def label_space_classes(space: str) -> List[str]:
+    if space not in LABEL_SPACES:
+        raise KeyError(f"unknown label space {space!r}; "
+                       f"known: {', '.join(sorted(LABEL_SPACES))}")
+    return list(LABEL_SPACES[space])
+
+
+# ---------------------------------------------------------------------------
 # Coarser taxonomies
 # ---------------------------------------------------------------------------
 #
@@ -368,7 +558,26 @@ TAXONOMIES: Dict[str, Dict] = {
         "note": "keeps the actionable distinction between a head down and a "
                 "phone, still abstaining on the gaze-ambiguous classes",
     },
+    # Defined over the cue9 space, and a passthrough of it. It is in TAXONOMIES
+    # so that --taxonomy cue9 selects it the way every other target is selected;
+    # it regroups nothing, and `space` is what tells the loader that its ids
+    # index CUE9_CLASSES rather than CUE_CLASSES.
+    "cue9": {
+        "space": "cue9",
+        "classes": CUE9_CLASSES,
+        "groups": {c: [c] for c in CUE9_CLASSES},
+        "note": "screen_oriented split into writing_notes / using_laptop / "
+                "reading / listening; head_down also fires on gaze == down",
+    },
 }
+
+
+def taxonomy_space(name: str) -> str:
+    """Which label space this taxonomy's groups are defined over."""
+    if name not in TAXONOMIES:
+        raise KeyError(f"unknown taxonomy {name!r}; "
+                       f"known: {', '.join(sorted(TAXONOMIES))}")
+    return str(TAXONOMIES[name].get("space", DEFAULT_LABEL_SPACE))
 
 
 def taxonomy_classes(name: str) -> List[str]:
@@ -389,14 +598,132 @@ def taxonomy_lut(name: str) -> List[int]:
     if spec is None:
         raise KeyError(f"unknown taxonomy {name!r}; "
                        f"known: {', '.join(sorted(TAXONOMIES))}")
-    lut = [IGNORE_LABEL] * len(CUE_CLASSES)
+    space = taxonomy_space(name)
+    src_classes = LABEL_SPACES[space]
+    src_to_id = {c: i for i, c in enumerate(src_classes)}
+    lut = [IGNORE_LABEL] * len(src_classes)
     for new_id, gname in enumerate(spec["classes"]):
         for src in spec["groups"][gname]:
-            lut[CUE_TO_ID[src]] = new_id
+            if src not in src_to_id:
+                raise KeyError(
+                    f"taxonomy {name!r} groups {src!r}, which is not a class of "
+                    f"its label space {space!r} ({', '.join(src_classes)}). A "
+                    f"taxonomy may only regroup classes that exist.")
+            lut[src_to_id[src]] = new_id
     return lut
 
 
 def taxonomy_excluded(name: str) -> List[str]:
     """Source classes this taxonomy abstains on (mapped to IGNORE_LABEL)."""
     lut = taxonomy_lut(name)
-    return [c for c in CUE_CLASSES if lut[CUE_TO_ID[c]] == IGNORE_LABEL]
+    src = LABEL_SPACES[taxonomy_space(name)]
+    return [c for i, c in enumerate(src) if lut[i] == IGNORE_LABEL]
+
+
+# ---------------------------------------------------------------------------
+# Projecting per-cue policy onto a regrouped taxonomy
+# ---------------------------------------------------------------------------
+#
+# The dashboard holds two policies keyed by the SIX cue classes: which cues
+# count as off-task for the classroom aggregate, and how long each must persist
+# before it may page an instructor (``ALERT_AFTER_S`` in
+# tools/dashboard/server.py). A model trained on `onoff_reliable` predicts
+# `on_task`/`off_task`, which appear in neither, so both policies silently
+# degraded to "nothing is off-task, nothing may alert" — a 2-class model would
+# have shown 0% off-task on a room full of phones.
+#
+# These two functions project the cue-level policy onto whichever taxonomy is
+# running. They deliberately use DIFFERENT rules, because the two questions are
+# different:
+#
+#   off-task share   an aggregate. A merged class counts when it contains an
+#                    off-task cue and no on-task one.
+#   alert dwell      interrupts a person. A merged class may alert only when
+#                    EVERY cue it merges is independently alertable, so a class
+#                    that mixes an actionable cue with `uncertain` pages nobody.
+#
+# The consequence is deliberate and is the honest reading: `onoff_reliable`'s
+# `off_task` merges `head_down` and `phone_use` (actionable) with `uncertain`
+# (a student who cannot be seen), so it contributes to the off-task share and
+# may raise no alerts at all. `coarse3_reliable` keeps `phone_use` as a
+# singleton and can alert on it, while `down_or_hidden` cannot.
+
+#: Cues that count as off-task for the classroom aggregate overlay.
+#: `uncertain` is NEITHER — an unverifiable crop is not evidence of being
+#: off-task — so it appears in no list here. cue9 splits only the ON-task side,
+#: so the off-task four are identical in both spaces.
+OFF_TASK_CUES: Tuple[str, ...] = ("looking_away", "head_down",
+                                  "turned_to_peer", "phone_use")
+ON_TASK_CUES: Tuple[str, ...] = ("screen_oriented",)
+
+OFF_TASK_BY_SPACE: Dict[str, Tuple[str, ...]] = {
+    "cue6": OFF_TASK_CUES,
+    "cue9": OFF_TASK_CUES,
+}
+ON_TASK_BY_SPACE: Dict[str, Tuple[str, ...]] = {
+    "cue6": ON_TASK_CUES,
+    "cue9": CUE9_ON_TASK,
+}
+
+
+def taxonomy_off_task_classes(name: str) -> List[str]:
+    """Classes of ``name`` that count toward the off-task share.
+
+    A class qualifies when it merges at least one off-task cue and no on-task
+    one. For ``cue6`` this returns exactly :data:`OFF_TASK_CUES`, so the
+    existing behaviour is unchanged.
+    """
+    spec = TAXONOMIES[name] if name in TAXONOMIES else None
+    if spec is None:
+        raise KeyError(f"unknown taxonomy {name!r}; "
+                       f"known: {', '.join(sorted(TAXONOMIES))}")
+    space = taxonomy_space(name)
+    off_cues = OFF_TASK_BY_SPACE[space]
+    on_cues = ON_TASK_BY_SPACE[space]
+    out = []
+    for cls in spec["classes"]:
+        src = spec["groups"][cls]
+        if any(c in off_cues for c in src) and \
+                not any(c in on_cues for c in src):
+            out.append(cls)
+    return out
+
+
+def taxonomy_off_task_is_impure(name: str) -> Dict[str, List[str]]:
+    """Off-task classes that also merge ``uncertain``, and what they merge.
+
+    Such a class inflates the off-task share with students who merely could not
+    be seen, so its percentage is NOT comparable to ``cue6``'s. The UI quotes
+    this next to the number rather than leaving the two looking alike.
+    """
+    spec = TAXONOMIES[name]
+    return {cls: list(spec["groups"][cls])
+            for cls in taxonomy_off_task_classes(name)
+            if "uncertain" in spec["groups"][cls]}
+
+
+def taxonomy_alert_dwell(name: str,
+                         cue_dwell: Dict[str, float]) -> Dict[str, float]:
+    """Sustained-dwell thresholds for ``name``, projected from per-cue ones.
+
+    ``cue_dwell`` is the cue-level policy (``server.ALERT_AFTER_S``). A merged
+    class is included only when every cue it merges has a threshold, and then
+    takes the LONGEST of them: merging two cues makes the evidence weaker, so
+    the wait gets longer, never shorter.
+
+    A class absent from the result may never raise an alert. That is the
+    intended outcome for any class merging ``uncertain``.
+    """
+    spec = TAXONOMIES[name] if name in TAXONOMIES else None
+    if spec is None:
+        raise KeyError(f"unknown taxonomy {name!r}; "
+                       f"known: {', '.join(sorted(TAXONOMIES))}")
+    out: Dict[str, float] = {}
+    on_cues = ON_TASK_BY_SPACE[taxonomy_space(name)]
+    for cls in spec["classes"]:
+        src = spec["groups"][cls]
+        if not src or any(c in on_cues for c in src):
+            continue
+        if all(c in cue_dwell for c in src):
+            out[cls] = max(cue_dwell[c] for c in src)
+    return out

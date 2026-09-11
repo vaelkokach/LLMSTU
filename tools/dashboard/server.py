@@ -106,10 +106,72 @@ STATE = {
 }
 LOCK = threading.Lock()
 
+#: Frames POSTed by the page's own webcam. One buffer for the process: the
+#: dashboard runs one pipeline at a time, and a second camera would be a second
+#: pipeline pushing into the same STATE.
+CAMERA = None
+
+
+def camera_buffer():
+    """The browser-camera frame buffer, created on first use.
+
+    Imported lazily because pipeline_bridge pulls in torch, and replay mode is
+    deliberately stdlib-only.
+    """
+    global CAMERA
+    if CAMERA is None:
+        from pipeline_bridge import PushedFrames
+        CAMERA = PushedFrames()
+    return CAMERA
+
 # Alert only after a cue has persisted this long — matches EventConfig
 # min_duration_s. Single-frame flicker must never page an instructor.
+# Keyed by the SIX cue classes; `active_policy` projects it onto whichever
+# taxonomy the running model predicts.
 ALERT_AFTER_S = {"phone_use": 15.0, "head_down": 30.0,
                  "turned_to_peer": 30.0, "looking_away": 20.0}
+
+#: The cue6 policy, used in replay mode and as the fallback. A recorded cue log
+#: stores decisions with no model attached, and every recorded log predates the
+#: coarse taxonomies, so cue6 is the correct reading of one.
+CUE6_POLICY = {
+    "taxonomy": "cue6",
+    "off_task_classes": ["looking_away", "head_down", "turned_to_peer",
+                         "phone_use"],
+    "alert_dwell": dict(ALERT_AFTER_S),
+    "off_task_impure": {},
+}
+
+
+def active_policy(taxonomy="cue6"):
+    """Off-task classes and alert dwells for the taxonomy now running.
+
+    A model trained on `onoff_reliable` predicts `on_task`/`off_task`, neither
+    of which appears in ALERT_AFTER_S. Without this projection the off-task
+    share read 0% for every frame and no alert could ever fire — the page would
+    have shown a calm room full of phones. The rules, and why the two questions
+    get different ones, are in ``attention.taxonomy``.
+
+    Falls back to cue6 if ``attention`` is not importable: replay mode is
+    deliberately stdlib-only, and a cue log is cue6 anyway.
+    """
+    if taxonomy == "cue6":
+        return CUE6_POLICY
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "LLMDet"))
+        from attention.taxonomy import (taxonomy_alert_dwell,
+                                        taxonomy_off_task_classes,
+                                        taxonomy_off_task_is_impure)
+        return {
+            "taxonomy": taxonomy,
+            "off_task_classes": taxonomy_off_task_classes(taxonomy),
+            "alert_dwell": taxonomy_alert_dwell(taxonomy, ALERT_AFTER_S),
+            "off_task_impure": taxonomy_off_task_is_impure(taxonomy),
+        }
+    except Exception as e:
+        print(f"[dashboard] cannot project the alert policy onto {taxonomy!r} "
+              f"({type(e).__name__}: {e}); using the cue6 policy", flush=True)
+        return CUE6_POLICY
 
 
 # ---------------------------------------------------------------------------
@@ -251,6 +313,10 @@ class Handler(BaseHTTPRequestHandler):
                 "active": STATE["model"].get("variant_id"),
                 "switchable": bool(CONTEXT.get("entries")),
                 "switch_cost": CONTEXT.get("switch_cost", ""),
+                # A session cache cannot serve a head-stream model, so the page
+                # needs to know which kind of source is running to disable the
+                # right options instead of offering one that will be refused.
+                "source_kind": (CONTEXT.get("source") or {}).get("kind", ""),
             }))
         if path == "/api/sources":
             return self._send(200, json.dumps({
@@ -263,6 +329,10 @@ class Handler(BaseHTTPRequestHandler):
                 "can_analyse": bool(CONTEXT.get("config")),
                 "stream_enabled": bool(CONTEXT.get("config")),
                 "stream_schemes": [x.rstrip(":/") for x in SRC.STREAM_SCHEMES],
+                # The page captures with getUserMedia and POSTs frames, so this
+                # needs the detector (--config) but nothing on this machine.
+                "camera_enabled": bool(CONTEXT.get("config")),
+                "camera_id": SRC.BROWSER_CAMERA_ID,
             }))
         self._err(404, "not found")
 
@@ -284,6 +354,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, json.dumps(
                     start_analyse(b.get("source_id", ""),
                                   b.get("max_frames"))))
+            if u.path == "/api/camera/frame":
+                return self._camera_frame()
             if u.path == "/api/cancel":
                 JOBS.request_stop()
                 with LOCK:
@@ -323,6 +395,45 @@ class Handler(BaseHTTPRequestHandler):
             "id": f"video:{dest}", "name": dest.name,
             "size_mb": round(n / 1e6, 1)}))
 
+    def _camera_frame(self):
+        """One JPEG from the page's webcam, straight into the frame buffer.
+
+        Decoded here rather than on the worker thread so a corrupt frame is
+        rejected with a 400 at the source instead of killing the pipeline, and
+        so the buffer only ever holds something the pipeline can use.
+
+        Returns the buffer's own counters, which is what lets the page throttle
+        itself: if it is pushing far faster than the pipeline consumes, the drop
+        count is the honest signal to slow down.
+        """
+        if not CONTEXT.get("config"):
+            raise RuntimeError(
+                "this dashboard was started without --config, so it cannot run "
+                "the detector on camera frames")
+        n = int(self.headers.get("Content-Length") or 0)
+        if n <= 0:
+            raise ValueError("empty camera frame")
+        if n > MAX_CAMERA_FRAME_BYTES:
+            raise ValueError(
+                f"camera frame is {n / 1e6:.1f} MB, over the "
+                f"{MAX_CAMERA_FRAME_BYTES / 1e6:.0f} MB limit")
+        blob = self.rfile.read(n)
+        import numpy as np
+        import cv2
+        img = cv2.imdecode(np.frombuffer(blob, np.uint8), cv2.IMREAD_COLOR)
+        if img is None:
+            raise ValueError("camera frame is not a decodable image")
+        buf = camera_buffer()
+        buf.put(img)
+        return self._send(200, json.dumps({
+            "received": int(buf.seq), "processed": int(buf.taken),
+            "dropped": int(buf.dropped)}))
+
+
+#: Largest single webcam frame accepted, before decoding. A 1280x720 JPEG at
+#: quality 0.7 is ~120 KB; this is generous and still bounds a malicious post.
+MAX_CAMERA_FRAME_BYTES = 4 << 20
+
 
 def push_frame(t, jpeg_bytes, students, cue_names):
     """Update dashboard state from one processed frame."""
@@ -332,7 +443,13 @@ def push_frame(t, jpeg_bytes, students, cue_names):
             STATE["frame_jpeg_b64"] = base64.b64encode(jpeg_bytes).decode()
         STATE["students"] = students
 
-        off = [s for s in students.values() if s["cue"] in ALERT_AFTER_S]
+        pol = CONTEXT.get("policy") or CUE6_POLICY
+        off_classes = pol["off_task_classes"]
+        dwell_for = pol["alert_dwell"]
+        # The DISPLAYED cue, not the raw one: a frame the model abstained on
+        # reads `uncertain`, and an abstention must not be counted as off-task
+        # evidence. `cue` is already the displayed value everywhere it is set.
+        off = [s for s in students.values() if s["cue"] in off_classes]
         frac = len(off) / max(len(students), 1)
         STATE["history"].append([round(float(t), 1), round(frac, 3)])
 
@@ -344,10 +461,15 @@ def push_frame(t, jpeg_bytes, students, cue_names):
             "off_task": len(off),
             "off_task_pct": round(100 * frac),
             "by_cue": dict(counts),
+            "taxonomy": pol["taxonomy"],
+            # Named so the UI can footnote a percentage that is NOT comparable
+            # to cue6's: `onoff_reliable`'s off_task merges `uncertain`, so it
+            # counts students who merely could not be seen.
+            "off_task_impure": pol["off_task_impure"],
         }
 
         for seat, s in students.items():
-            thr = ALERT_AFTER_S.get(s["cue"])
+            thr = dwell_for.get(s["cue"])
             # Selective prediction: an alert also needs the model to be confident
             # enough, at the threshold fitted on ITS OWN validation predictions
             # (tools/dashboard/calibrate_registry.py). Replay logs recorded
@@ -398,9 +520,10 @@ def run_session(entry, cache_dir):
         STATE["source"] = (f"session: {Path(cache_dir).name} "
                            f"({cache.meta['n_frames']} frames @ "
                            f"{cache.fps:.0f} fps)")
-        STATE["model"] = model_card(entry, cal)
-        STATE["notice"] = "" if cal.get("alerts_enabled", True) else \
-            cal.get("alerts_disabled_reason", "")
+        card = model_card(entry, cal)
+        STATE["model"] = card
+        STATE["notice"] = "" if card["alerts_enabled"] else \
+            card["alerts_disabled_reason"]
         # A frameless cache replays as cue data over a blank panel, which reads
         # as a broken player rather than as a cache that was built without
         # frames. Name it instead of leaving the operator to guess.
@@ -437,15 +560,19 @@ def run_live_source(entry, video):
     from pipeline_bridge import classify_source, run_live
     cal_path = SR.calibration_path(entry.variant_id)
     cal = json.loads(cal_path.read_text()) if cal_path.exists() else {}
-    kind, _ = classify_source(video)
+    browser_cam = str(video) == SRC.BROWSER_CAMERA_ID
+    frame_source = camera_buffer() if browser_cam else None
+    kind = "camera" if browser_cam else classify_source(video)[0]
     with LOCK:
         STATE["running"] = True
         STATE["source"] = (
-            f"{kind}: {Path(video).name if kind == 'file' else video} "
-            f"on {CONTEXT['device']}")
-        STATE["model"] = model_card(entry, cal)
-        STATE["notice"] = "" if cal.get("alerts_enabled", True) else \
-            cal.get("alerts_disabled_reason", "")
+            "camera: your browser's webcam" if browser_cam else
+            f"{kind}: {Path(video).name if kind == 'file' else video}"
+        ) + f" on {CONTEXT['device']}"
+        card = model_card(entry, cal)
+        STATE["model"] = card
+        STATE["notice"] = "" if card["alerts_enabled"] else \
+            card["alerts_disabled_reason"]
 
     def on_stats(s):
         with LOCK:
@@ -454,7 +581,8 @@ def run_live_source(entry, video):
     run_live(CONTEXT["config"], video, push_frame,
              blur_faces=CONTEXT["blur_faces"], max_frames=CONTEXT["max_frames"],
              device=CONTEXT["device"], entry=entry,
-             should_stop=RUNNER.should_stop, stats_fn=on_stats)
+             should_stop=RUNNER.should_stop, stats_fn=on_stats,
+             frame_source=frame_source)
     with LOCK:
         STATE["running"] = False
 
@@ -481,7 +609,21 @@ def model_card(entry, cal):
         "test_seed_mean": entry.test_seed_mean,
         "display_threshold": cal.get("display_threshold"),
         "alert_threshold": cal.get("alert_threshold"),
-        "alerts_enabled": cal.get("alerts_enabled", True),
+        # Two independent reasons alerts can be off, and the card must not
+        # claim they are on when either holds:
+        #   calibration — no threshold reaches 85% selective accuracy;
+        #   taxonomy    — every off-task class merges `uncertain`, so none is
+        #                 alertable (attention.taxonomy.taxonomy_alert_dwell).
+        # onoff_reliable hits the second: its calibration is fine, and it may
+        # still page nobody.
+        "alerts_enabled": bool(cal.get("alerts_enabled", True)) and bool(
+            (CONTEXT.get("policy") or CUE6_POLICY)["alert_dwell"]),
+        "alerts_disabled_reason": cal.get("alerts_disabled_reason", "") or (
+            "" if (CONTEXT.get("policy") or CUE6_POLICY)["alert_dwell"] else
+            f"no class of the {getattr(entry, 'taxonomy', 'cue6')} taxonomy may "
+            f"raise an alert: each of its off-task classes merges "
+            f"\u201cuncertain\u201d, and a student who cannot be seen is not "
+            f"evidence of being off task. Cues are still displayed."),
         # Alert coverage is the instructor-facing consequence of model quality
         # and is NOT ordered like macro-F1. Every model is held to the same 85%
         # alert precision, so what a weaker one gives up is the *share of the
@@ -491,6 +633,18 @@ def model_card(entry, cal):
         "alert_selective_accuracy": cal.get("alert_selective_accuracy"),
         "display_coverage": cal.get("display_coverage"),
         "checkpoint": entry.checkpoint,
+        # What this model predicts. A 2-class abstaining model's macro-F1 is
+        # not comparable to a 6-class one's, so the class count and the
+        # taxonomy's own validation coverage travel with the number.
+        "taxonomy": getattr(entry, "taxonomy", "cue6"),
+        "class_names": list(getattr(entry, "class_names", []) or []),
+        "n_classes": getattr(entry, "n_classes", 0),
+        "taxonomy_coverage": getattr(entry, "coverage", 1.0),
+        "abstains_on": list(getattr(entry, "abstains_on", []) or []),
+        "comparable_group": getattr(entry, "comparable_group", ""),
+        "is_canonical": getattr(entry, "is_canonical", True),
+        "alert_dwell": (CONTEXT.get("policy") or CUE6_POLICY)["alert_dwell"],
+        "off_task_impure": (CONTEXT.get("policy") or CUE6_POLICY)["off_task_impure"],
     }
 
 
@@ -507,27 +661,52 @@ def start(source, entry=None):
 
     if source["kind"] == "cuelog":
         CONTEXT["switch_cost"] = ""
+        CONTEXT["policy"] = CUE6_POLICY
         return RUNNER.start(run_replay, source["path"])
 
     if entry is None:
         raise RuntimeError("no model selected")
     CONTEXT["entry"] = entry
+    # Before the first frame is pushed: push_frame reads this to decide what
+    # counts as off-task and what may alert.
+    CONTEXT["policy"] = active_policy(getattr(entry, "taxonomy", "cue6"))
+
+    if source["kind"] == "camera" and source["path"] == "browser":
+        if not CONTEXT.get("config"):
+            raise RuntimeError(
+                "no detector config; start the server with --config to analyse "
+                "camera frames")
+        CONTEXT["switch_cost"] = (
+            "restarts the capture; the browser keeps streaming and the new "
+            "model picks up from the next frame")
+        buf = camera_buffer()
+        buf.reopen()
+        return RUNNER.start(run_live_source, entry, SRC.BROWSER_CAMERA_ID)
 
     if source["kind"] == "session":
+        # A session cache stores base + both head-pose blocks and nothing else.
+        # A head-stream model would reach the width assert in predict_window and
+        # fail there with a message about padding; say the real reason instead.
+        if not getattr(entry, "replay_capable", True):
+            raise ValueError(
+                f"{entry.variant_id} cannot re-decide a cached session: "
+                f"{entry.blocked_reason} Analyse the video or a camera with "
+                f"this model instead, or pick a model that reads only base + "
+                f"head pose.")
         CONTEXT["switch_cost"] = (
             "instant — the detector, tracker and features are cached, so only "
             "the temporal head re-runs")
         return RUNNER.start(run_session, entry, source["path"])
 
-    if source["kind"] in ("video", "stream"):
+    if source["kind"] in ("video", "stream", "camera"):
         if not CONTEXT.get("config"):
             raise RuntimeError(
                 "no detector config; start the server with --config to run "
                 "the full pipeline")
         CONTEXT["switch_cost"] = (
             "reconnects to the camera and re-runs the whole pipeline; a live "
-            "stream has no cache to fall back on"
-            if source["kind"] == "stream" else
+            "source has no cache to fall back on"
+            if source["kind"] in ("stream", "camera") else
             "restarts the source and re-runs the whole pipeline; analyse it "
             "into a session to make switching instant")
         return RUNNER.start(run_live_source, entry, source["path"])
@@ -560,6 +739,15 @@ def select_source(source_id, mode=None):
     and speed.
     """
     kind, path = SRC.parse_id(source_id)
+    if kind == "camera":
+        # Not discovered on disk either: the page names it, and for "browser"
+        # the frames come from the viewer rather than from this machine.
+        src = {"id": f"camera:{path}", "kind": "camera",
+               "name": ("your browser's webcam" if path == "browser"
+                        else f"capture device {path}"),
+               "path": path, "ready": True}
+        start(src)
+        return src["id"]
     if kind == "stream":
         # Typed by the user rather than discovered on disk, so there is nothing
         # in list_sources to look up. parse_id has already validated the URL.

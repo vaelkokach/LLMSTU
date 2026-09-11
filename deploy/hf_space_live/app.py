@@ -20,7 +20,8 @@ Environment (set these as Space secrets/variables, not in the Dockerfile):
     HF_TOKEN         read token for the private artifact repo   (secret)
     ARTIFACT_REPO    e.g. "WaelK/llmstu-dashboard-artifacts"    (variable)
     ARTIFACT_TYPE    "model" (default) or "dataset"             (variable)
-    DASHBOARD_MODEL  registry id, default arch/mstcn_556_hp     (variable)
+    DASHBOARD_MODEL  registry id, default ff_det/mstcn_553_facefound@s42
+                     -- the checkpoint attention_runtime.yaml deploys  (variable)
     SESSION          session dir name under sessions/, default 0325
     RUNTIME_CONFIG   detector+features config for live analysis  (variable)
     DETECTOR_CONFIG  mmdet config to use instead of the one named
@@ -279,7 +280,25 @@ def main() -> int:
 
     session = os.environ.get("SESSION", "0325")
     session_dir = SESSIONS_DIR / session
-    model = os.environ.get("DASHBOARD_MODEL", "arch/mstcn_556_hp")
+    # The checkpoint attention_runtime.yaml names as deployed, seed-pinned.
+    #
+    # This used to default to arch/mstcn_556_hp, inherited from the phase-1
+    # CPU-only Space, where that choice is argued for explicitly
+    # (README_DEPLOY.md: best test macro-F1 among deployable variants AND ~4.6x
+    # faster to replay on CPU). Neither half of that argument applies here: this
+    # Space has a T4, and the thesis cites ff_det/mstcn_553_ff_s42 as the
+    # deployed system. With the old default, a Space whose DASHBOARD_MODEL
+    # variable was unset served a *different* model than the one written up --
+    # trained on the FaceLandmarker mesh rather than the BlazeFace detector, so
+    # live analysis also gave up the +30% FPS that backend change bought
+    # (FINDINGS 11.16) -- while the page still presented itself as the
+    # deployed system.
+    #
+    # Pinned to @s42 deliberately: the unpinned variant id resolves to the best
+    # VALIDATION seed, which is s43, a different checkpoint with its own fitted
+    # calibration. See model_registry.find().
+    model = os.environ.get("DASHBOARD_MODEL",
+                           "ff_det/mstcn_553_facefound@s42")
 
     # Live analysis needs the detector config and a device. Without --config the
     # Analyse button can only replay; with it, an uploaded video runs the full

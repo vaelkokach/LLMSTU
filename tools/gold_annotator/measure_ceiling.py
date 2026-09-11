@@ -70,6 +70,48 @@ def bootstrap_macro_f1(y_true, y_pred, n_boot: int, seed: int) -> dict:
     return {"mean": float(np.mean(vals)), "ci95": [float(lo), float(hi)]}
 
 
+#: Fields the cue rules read that the annotation tool does NOT collect, and so
+#: must be recovered from the crop's own record. Currently just one.
+MEASURED_FIELDS = ("face_kpts",)
+
+
+def join_measured_fields(human: list, pseudo: dict) -> dict:
+    """Copy measured-but-unannotated fields onto each human record, in place.
+
+    ``face_kpts`` is how many face keypoints the detector found on the crop. It
+    is a MEASUREMENT of the image, not an annotator judgement, and the gold tool
+    never asks for it — so a human record arrives without it, ``map_record``
+    falls back to its default of 3, and the ``uncertain`` gate
+    (``occluded AND face_kpts <= 2``) can never fire on the human side.
+
+    It fires on the pseudo side, which carries the field. Scoring one against the
+    other with the gate live on only one of them does not measure the
+    pseudo-labeller: it measures the asymmetry. Human ``uncertain`` is
+    systematically under-counted and every pseudo ``uncertain`` over an occluded
+    crop is scored as a false positive it did not commit.
+
+    Taking the value from the pseudo record leaks nothing — it is the same
+    detector output for the same crop that the corpus was built from, and it is
+    not one of the fields the annotator could disagree with.
+
+    Returns a report of how many labels the join actually moved, so the
+    correction is visible rather than assumed.
+    """
+    from attention.taxonomy import CUE_CLASSES as _C
+    before = [map_record(h, "v1") for h in human]
+    filled = Counter()
+    for h in human:
+        src = pseudo.get(h["file_name"], {})
+        for f in MEASURED_FIELDS:
+            if f not in h and f in src:
+                h[f] = src[f]
+                filled[f] += 1
+    after = [map_record(h, "v1") for h in human]
+    moved = Counter(f"{_C[a]} -> {_C[b]}" for a, b in zip(before, after) if a != b)
+    return {"filled": dict(filled), "n_labels_changed": int(sum(moved.values())),
+            "transitions": dict(moved)}
+
+
 def score(human: list, pseudo: dict, ruleset: str, n_boot: int, seed: int) -> dict:
     """Pseudo-labels scored against human gold under one cue rule version."""
     y_true = np.array([map_record(h, ruleset) for h in human], dtype=np.int64)
@@ -170,6 +212,7 @@ def main() -> int:
     usable = [h for h in raw if h.get("status") not in ("rejected",)]
     unmatched = [h for h in usable if h["file_name"] not in pseudo]
     human = [h for h in usable if h["file_name"] in pseudo]
+    join_report = join_measured_fields(human, pseudo)
     if not human:
         print("no human item joins to a pseudo record on file_name. The gold "
               "file was probably annotated from a different manifest than "
@@ -186,6 +229,9 @@ def main() -> int:
         "n_rejected": len(rejected),
         "reject_rate": len(rejected) / max(len(raw), 1),
         "n_unmatched_human": len(unmatched),
+        # What join_measured_fields recovered, and what it changed. Reported
+        # because a correction nobody can see is indistinguishable from a bug.
+        "measured_field_join": join_report,
         "all_fields_exact": exact / max(len(human), 1),
         "field_agreement": field_agreement(human, pseudo),
         "by_ruleset": {rs: score(human, pseudo, rs, args.n_boot, args.seed)
@@ -198,6 +244,9 @@ def main() -> int:
             "crop being readable",
             "one annotator unless a second gold file is scored separately; run "
             "compute_agreement.py for kappa before quoting this as THE ceiling",
+            "face_kpts is joined from the pseudo manifest by file_name: the gold "
+            "tool does not collect it, and without it the `uncertain` gate "
+            "(occluded AND face_kpts <= 2) fires on the pseudo side only",
         ],
     }
     print(render(report))

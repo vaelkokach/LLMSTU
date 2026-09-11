@@ -73,13 +73,27 @@ LLMDet/configs/     <- LLMDet/configs/
 |---|---|---|
 | `HF_TOKEN` | **secret** | a read token for the artifact repo |
 | `ARTIFACT_REPO` | variable | `WaelK/llmstu-dashboard-artifacts` |
-| `DASHBOARD_MODEL` | variable | `arch/mstcn_556_hp` |
+| `DASHBOARD_MODEL` | variable | `arch/mstcn_556_hp` (phase 1 / CPU only — see below) |
 | `SESSION` | variable | `0325` |
 
 `arch/mstcn_556_hp` rather than the registry default: it has the best test
 macro-F1 of any deployable variant (0.5011 vs ASRF's 0.4940) *and* replays about
 4.6x faster on CPU (0.88x real time vs 0.19x). On CPU hardware the default is
 the wrong choice on both axes.
+
+**This argument is phase-1-only, and does not transfer.** The GPU Space
+(`deploy/hf_space_live/`) has a T4, so the replay-speed half is moot, and the
+thesis cites `ff_det/mstcn_553_ff_s42` as the deployed system. That app therefore
+defaults to `ff_det/mstcn_553_facefound@s42`. It previously inherited this
+CPU default, so a live Space with `DASHBOARD_MODEL` unset served a model trained
+on the FaceLandmarker mesh rather than the BlazeFace detector — giving up the
++30% FPS of FINDINGS 11.16 — while presenting itself as the deployed system
+(FINDINGS §14.6).
+
+**Keep the seed pin.** The unpinned id `ff_det/mstcn_553_facefound` resolves to
+the best *validation* seed, s43, which is a different checkpoint with its own
+fitted calibration. Without `@s42` the Space cannot serve the checkpoint the
+thesis names.
 
 ### 4. Verify
 
@@ -89,6 +103,27 @@ The build takes a few minutes. When it is up, check in this order:
 2. **Model** is populated and switching one re-decides the session;
 3. alert coverage in the model card changes between variants — it ranges 78.7%
    down to 30.5% across the registry at the same 85% alert precision.
+
+### 5. Check the artifact repo is current
+
+The registry the Space builds is derived from whatever landed in the artifact
+repo, so a checkpoint that was never uploaded is simply not offered and nothing
+says it was expected. From a machine with network:
+
+```bash
+# on the HPC
+python tools/dashboard/artifact_manifest.py --emit artifacts_manifest.json
+# wherever the repo is checked out
+python tools/dashboard/artifact_manifest.py --verify artifacts_manifest.json \
+    --root /path/to/snapshot_of_llmstu-dashboard-artifacts
+```
+
+It lists every file the Space needs — checkpoints, `run_record.json`,
+`eval_val/metrics.json` and the fitted calibration for each of the 24
+live-capable variants, 98 files and ~565 MB — with sizes and sha256, and flags
+any model whose calibration is missing. A model without one is refused at
+selection time rather than at boot, so it is exactly the kind of gap that
+survives a smoke test.
 
 If the page loads but every panel stays empty, the API calls are 404ing. That was
 fixed by resolving them against `document.baseURI`; confirm the Space is running
