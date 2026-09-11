@@ -38,9 +38,32 @@ one commit:
     python tools/dashboard/artifact_manifest.py --check-remote
     HF_TOKEN=hf_...write python tools/dashboard/artifact_manifest.py --push
 
-``--push`` needs a **write** token. A read token fails with a 403 naming the
-preupload endpoint, which is easy to misread as a permissions problem with the
-repo rather than with the token.
+Two tokens, deliberately
+------------------------
+Reading the repo and writing to it are different privileges, and every action
+here except ``--push`` only reads. So:
+
+``--check-remote``, and every read
+    the ordinary resolution -- ``HF_TOKEN``, then the active profile from
+    ``huggingface-cli login``. A read token is enough and is what should
+    normally be active.
+
+``--push``
+    **``HF_TOKEN_W`` only**, falling back to ``HF_TOKEN`` if that is unset. The
+    write token is never consulted by anything that does not write, so a routine
+    ``--check-remote`` cannot be the thing that leaks or misuses it.
+
+    HF_TOKEN_W=hf_...write python tools/dashboard/artifact_manifest.py --push
+
+The token's role is checked BEFORE any upload starts. A read token otherwise
+fails with a 403 naming the preupload endpoint, which reads like a permissions
+problem with the repo rather than with the token -- and it fails after the files
+have been hashed and staged, so the wait is wasted before the message is wrong.
+
+``huggingface-cli auth list`` / ``auth switch`` store several named tokens and
+choose which is active, but only one is active at a time. That is fine for reads
+and the wrong shape for this: the env var keeps the write credential scoped to
+the single command that needs it instead of making it the global default.
 """
 from __future__ import annotations
 
@@ -206,6 +229,52 @@ def verify(man: dict, root: Path) -> int:
     return 1 if bad else 0
 
 
+def read_token():
+    """Token for read-only work. Never the write one unless it is all there is."""
+    import os
+    return (os.environ.get("HF_TOKEN")
+            or os.environ.get("HUGGING_FACE_HUB_TOKEN") or None)
+
+
+def write_token():
+    """Token for ``--push``. HF_TOKEN_W first, so the write credential does not
+    have to be the machine's default identity."""
+    import os
+    return (os.environ.get("HF_TOKEN_W")
+            or os.environ.get("HF_WRITE_TOKEN")
+            or os.environ.get("HF_TOKEN")
+            or os.environ.get("HUGGING_FACE_HUB_TOKEN") or None)
+
+
+def assert_can_write(token=None) -> str:
+    """Fail before uploading if this credential cannot. Returns the user name.
+
+    whoami reports the token's role, so the check costs one request and
+    converts a post-staging 403 into a sentence naming the actual problem.
+    """
+    from huggingface_hub import HfApi
+    try:
+        who = HfApi().whoami(token=token)
+    except Exception as e:
+        raise SystemExit(
+            f"could not authenticate to the Hub ({type(e).__name__}: "
+            f"{str(e)[:120]}). Set HF_TOKEN_W to a write token, or run "
+            f"`huggingface-cli login`.")
+    role = (who.get("auth", {}).get("accessToken", {}) or {}).get("role")
+    name = (who.get("auth", {}).get("accessToken", {}) or {}).get("displayName", "?")
+    if role != "write":
+        raise SystemExit(
+            f"the token in use ({name!r}) has role {role!r}, not 'write', so the "
+            f"upload would fail with a 403 on the preupload endpoint after "
+            f"staging every file.\n"
+            f"  Set HF_TOKEN_W to a token with WRITE access to the artifact "
+            f"repo:\n"
+            f"      HF_TOKEN_W=hf_...  python {Path(__file__).name} --push\n"
+            f"  Note the write access must be on the MODEL REPO that holds the "
+            f"artifacts, not on the Space.")
+    return who.get("name", "?")
+
+
 def _remote_files(repo: str, token=None) -> set:
     from huggingface_hub import HfApi
     return set(HfApi().list_repo_files(repo, repo_type="model", token=token))
@@ -253,6 +322,8 @@ def report_remote(man: dict, repo: str, token=None) -> int:
 def push(man: dict, repo: str, token=None, message=None) -> int:
     """Upload everything the repo is missing, as one commit."""
     from huggingface_hub import CommitOperationAdd, HfApi
+    who = assert_can_write(token)          # before anything is staged
+    print(f"authenticated as {who} with a write token")
     missing, bad = check_remote(man, repo, token)
     if not missing:
         print("nothing to upload — the repo already has every file")
@@ -290,13 +361,10 @@ def main() -> int:
         return verify(json.loads(args.verify.read_text()), args.root)
 
     if args.check_remote or args.push:
-        import os
-        token = (os.environ.get("HF_TOKEN")
-                 or os.environ.get("HUGGING_FACE_HUB_TOKEN") or None)
         man = build(with_hashes=False)
         if args.push:
-            return push(man, args.repo, token)
-        return report_remote(man, args.repo, token)
+            return push(man, args.repo, write_token())
+        return report_remote(man, args.repo, read_token())
 
     man = build(with_hashes=not args.no_hashes)
     print(f"registry default : {man['registry_default']}")
