@@ -425,9 +425,35 @@ class Handler(BaseHTTPRequestHandler):
             raise ValueError("camera frame is not a decodable image")
         buf = camera_buffer()
         buf.put(img)
+
+        # Whether anything is actually READING this buffer, and if not, why.
+        #
+        # Without this the endpoint returns 200 and a rising `dropped` count in
+        # three completely different situations — the pipeline is keeping up,
+        # the detector is still loading (~40 s on first use), and the camera is
+        # not the active source at all — and the page renders all three as
+        # "skipped". That made a working pipeline and a pipeline that was never
+        # started look identical from the browser.
+        src = CONTEXT.get("source") or {}
+        is_cam = src.get("kind") == "camera"
+        alive = RUNNER.alive()
+        if not is_cam:
+            status = ("not consuming: the active source is "
+                      f"{src.get('kind') or 'none'}, not the camera. Press "
+                      f"Start camera again to switch.")
+        elif not alive:
+            status = "not consuming: the camera pipeline is not running"
+        elif buf.taken == 0:
+            status = ("warming up: the detector loads on first use and takes "
+                      "about 40 s. Frames pushed until then are skipped.")
+        else:
+            status = "consuming"
         return self._send(200, json.dumps({
             "received": int(buf.seq), "processed": int(buf.taken),
-            "dropped": int(buf.dropped)}))
+            "dropped": int(buf.dropped),
+            "consuming": bool(is_cam and alive),
+            "status": status,
+            "error": STATE.get("error", "")}))
 
 
 #: Largest single webcam frame accepted, before decoding. A 1280x720 JPEG at

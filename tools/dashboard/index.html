@@ -510,13 +510,21 @@ async function camSend(){
       {method:"POST", headers:{"Content-Type":"image/jpeg"}, body:blob});
     const j = await r.json();
     if(!r.ok) throw new Error(j.error||r.statusText);
-    camStats({status:"streaming",
+    camStats({status: j.status || "streaming",
               sent:j.received, analysed:j.processed,
-              // Dropped frames are NORMAL and are the mechanism that keeps the
-              // overlay current: the pipeline is slower than the camera, so it
-              // skips rather than falls behind.
+              // Dropped frames are NORMAL once analysis is flowing: the pipeline
+              // is slower than the camera, so it skips rather than falls behind.
+              // Before the first frame is analysed they mean something else
+              // entirely, which is why `status` is shown rather than inferred.
               "skipped (kept current)":j.dropped});
-    camBanner("");
+    // The server distinguishes "keeping up", "still loading the detector" and
+    // "nothing is reading these frames". Only the last is a problem, and it is
+    // the one that used to be invisible.
+    if(j.consuming === false && j.processed === 0){
+      camBanner(j.status + (j.error ? " — " + j.error : ""), !/warming up/.test(j.status||""));
+    } else {
+      camBanner("");
+    }
   }catch(e){
     camBanner("Camera frame rejected: "+e.message, true);
   }finally{ CAM_BUSY=false; }
