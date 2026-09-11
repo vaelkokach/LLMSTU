@@ -130,9 +130,35 @@ class ObjectDetector:
                                         device=self.device)
 
     def detect(self, frame_bgr: np.ndarray):
-        """-> [(boxes, scores)] per prompt, in OBJECT_PROMPTS order."""
+        """-> [(boxes, scores)] per prompt, in OBJECT_PROMPTS order.
+
+        ONE forward pass for all prompts. GroundingDINO takes a multi-phrase
+        caption (``"cell phone. laptop."``) and `pred_instances.labels` indexes
+        the phrase each box matched, so asking separately costs a full pass per
+        object for no extra information. Over a corpus of ~91k frames that is
+        the difference between one pass and N.
+
+        Falls back to per-prompt passes if the labels do not come back — better
+        to be slow than to mis-assign every box to the wrong object.
+        """
         from mmdet.apis import inference_detector
         self._ensure()
+        caption = ". ".join(self.prompts) + "."
+        r = inference_detector(self._model, frame_bgr,
+                               text_prompt=caption, custom_entities=True)
+        p = r.pred_instances
+        sc = p.scores.detach().cpu().numpy()
+        bb = p.bboxes.detach().cpu().numpy()
+        lb = (p.labels.detach().cpu().numpy()
+              if hasattr(p, "labels") and p.labels is not None else None)
+        if lb is None or (len(sc) and lb.max() >= len(self.prompts)):
+            return self._detect_separately(frame_bgr)
+        keep = sc >= self.min_score
+        return [(bb[keep & (lb == i)], sc[keep & (lb == i)])
+                for i in range(len(self.prompts))]
+
+    def _detect_separately(self, frame_bgr: np.ndarray):
+        from mmdet.apis import inference_detector
         out = []
         for prompt in self.prompts:
             r = inference_detector(self._model, frame_bgr,
