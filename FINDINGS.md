@@ -4326,8 +4326,54 @@ huggingface/mm_grounding_dino/grounding_dino_swin-t_pretrain_obj365_goldg_grit9m
 
 Obj365 contains both `cell phone` and `laptop`, so the swin-t pretrain is the
 natural choice: a second detector pass per frame, prompted for the objects, with
-per-student presence features derived from overlap with the student box. That is
-the next step, and it is now a two-detector design rather than a re-prompt.
+per-student presence features derived from overlap with the student box.
+
+### 21.1 The pretrained detector IS prompt-sensitive
+
+Same test, on `grounding_dino_swin-t_pretrain_obj365_goldg_grit9m_v3det`, 9
+frames at 960x540:
+
+| prompt | detections | median rel-area | matches a `person` box |
+|---|---|---|---|
+| `person` | 508 | 0.00514 | 100% |
+| `cell phone` | 136 | **0.00055** | **0%** |
+| `laptop` | 291 | 0.00796 | 0% |
+| `potted plant` | 12 | 0.00275 | 0% |
+| `qwertyuiop` | **0** | — | — |
+
+The nonsense control returns **nothing**, phone boxes are an order of magnitude
+smaller than person boxes, and none of them are students relabelled. This is what
+a working open-vocabulary detector looks like, and it is the contrast that makes
+§21 a measurement rather than an impression.
+
+### 21.2 But the naive presence feature does NOT discriminate
+
+Before rebuilding any sequences, the feature was tested against the label it is
+supposed to predict. 240 records with a known `phone_visible`, balanced, one per
+source frame, un-occluded; "is there a `cell phone` detection at score >= 0.15
+whose centre falls within the student's box padded by 15%":
+
+| `phone_visible` | fires | mean max-score |
+|---|---|---|
+| **True** | **96.7%** | 0.223 |
+| **False** | **90.8%** | 0.160 |
+
+**5.9 points of separation on a binary feature is not a feature.** It fires on
+nine of ten students who have no phone. A classroom is dense, desks are covered
+in objects, and a 15% pad around a seated student reaches their neighbour.
+
+The graded score separates better than the binary does (0.223 vs 0.160), so the
+signal is real but weak as extracted. What this rules out is the *naive* version;
+what it does not rule out is a tighter one — containment rather than a padded
+centre test, the phone box's size relative to the student's, its position within
+the box (a phone in the hands sits low and central), and the score as a
+continuous feature rather than a threshold.
+
+**The value here is the order of operations.** Three minutes of measurement
+against the label showed the feature does not work, before a sequence rebuild
+(~40 GPU-minutes of CLIP over 284k crops) and a 12-run retrain were spent on it.
+That is the same discipline as §18's convergence probe, applied to a feature
+instead of a budget.
 
 ---
 

@@ -164,3 +164,85 @@ Step 1 and 2 are cheap and decisive. Do them before any sequence rebuild.
 Space is on **l4x1** (24 GB Ada, native bf16). The `~1 fps` and `125 s cold
 start` figures in FINDINGS §16/20 were measured on **t4-medium** and should be
 re-measured before being quoted again.
+
+
+---
+
+# 2026-09-11 end-of-session state
+
+## Environment constraints discovered (important, not in CLAUDE.md)
+
+* **GitHub and huggingface.co ARE reachable** from this box. CLAUDE.md says they
+  are not; git push and HF uploads both work.
+* **PyPI is NOT reachable.** `pip install` fails with DNS errors, so no
+  dependency can be tested here. The Space's Docker build has network and can
+  install; it just cannot be rehearsed locally first.
+
+## Task 4 (VLM) — the real blocker, and the two user suggestions
+
+The blocker is a **version conflict, not a capability one**: Qwen3-VL needs
+`AutoModelForImageTextToText` (transformers >= 4.45) and both the HPC and the
+Space pin **4.44.2** to protect mmcv's compiled `_ext` against torch 2.2.2.
+
+**User suggestion 1 — "LoRA-train a base open-vocab VLM like Qwen."** Good, but
+downstream: LoRA does not change what can be *loaded*. Order must be (a) get a
+VLM that loads on this stack, (b) measure it, (c) LoRA only if the base is too
+weak. Note the labels came from Qwen3.5-27B, so LoRA-ing a Qwen on those labels
+makes the "independent second opinion" claim weaker, not stronger — if the point
+is independence, adapt a non-Qwen base, or state plainly that it is an ensemble
+rather than an independent check.
+
+**User suggestion 2 — "make sure VLM inference is fast enough for live."** This
+is the binding constraint and it changes the design. Arithmetic: a 4B VLM doing
+one option-likelihood forward pass per student is roughly 0.2-0.5 s/student on an
+L4; six students is 1.5-3 s per frame, against a pipeline that manages ~1-4 fps.
+**Synchronous VLM cannot be live.** Four levers, in order of value:
+
+1. **Run the VLM ASYNCHRONOUSLY** — its own thread at its own rate, and each
+   frame fuses the most recent opinion available. `fusion.fuse_frame` already
+   handles a student with no VLM row (fused temporal-only), so the data model
+   supports this today; only the threading is missing. This is the fix.
+2. **Batch all students into one forward pass** rather than one per student.
+3. **A much smaller VLM.** `huggingface/my_llava-onevision-qwen2-0.5b-ov-2` is
+   already on disk, already in the artifact repo, 0.5B, and proven to load on
+   this exact stack (the detector ships it and never reads it at inference, so
+   the weights are free). ~8x faster than a 4B.
+4. **VLM stride** — currently 1 opinion per second of source; can be 1 per 2-5 s.
+
+Current state: wiring complete and stub-tested, entry hidden where it cannot
+load, refuses at selection with the reason. Nothing is half-applied.
+
+## Task 5 (weak classes) — where it actually stands
+
+Diagnosis done (§20.4), and the first intervention has been **tested and
+rejected before spending GPU** (§21.2):
+
+* The fine-tuned detector ignores its prompt entirely (§21) — so phone detection
+  needs the pretrained `mm_grounding_dino` swin-t, which IS prompt-sensitive
+  (§21.1: nonsense prompt returns 0 detections, phone boxes 10x smaller than
+  person boxes, 0% overlap with students).
+* But the **naive** presence feature does not discriminate: fires on 96.7% of
+  `phone_visible=True` and **90.8%** of `phone_visible=False`. A 15% pad around a
+  seated student reaches their neighbour in a dense classroom.
+
+**Next step is NOT a retrain.** It is to make the geometry tighter and re-measure
+the same 240-record test, which takes minutes:
+
+* containment of the phone box in the student box, not centre-in-padded-box;
+* phone-box area relative to student-box area (a real phone is ~0.1-1% of it);
+* vertical position within the student box (a held phone sits low/central);
+* the raw max score as a continuous feature, and its **AUROC** against
+  `phone_visible` — that is the number that decides whether to proceed.
+
+Only if AUROC clears roughly 0.75 is a sequence rebuild + 12-run retrain worth
+it. The script to adapt is in this session's history; it samples 120 positive and
+120 negative records one-per-src_frame from `labels_tracked.jsonl`, un-occluded.
+
+## What is DONE and deployed
+
+* frame cap removed (whole video; demo session re-cut 900 -> 1931 frames)
+* dropdown shortlist, 5 of 34, nothing deleted
+* Space on **l4x1**; the ~1 fps and 125 s cold-start figures were measured on
+  t4-medium and must be re-measured before being quoted
+* all 29 live models + calibrations on HF; registry taxonomy-aware
+* threat C closed (kappa 0.800 / 0.711); label ceiling shown annotator-dependent
