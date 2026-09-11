@@ -20,16 +20,44 @@ disagree. Change the code, not this document, and re-run the test.
 
 ## Layer 0 — Detector
 
-One foreground category, addressed by text rather than by an id: the detector
-is open-vocabulary (GroundingDINO/LLMDet), so the "label" is a phrase.
+One foreground category. The architecture is open-vocabulary
+(GroundingDINO/LLMDet), but **the fine-tuned checkpoint is not** — see the
+warning below.
 
 | | |
 |---|---|
-| text prompt | `a student sitting` |
+| text prompt | `a student sitting` — **inert, see below** |
 | output | boxes only, no class — score >= 0.10, at most 80 per frame |
 
 Source: `attention_runtime.yaml:49`. Test R@1 **0.6462** under the closed
 protocol in `TEST_SPLIT_PROTOCOL.md`.
+
+### ⚠ The prompt does nothing (measured 2026-09-11)
+
+This document previously said the "label" is a phrase. It is not, for this
+checkpoint. Fine-tuning on the single category collapsed the text conditioning:
+the detector returns the **same student boxes whatever it is asked for**.
+
+Measured over 12 frames of `0325.mp4`, share of each prompt's boxes that match
+a box from `a student sitting` at IoU >= 0.9:
+
+| prompt | detections | matches a student box | mean IoU |
+|---|---|---|---|
+| `a mobile phone` | 41 | **98%** | 0.975 |
+| `qwertyuiop` | 51 | **92%** | 0.918 |
+| `a laptop` | 65 | 89% | 0.897 |
+| `a fire hydrant` | 59 | 88% | 0.881 |
+| `xyzzy` | 72 | 82% | 0.818 |
+| `a potted plant` | 80 | 71% | 0.712 |
+
+A nonsense string retrieves students as well as the real phrase does. **R@1
+0.6462 is unaffected** — it was always measured on students — but the detector
+must be described as a one-class student detector, not as an open-vocabulary one,
+and the prompt in the runtime config is documentation rather than a control.
+
+Consequence: it cannot be re-prompted to find phones or laptops. An open-vocab
+object pass needs a *pretrained* checkpoint; three sit unused in
+`huggingface/mm_grounding_dino/`. FINDINGS §21.
 
 ---
 

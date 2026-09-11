@@ -4272,6 +4272,65 @@ The two are not the same problem underneath, and the inter-annotator numbers
 
 ---
 
+## 21. The fine-tuned detector ignores its text prompt (2026-09-11) ★★
+
+Testing whether the detector could be re-prompted to find phones — the
+intervention §20.4 says `phone_use` needs — showed that it cannot be re-prompted
+at all.
+
+Over 12 frames of `0325.mp4`, the share of each prompt's detections matching a
+box from `a student sitting` at IoU >= 0.9:
+
+| prompt | detections | matches a student box | mean IoU |
+|---|---|---|---|
+| `a mobile phone` | 41 | **98%** | 0.975 |
+| `qwertyuiop` | 51 | **92%** | 0.918 |
+| `a laptop` | 65 | 89% | 0.897 |
+| `a fire hydrant` | 59 | 88% | 0.881 |
+| `xyzzy` | 72 | 82% | 0.818 |
+| `a potted plant` | 80 | 71% | 0.712 |
+
+**A nonsense string retrieves students as well as the real phrase does.**
+Fine-tuning on one category collapsed the text conditioning; the checkpoint is a
+one-class student detector wearing an open-vocabulary interface.
+
+### What this does and does not invalidate
+
+**Does not:** R@1 **0.6462** stands. It was always measured on students under the
+closed protocol, and a detector that ignores its prompt still detects students
+exactly as well as it was measured to.
+
+**Does:** `docs/LABELS.md` Layer 0 said "the detector is open-vocabulary
+(GroundingDINO/LLMDet), so the 'label' is a phrase." That is false for this
+checkpoint, and it has been corrected. `attention_runtime.yaml:49`'s
+`text_prompt: "a student sitting"` is documentation, not a control — changing it
+changes nothing, and any future work that assumes otherwise is building on sand.
+
+This is the third instance of the same pattern in this log: a component that
+produces a plausible result for a reason nobody checked (§14 the registry key,
+§20.1 the frame cap). The common thread is that none of them fail — they all
+return something reasonable-looking.
+
+### Consequence for the phone_use plan
+
+The §20.4 intervention — explicit phone detection, which the inter-annotator
+kappa of 0.934 on `phone_visible` says is the right one — cannot use this
+detector. It needs a *pretrained* open-vocabulary checkpoint, and three are
+already on disk and unused:
+
+```
+huggingface/mm_grounding_dino/grounding_dino_swin-t_pretrain_obj365_goldg_grit9m_v3det_*.pth
+                              grounding_dino_swin-b_pretrain_obj365_goldg_v3de-*.pth
+                              grounding_dino_swin-l_pretrain_obj365_goldg-*.pth
+```
+
+Obj365 contains both `cell phone` and `laptop`, so the swin-t pretrain is the
+natural choice: a second detector pass per frame, prompted for the objects, with
+per-student presence features derived from overlap with the student box. That is
+the next step, and it is now a two-detector design rather than a re-prompt.
+
+---
+
 ## 10. Changelog
 
 **2026-08-08**

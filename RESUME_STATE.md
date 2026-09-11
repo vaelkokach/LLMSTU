@@ -13,7 +13,7 @@ To continue: `claude --resume <session-id>`, or start a fresh session and say
 |---|---|---|
 | 1 | Remove the 900-frame cap on video analysis | **DONE** (needs commit) |
 | 2 | Prune dropdown to best-per-taxonomy, keep files | **DONE** (needs commit) |
-| 3 | More FPS + hardware upgrade | l4x1 requested and accepted; migrating. Tuning pending |
+| 3 | More FPS + hardware upgrade | **l4x1 LIVE**. Stride/resolution tuning still pending |
 | 4 | VLM model in the dropdown | **WIRED + stub-tested; BLOCKED** by transformers 4.44.2 pin (FINDINGS 20.3) |
 | 5 | Diagnose + improve talking_to_peer / phone_use / using_laptop | **DIAGNOSED** (FINDINGS 20.4); retraining next |
 
@@ -131,3 +131,36 @@ Next concrete step: add phone/laptop presence features (the detector is already
 open-vocabulary — "a mobile phone", "a laptop" are free text prompts), rebuild
 the affected feature block, retrain cue6 and cue9 at 240 epochs x 3 seeds in a
 NEW work_dirs tree, and compare per-class against the epochs240 baseline.
+
+
+## 2026-09-11 late: the phone_use plan changed shape (FINDINGS §21)
+
+The detector **ignores its text prompt**. Fine-tuning on one category collapsed
+the text conditioning: `qwertyuiop` retrieves students as well as
+`a student sitting` does (92% of its boxes match a student box at IoU >= 0.9).
+R@1 0.6462 is unaffected — it was always measured on students — but the
+open-vocabulary description in docs/LABELS.md was wrong and is corrected.
+
+So `phone_use` cannot be fixed by re-prompting. It needs a **second detector**,
+and three pretrained open-vocab checkpoints are already on disk and unused:
+
+    huggingface/mm_grounding_dino/grounding_dino_swin-t_pretrain_obj365_goldg_grit9m_v3det_*.pth
+
+Obj365 has `cell phone` and `laptop`. Next concrete steps, in order:
+
+1. Verify the pretrained swin-t DOES respond to prompts (same IoU-vs-nonsense
+   test as §21 — do not assume it, the fine-tuned one looked fine too).
+2. Measure phone/laptop detection rate on frames whose pseudo-label carries
+   `phone_visible` / `laptop_visible`. If the objects are not findable at this
+   resolution, the whole plan stops here and that is the finding.
+3. Only then: per-student presence features (max score, containment, relative
+   size, distance to box centre), extend the feature layout with a NAMED block,
+   rebuild sequences, retrain cue6 + cue9 at 240 epochs x 3 seeds in a new tree.
+
+Step 1 and 2 are cheap and decisive. Do them before any sequence rebuild.
+
+## Hardware
+
+Space is on **l4x1** (24 GB Ada, native bf16). The `~1 fps` and `125 s cold
+start` figures in FINDINGS §16/20 were measured on **t4-medium** and should be
+re-measured before being quoted again.
