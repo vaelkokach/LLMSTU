@@ -581,10 +581,29 @@ def _vlm_entries(entries: List[ModelEntry]) -> List[ModelEntry]:
         print(f"[registry] VLM entries not offered (transformers {tv}): {why}")
         return []
 
+    def _has_phrases(taxonomy: str) -> bool:
+        """Can this taxonomy's classes be presented as an option list?
+
+        A class with no cue phrase is not scorable: the options are a lettered
+        list and a gap shifts every letter after it onto the wrong cue, so the
+        scores come back well-formed and wrong. `onoff_reliable` and
+        `coarse3_reliable` have no phrases (`on_task`, `off_task`,
+        `down_or_hidden` are merges, not observable behaviours) and are skipped.
+        """
+        try:
+            import sys
+            sys.path.insert(0, str(REPO / "LLMDet"))
+            from attention.cue_phrases import phrases_in_class_order
+            from attention.taxonomy import taxonomy_classes
+            phrases_in_class_order(taxonomy_classes(taxonomy))
+            return True
+        except Exception:
+            return False
+
     out = []
     for e in entries:
-        if not (e.recommended and e.taxonomy == "cue6" and e.live_capable
-                and e.replay_capable):
+        if not (e.recommended and e.live_capable and e.replay_capable
+                and _has_phrases(e.taxonomy)):
             continue
         v = ModelEntry(**{**asdict(e),
                           "variant_id": f"{e.variant_id}+vlm",
