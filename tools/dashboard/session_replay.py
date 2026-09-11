@@ -74,7 +74,36 @@ def colour_for(cue: str):
 
 
 def calibration_path(variant_id: str) -> Path:
-    return CALIBRATION_DIR / f"{variant_id.replace('/', '__')}.json"
+    """Where this variant's fitted thresholds live.
+
+    A `+vlm` entry is virtual — the temporal half is the base checkpoint and
+    runs identically, so it uses the base model's thresholds. Fitting separate
+    ones would be fitting the same predictions twice under a different name.
+    (The FUSION has its own decision rule, in fusion.Policy; it is not a
+    threshold on this distribution.)
+    """
+    base = variant_id[:-4] if variant_id.endswith("+vlm") else variant_id
+    return CALIBRATION_DIR / f"{base.replace('/', '__')}.json"
+
+
+def load_grounder(entry, device: str = "cpu"):
+    """The VLM for a `+vlm` entry, or None. Loaded lazily by the caller."""
+    if not getattr(entry, "vlm", False):
+        return None
+    from attention.vlm_grounder import QwenGrounder, StubGrounder
+    ok, why = QwenGrounder.available()
+    if not ok:
+        # Fail loudly at selection, not silently at the first frame, and do NOT
+        # fall back to the stub: a deterministic fake presented as a second
+        # opinion would put an agreement rate on screen that measures nothing.
+        raise SystemExit(
+            f"{entry.variant_id} needs a VLM this environment cannot load.\n"
+            f"  {why}\n"
+            f"  Pick the base model {entry.vlm_base!r} instead — it is the same "
+            f"checkpoint without the second opinion.")
+    print(f"[replay] VLM second opinion: {entry.vlm_model_id} on {device} "
+          f"(policy {entry.vlm_policy}). Expect seconds per frame.")
+    return QwenGrounder(model_id=entry.vlm_model_id, device=device)
 
 
 class SessionCache:
@@ -148,7 +177,8 @@ def load_model(entry, device: str = "cpu"):
 def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
            should_stop: Callable[[], bool] = lambda: False,
            blur_faces: bool = False, realtime: bool = True,
-           speed: float = 1.0, overlay: bool = True) -> int:
+           speed: float = 1.0, overlay: bool = True,
+           grounder=None) -> int:
     """Stream one model's cues over the cached session.
 
     ``push_fn(t, jpeg_bytes, students, cue_names)`` matches
@@ -162,6 +192,36 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
     # two-class model, so the legend and the model would disagree.
     class_names = list(bundle.class_names)
 
+    # The VLM's second opinion, when this entry asked for one. It needs the
+    # frame, which the cache has; `fuse_frame` combines the two distributions
+    # per student. Both are strictly optional -- if the VLM is absent the run is
+    # exactly the run without it, which is the property that lets the slow path
+    # be opt-in rather than a fork of the pipeline.
+    fuse = None
+    if grounder is not None:
+        import cv2 as _cv2
+        from attention.fusion import Policy, fuse_frame
+        policy = Policy(getattr(entry, "vlm_policy", "agreement"))
+        def fuse(jpeg_bytes, rows, probs_by_track):
+            """-> {track_id: FusedStudent} or {} when the frame is unusable."""
+            if jpeg_bytes is None or not rows:
+                return {}
+            img = _cv2.imdecode(np.frombuffer(jpeg_bytes, np.uint8),
+                                _cv2.IMREAD_COLOR)
+            if img is None:
+                return {}
+            # Boxes are cached at full resolution; the JPEG is downscaled.
+            sw = cache.meta.get("source_width")
+            sc = img.shape[1] / float(sw) if sw else 1.0
+            boxes = [[v * sc for v in cache.bbox[r]] for r in rows]
+            tids = [int(cache.track_id[r]) for r in rows]
+            vlm = grounder.score_students(img, boxes)
+            return fuse_frame({t: probs_by_track[t] for t in tids
+                               if t in probs_by_track},
+                              {t: vlm[i] for i, t in enumerate(tids)
+                               if t in probs_by_track},
+                              policy=policy)
+
     inf = cache.meta.get("inference", {})
     win = int(inf.get("window_size", 32))
     minf = int(inf.get("min_frames_for_pred", 4))
@@ -171,6 +231,11 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
 
     hist = defaultdict(lambda: deque(maxlen=win))
     dwell: Dict[int, Dict] = {}
+    #: Last frame the VLM was asked, and how often to ask. 25 frames is about
+    #: one opinion per second of source video.
+    vlm_every = int(cache.meta.get("fps", 25.0))
+    last_vlm_frame = -10 ** 9
+    vlm_cache: Dict[int, object] = {}
     fps = cache.fps
     n_pushed = 0
     wall0 = time.time()
@@ -182,6 +247,7 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
         t = frame / fps
         rows = cache.rows_for(frame)
         students: Dict[str, Dict] = {}
+        probs_by_track: Dict[int, list] = {}
 
         # Forget tracks the tracker dropped, on empty frames too — otherwise a
         # reused track id would inherit a stale cached prediction.
@@ -211,6 +277,7 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
                     dwell[tid] = {"cue": cue, "since": t, "dwell": 0.0,
                                   "alerted": False}
                 st = dwell[tid]
+                probs_by_track[tid] = res["probs"]
                 students[str(tid)] = {
                     "cue": cue,
                     "conf": round(float(res["confidence"]), 2),
@@ -223,6 +290,32 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
                 }
 
         jpg = cache.jpeg(frame)
+
+        # The VLM runs on a stride of its own. It costs seconds per frame, so
+        # asking it every frame would make the replay unwatchable; between its
+        # opinions the previous one is carried, which is the same thing the
+        # temporal stride already does for the model itself. A student the VLM
+        # has never seen is fused temporal-only rather than dropped.
+        if fuse is not None and students:
+            if frame - last_vlm_frame >= vlm_every:
+                last_vlm_frame = frame
+                try:
+                    vlm_cache = fuse(jpg, rows, probs_by_track)
+                except Exception as e:                       # noqa: BLE001
+                    # A VLM failure must degrade to the temporal model, not take
+                    # the run down: the fused entry is the same checkpoint plus
+                    # an opinion, and the checkpoint is still right without it.
+                    print(f"[replay] VLM failed on frame {frame}: "
+                          f"{type(e).__name__}: {e}", flush=True)
+                    vlm_cache, fuse = {}, None
+            for tid, fs in vlm_cache.items():
+                srec = students.get(str(tid))
+                if srec is None:
+                    continue
+                srec["fusion"] = fs.to_json()
+                if fs.cue:                  # the policy picked a label
+                    srec["cue"] = fs.cue
+                srec["contested"] = bool(fs.contested)
         if jpg is not None and overlay and students:
             jpg = _draw(cv2, jpg, students, cache.meta, blur_faces)
 

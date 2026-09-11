@@ -117,8 +117,12 @@ class StubGrounder:
         rows = uniform_rows(n).copy()
         rest = (1.0 - self.conf) / (NUM_CUES - 1)
         for i in range(n):
-            cid = (self.cue_ids[i] if self.cue_ids is not None
-                   else i % NUM_CUES)
+            # Cycle rather than index: a caller that wants "everyone is
+            # screen_oriented" passes [0], and indexing would raise IndexError
+            # from inside the grounder on the second box -- a confusing failure
+            # for a deterministic fake whose whole job is to be predictable.
+            cid = (self.cue_ids[i % len(self.cue_ids)]
+                   if self.cue_ids else i % NUM_CUES)
             rows[i, :] = rest
             rows[i, cid] = self.conf
         return rows
@@ -149,9 +153,39 @@ class QwenGrounder:
         self._letter_ids: Optional[List[int]] = None
 
     # -- lazy load: the dashboard must start without paying for the VLM -----
+    @staticmethod
+    def available() -> "tuple[bool, str]":
+        """(usable here, why not). Checked BEFORE a run commits to this backend.
+
+        Qwen3-VL needs ``AutoModelForImageTextToText``, which arrived in
+        transformers 4.45. This stack pins **4.44.2**, and that pin is
+        load-bearing rather than lazy: the Space's requirements.txt documents
+        that torch 2.2.2 and mmcv's compiled ``_ext`` are built against each
+        other, and a dependency bump that drags torch forward produces
+
+            mmcv/_ext...so: undefined symbol: _ZN3c104cuda9SetDeviceEi
+
+        i.e. it breaks the detector, which is the part that works. So this
+        reports unavailable rather than being made to work by upgrading.
+        """
+        try:
+            import transformers
+        except Exception as e:                               # noqa: BLE001
+            return False, f"transformers not importable: {e}"
+        if not hasattr(transformers, "AutoModelForImageTextToText"):
+            return False, (
+                f"transformers {transformers.__version__} has no "
+                f"AutoModelForImageTextToText (added in 4.45); Qwen3-VL cannot "
+                f"load. The pin is deliberate — bumping it risks mmcv's "
+                f"compiled _ext against torch 2.2.2.")
+        return True, ""
+
     def _ensure(self):
         if self._model is not None:
             return
+        ok, why = self.available()
+        if not ok:
+            raise RuntimeError(f"{self.model_id} is not loadable here: {why}")
         import torch
         from transformers import AutoModelForImageTextToText, AutoProcessor
 

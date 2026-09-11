@@ -13,9 +13,9 @@ To continue: `claude --resume <session-id>`, or start a fresh session and say
 |---|---|---|
 | 1 | Remove the 900-frame cap on video analysis | **DONE** (needs commit) |
 | 2 | Prune dropdown to best-per-taxonomy, keep files | **DONE** (needs commit) |
-| 3 | More FPS + hardware upgrade | hardware requested, tuning pending |
-| 4 | VLM model in the dropdown | NOT STARTED |
-| 5 | Diagnose + improve talking_to_peer / phone_use / using_laptop | NOT STARTED |
+| 3 | More FPS + hardware upgrade | l4x1 requested and accepted; migrating. Tuning pending |
+| 4 | VLM model in the dropdown | **WIRED + stub-tested; BLOCKED** by transformers 4.44.2 pin (FINDINGS 20.3) |
+| 5 | Diagnose + improve talking_to_peer / phone_use / using_laptop | **DIAGNOSED** (FINDINGS 20.4); retraining next |
 
 Decisions taken by the user, do not re-ask:
 * prune = **hide from dropdown, keep the files** (nothing deleted from HF)
@@ -67,7 +67,7 @@ detector_stride 3 / temporal_stride 2 and 7.03 at 5:3 with 92.2% cue agreement.
 Still to do: re-measure on L4, then tune strides/resolution against measured
 cue agreement rather than guessing.
 
-## 4. VLM model — not started
+## 4. VLM model — wired, tested, blocked
 
 Infrastructure already exists and is tested but **not wired**:
 * `attention/vlm_grounder.py` — `QwenGrounder` (Qwen3-VL-4B-Instruct, ~8 GB
@@ -80,7 +80,7 @@ Plan: expose as a synthetic registry entry (temporal model + VLM fusion), run
 the VLM on the detector's boxes, fuse per `Policy`, and surface agreement in the
 model card. It will be seconds per frame; that is expected and must be labelled.
 
-## 5. Class performance — not started
+## 5. Class performance — diagnosed, retraining next
 
 **Read this before spending GPU.** `turned_to_peer` looks label-limited, not
 capacity-limited, and the evidence is already in FINDINGS:
@@ -106,3 +106,28 @@ then retrain only what it supports.
 * Log every result and defect to `FINDINGS.md` as it happens.
 * New sweeps go in a NEW `work_dirs/thesis/<name>/` so published checkpoints are
   never overwritten.
+
+
+## Diagnosis result (2026-09-11) — read before spending GPU on task 5
+
+Both weak classes fail the SAME way: `screen_oriented` is 76% of the data and
+absorbs them. 54.4% of `turned_to_peer` frames and 38.9% of `phone_use` frames
+are predicted `screen_oriented`, and it supplies 752/969 and 393/436 of their
+false positives respectively.
+
+They are NOT the same problem underneath:
+
+* **`phone_use` — feature-limited, and therefore fixable.** `phone_visible` has
+  inter-annotator kappa **0.934**: humans agree almost perfectly. The label is
+  sound; CLIP at 224x224 over a whole-body crop cannot resolve a phone. The
+  supported intervention is **explicit phone/laptop detection added to the
+  feature vector**, then retrain. This is the highest-expected-value GPU spend.
+* **`turned_to_peer` — partly label-limited.** Human agreement ~81% on the
+  stratified subset against the model's 0.239, so there IS headroom, but head
+  yaw bought +0.021 and 150 extra epochs bought +0.01. More of the same will not
+  do it.
+
+Next concrete step: add phone/laptop presence features (the detector is already
+open-vocabulary — "a mobile phone", "a laptop" are free text prompts), rebuild
+the affected feature block, retrain cue6 and cue9 at 240 epochs x 3 seeds in a
+NEW work_dirs tree, and compare per-class against the epochs240 baseline.

@@ -4163,6 +4163,115 @@ and has not been run.
 
 ---
 
+## 20. The demo session was 47% of the video, and other deployment defects (2026-09-11)
+
+### 20.1 A default nobody chose to hit
+
+`precompute_session.precompute` defaulted to `max_frames=900` — **36 seconds at
+25 fps**. Analysing a lecture therefore produced a cache of its opening, which
+replayed cleanly and simply stopped early. Nothing in the UI, the meta or the
+logs said the video had been cut.
+
+The shipped demo session is the proof: **900 of 1931 frames, 47% of
+`0325.mp4`**. Every figure ever quoted from "the 0325 session" describes the
+first half of it.
+
+`max_frames = 0` now means the whole video and is the default in `precompute`,
+`pipeline_bridge.run_live` and both server flags. A source over 5,000 frames
+prints its projected JPEG footprint rather than silently truncating. Re-run:
+**1931/1931 frames, 10,291 student-frames, 7 tracks, 417 s at 4.6 fps on an
+A100**, 171 MB of cache.
+
+This is the same class of defect as the taxonomy collapse in §14 — a default
+that produces a plausible, smaller, wrong result rather than an error.
+
+### 20.2 The model list was a research record, not a menu
+
+34 variants were offered, most of them seeds of ablations whose conclusions are
+already written down here. `model_registry._mark_recommended` now flags the best
+live model per **taxonomy**, restricted to the canonical training target where
+one exists, so cue6's v2 and PRODEN variants stay off the shortlist as the
+ablations they are. Five entries:
+
+| classes | variant | val macro-F1 |
+|---|---|---|
+| 9 | `epochs240/mstcn_556_hp:cue9` | 0.4680 |
+| 6 | `epochs240/mstcn_556_hp` | 0.5326 |
+| 6 | `wave2/mstcn_1074_hp_head` *(live-only)* | 0.5307 |
+| 3 | `epochs240/mstcn_556_hp:coarse3_reliable` | 0.7687 |
+| 2 | `epochs240/mstcn_556_hp:onoff_reliable` | 0.8496 |
+
+cue6 gets two deliberately: the best mean can replay a cached session, the best
+single score reads the head block and is live-only, and neither dominates.
+**Nothing is deleted** — all 34 stay in the registry and in the artifact repo,
+behind one checkbox.
+
+### 20.3 VLM fusion: wired, tested, and blocked by a load-bearing pin
+
+`attention/vlm_grounder.py` and `attention/fusion.py` existed and were tested but
+had never been connected to anything. They now are: a **virtual** registry entry
+(`<base>+vlm`) carries the base checkpoint and calibration, `session_replay`
+asks the grounder on its own stride (~1 opinion/second of source) and fuses per
+`fusion.Policy`, and a VLM failure degrades to the temporal model rather than
+taking the run down.
+
+Verified with `StubGrounder` over the 900-frame session, 5,055 of 5,073
+student-frames fused, and the agreement rate tracks what the stub claims:
+
+| stub says | agreed | contested |
+|---|---|---|
+| `screen_oriented` | 3,780 | 1,275 |
+| `phone_use` | 525 | 4,530 |
+
+**It cannot run on this stack.** `QwenGrounder` needs
+`AutoModelForImageTextToText`, added in transformers **4.45**; the HPC and the
+Space both pin **4.44.2**, and that pin is load-bearing rather than lazy — the
+Space's `requirements.txt` records that torch 2.2.2 and mmcv's compiled `_ext`
+are built against each other and that a bump produces
+`undefined symbol: _ZN3c104cuda9SetDeviceEi`, i.e. it breaks the detector.
+
+So `QwenGrounder.available()` reports the reason, `load_grounder` refuses at
+selection rather than at the first frame, and the registry **does not offer the
+entry at all** where it cannot run. It explicitly does **not** fall back to the
+stub: a deterministic fake presented as a second opinion would put an agreement
+rate on screen that measures nothing.
+
+Two ways forward, neither taken yet: a 4.44-compatible backend via
+`AutoModelForVision2Seq` (LLaVA-1.5, Idefics2), or the vendored
+`my_llava-onevision-qwen2-0.5b-ov-2` that already ships with the detector and is
+proven to load on this exact stack — it is 0.5B, and the detector never reads it
+at inference, so the weights are free to repurpose.
+
+### 20.4 Where the three weak classes actually fail
+
+Best cue6 model (`epochs240` s43), validation confusion:
+
+| class | F1 | where its frames go | where its false positives come from |
+|---|---|---|---|
+| `turned_to_peer` | 0.239 | **54.4% -> `screen_oriented`** | `screen_oriented` 752 of 969 |
+| `phone_use` | 0.536 | **38.9% -> `screen_oriented`** | `screen_oriented` 393 of 436 |
+| `screen_oriented` | 0.863 | 9.1% -> `looking_away` | `looking_away` 1,676 |
+
+Both failures are the *same* failure: `screen_oriented` is 76% of the data and
+acts as an attractor. A student turned to a neighbour, and a student looking
+down at a phone, both get absorbed into "oriented at a task".
+
+The two are not the same problem underneath, and the inter-annotator numbers
+(§19) separate them:
+
+* **`phone_use` is FEATURE-limited.** `phone_visible` has human kappa **0.934** —
+  people agree almost perfectly on whether a phone is visible. The label is
+  sound; the model simply cannot see a phone, because CLIP at 224x224 over a
+  whole-body crop has no resolution for one. Explicit phone detection is the
+  intervention the evidence supports.
+* **`turned_to_peer`** is weaker on both sides: humans agree on the derived cue
+  ~81% within the stratified subset, while the model reaches 0.239. That gap is
+  too large to be labels alone, so there is real headroom — but the causally
+  correct feature (head yaw) bought +0.021 and 150 extra epochs bought +0.01, so
+  it will not come from more of the same.
+
+---
+
 ## 10. Changelog
 
 **2026-08-08**

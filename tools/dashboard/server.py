@@ -574,10 +574,14 @@ def run_session(entry, cache_dir):
                 f"no image")
     print(f"[dashboard] {cache.n_cached_frames} cached frames")
     print(f"[dashboard] {entry.variant_id} — {bundle.describe()}")
+    # A `+vlm` entry loads an 8 GB VLM on top of the temporal model. Built here,
+    # after the cache and the checkpoint, so a failure to load it is reported
+    # against a running dashboard rather than at import time.
+    grounder = SR.load_grounder(entry, CONTEXT["device"])
     SR.replay(cache, entry, bundle, push_frame,
               should_stop=RUNNER.should_stop,
               blur_faces=CONTEXT["blur_faces"], realtime=True,
-              speed=CONTEXT["speed"])
+              speed=CONTEXT["speed"], grounder=grounder)
     with LOCK:
         STATE["running"] = False
 
@@ -677,6 +681,10 @@ def model_card(entry, cal):
         "abstains_on": list(getattr(entry, "abstains_on", []) or []),
         "comparable_group": getattr(entry, "comparable_group", ""),
         "is_canonical": getattr(entry, "is_canonical", True),
+        "vlm": bool(getattr(entry, "vlm", False)),
+        "vlm_model_id": getattr(entry, "vlm_model_id", ""),
+        "vlm_policy": getattr(entry, "vlm_policy", ""),
+        "vlm_base": getattr(entry, "vlm_base", ""),
         "alert_dwell": (CONTEXT.get("policy") or CUE6_POLICY)["alert_dwell"],
         "off_task_impure": (CONTEXT.get("policy") or CUE6_POLICY)["off_task_impure"],
     }

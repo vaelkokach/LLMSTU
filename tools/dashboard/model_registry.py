@@ -327,6 +327,13 @@ class ModelEntry:
     coverage: float = 1.0
     #: True when the head stream must be switched on in the live extractor.
     needs_head_stream: bool = False
+    #: Set on a VIRTUAL entry: a real checkpoint plus a VLM second opinion.
+    #: There is no separate checkpoint for it — `checkpoint` still points at the
+    #: base model and `vlm_base` names the variant it wraps.
+    vlm: bool = False
+    vlm_base: str = ""
+    vlm_model_id: str = ""
+    vlm_policy: str = ""
     #: On the curated shortlist the dashboard shows by default — the best model
     #: for each taxonomy. Everything else stays in the registry and is one
     #: checkbox away; nothing is deleted. See :func:`_mark_recommended`.
@@ -520,6 +527,72 @@ def _mark_recommended(entries: List[ModelEntry]) -> None:
                 "best that can also re-decide a cached session")
 
 
+#: Which VLM answers the second opinion, and under which fusion policy.
+#: Qwen3-VL-4B-Instruct is ~8 GB in fp16 and is deliberately NOT the 27B that
+#: produced the training labels — see the independence caveat in
+#: attention/vlm_grounder.py. It weakens the coupling; it does not remove it.
+VLM_MODEL_ID = "Qwen/Qwen3-VL-4B-Instruct"
+VLM_POLICY = "agreement"
+
+
+def _vlm_entries(entries: List[ModelEntry]) -> List[ModelEntry]:
+    """One virtual entry per shortlisted cue6 model: that model, plus a VLM.
+
+    Virtual because there is nothing new to train or store. The temporal model
+    runs exactly as it does alone; the VLM scores the same detector boxes
+    against the six cue phrases, and `attention.fusion` combines the two
+    opinions. What changes is the DECISION, not the weights, so the entry
+    carries the base model's checkpoint and calibration.
+
+    Restricted to cue6 because `fusion.py` and `vlm_grounder.py` are both built
+    on `CUE_CLASSES` — the option letters, the phrase list and the fused vector
+    are all six-wide. A cue9 grounder needs its own phrases and is a separate
+    piece of work, not a flag.
+
+    Restricted to REPLAY-CAPABLE models for a practical reason: the VLM needs
+    the frame, and a live run that also loads an 8 GB VLM per frame is slower
+    than the camera path is useful at. The session path already has the pixels.
+    """
+    # Only offer it where it can actually run. The wiring, the fusion and the
+    # calibration fallback are all in place and stub-tested, but Qwen3-VL needs
+    # transformers >= 4.45 and this stack pins 4.44.2 deliberately (bumping it
+    # risks mmcv's compiled _ext against torch 2.2.2). A dropdown entry that
+    # raises on selection is worse than no entry.
+    try:
+        import sys
+        sys.path.insert(0, str(REPO / "LLMDet"))
+        from attention.vlm_grounder import QwenGrounder
+        ok, why = QwenGrounder.available()
+    except Exception as e:                                   # noqa: BLE001
+        ok, why = False, f"{type(e).__name__}: {e}"
+    if not ok:
+        print(f"[registry] VLM entries not offered: {why}")
+        return []
+
+    out = []
+    for e in entries:
+        if not (e.recommended and e.taxonomy == "cue6" and e.live_capable
+                and e.replay_capable):
+            continue
+        v = ModelEntry(**{**asdict(e),
+                          "variant_id": f"{e.variant_id}+vlm",
+                          "label": f"{e.label} · + VLM second opinion",
+                          "sweep_label": "temporal model fused with a VLM",
+                          "vlm": True,
+                          "vlm_base": e.variant_id,
+                          "vlm_model_id": VLM_MODEL_ID,
+                          "vlm_policy": VLM_POLICY,
+                          "is_default": False,
+                          "recommended": True,
+                          "recommended_why": (
+                              f"{e.variant_id} plus a second opinion from "
+                              f"{VLM_MODEL_ID}, combined under the "
+                              f"'{VLM_POLICY}' policy. Seconds per frame, not "
+                              f"frames per second.")})
+        out.append(v)
+    return out
+
+
 def scan(thesis_root: Path = THESIS) -> List[ModelEntry]:
     """One entry per variant, best validation seed, ordered best-first.
 
@@ -545,6 +618,7 @@ def scan(thesis_root: Path = THESIS) -> List[ModelEntry]:
             e.is_default = True     # best canonical-target variant on validation
             break
     _mark_recommended(entries)
+    entries += _vlm_entries(entries)
     return entries
 
 
