@@ -281,8 +281,24 @@ async function loadSources(){
     SOURCES = await r.json();
   }catch(e){
     $("sourcesel").innerHTML = "<option>unavailable</option>";
-    sourceBanner("Could not list recordings: "+esc(e.message)
-      + ". The server logged the reason.", true);
+    // The camera panel is revealed below, once this call succeeds. Returning
+    // early leaves it display:none, so a failure here does not just break the
+    // recordings list -- it removes live capture from the page entirely, with
+    // nothing to say it was ever there. That reads as "this build has no camera
+    // mode" rather than "the page cannot reach its server".
+    let why = ". The server logged the reason.";
+    if(String(e.message).includes("404")){
+      // A 404 on the API, when the page itself loaded, almost always means the
+      // request never reached this server: behind a path prefix like
+      // /proxy/8010 with no trailing slash, "api/sources" resolves against the
+      // PARENT and the proxy answers 404 on its own. Nothing is logged here,
+      // so pointing at the log sends people to an empty file.
+      why = ". The page loaded but the API did not answer, so the request "
+          + "probably never reached the server — check the address ends in a "
+          + "slash (…/proxy/8010/, not …/proxy/8010).";
+    }
+    sourceBanner("Could not list recordings: "+esc(e.message) + why
+      + " Live camera is hidden until this succeeds.", true);
     return;
   }
   const sel=$("sourcesel"), keep=sel.value;
