@@ -22,7 +22,7 @@ Environment (set these as Space secrets/variables, not in the Dockerfile):
     ARTIFACT_TYPE    "model" (default) or "dataset"             (variable)
     DASHBOARD_MODEL  registry id, default ff_det/mstcn_553_facefound@s42
                      -- the checkpoint attention_runtime.yaml deploys  (variable)
-    SESSION          session dir name under sessions/, default 0325
+    SESSION          session dir name under sessions/, default 0325_full
     RUNTIME_CONFIG   detector+features config for live analysis  (variable)
     DETECTOR_CONFIG  mmdet config to use instead of the one named
                      inside RUNTIME_CONFIG, e.g.
@@ -278,7 +278,11 @@ def main() -> int:
     if have_artifacts:
         check_detector_assets()
 
-    session = os.environ.get("SESSION", "0325")
+    # 0325_full (64.4 s), not 0325 (30.0 s). The temporal window is 32
+    # frames and frames now enter the history at 1 fps (FINDINGS 27), so a
+    # 30 s clip yields 30 samples and never fills a single window. 64 s
+    # fills two.
+    session = os.environ.get("SESSION", "0325_full")
     session_dir = SESSIONS_DIR / session
     # The checkpoint attention_runtime.yaml names as deployed, seed-pinned.
     #
