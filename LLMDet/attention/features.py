@@ -198,6 +198,59 @@ class StudentFeatureExtractor:
     def extract(self, frame_bgr: np.ndarray, bbox_xyxy: List[float]) -> np.ndarray:
         return self.extract_batch(frame_bgr, [bbox_xyxy])[0]
 
+    def extract_many(self, pairs, batch: int = 32) -> np.ndarray:
+        """Features for (frame, bbox) pairs from DIFFERENT frames, batched.
+
+        `extract_batch` batches the students of ONE frame, which is the right
+        shape for live analysis. The sequence builder has the opposite shape: one
+        student across many frames, so it was calling `extract` per crop and
+        paying a batch-of-one forward pass each time. That is tolerable for
+        CLIP ViT-B/32 at 2.97 ms but not for a so400m tower at 384px, where a
+        batch of one runs ~3.5x the per-crop cost of a batch of eight and turns a
+        3-hour corpus build into an 11-hour one.
+
+        Only the encoder is batched; the geometry, colour and posture parts are
+        per-crop arithmetic and stay exactly where they were, so this is the same
+        function computed in a different order.
+        """
+        pairs = list(pairs)
+        out = np.zeros((len(pairs), self.output_dim()), dtype=np.float32)
+        for s in range(0, len(pairs), batch):
+            grp = pairs[s:s + batch]
+            crops, metas = [], []
+            for frame, box in grp:
+                h, w = frame.shape[:2]
+                c, clipped, valid = crop_boxes(frame, [box])
+                if not c:
+                    metas.append(None)
+                    continue
+                crops.append(c[0])
+                metas.append((frame, c[0], clipped[0], w, h))
+            feats = self._clip_batch(crops) if crops else []
+            j = 0
+            for r, m in enumerate(metas):
+                if m is None:
+                    continue
+                frame, crop, (x1, y1, x2, y2), w, h = m
+                parts = [feats[j], self._geom(x1, y1, x2, y2, w, h),
+                         self._color_stats(crop),
+                         self._posture_geom(crop, x1, y1, x2, y2, w, h)]
+                j += 1
+                if self.head_pose is not None and self.head_pose.available():
+                    parts.append(self.head_pose.estimate(crop))
+                if self.head_stream:
+                    hb = self._head_box(x1, y1, x2, y2, w, h)
+                    hc = frame[hb[1]:hb[3], hb[0]:hb[2]]
+                    hf = (self._clip_batch([hc])[0] if hc is not None and hc.size
+                          else np.zeros(self.clip_dim, dtype=np.float32))
+                    parts.append(hf)
+                    parts.append(self._head_geom(hb, x1, y1, x2, y2, w, h)
+                                 if hasattr(self, "_head_geom")
+                                 else np.zeros(6, dtype=np.float32))
+                v = np.concatenate(parts).astype(np.float32)
+                out[s + r, :len(v)] = v
+        return out
+
     def extract_batch(self, frame_bgr: np.ndarray, bboxes_xyxy: List[List[float]]) -> np.ndarray:
         """Features for every box of one frame with a single CLIP forward pass.
 

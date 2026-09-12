@@ -424,19 +424,37 @@ def build_sequences_llmstu(
                     continue
                 feats, labels, times, track_boxes = [], [], [], []
                 cand_masks = []
-                for obs in chunk:
-                    img_path = image_root / obs.src_frame
-                    if frame_cache[0] == str(img_path):
-                        frame = frame_cache[1]
-                    else:
-                        frame = cv2.imread(str(img_path))
-                        frame_cache = (str(img_path), frame)
-                    if frame is None:
+                # Encode the whole chunk in sub-batches before the per-obs loop.
+                # This used to call extract() once per crop, i.e. a batch-of-one
+                # forward pass each time -- tolerable for CLIP ViT-B/32 at
+                # 2.97 ms, but a so400m tower at 384px runs ~3.5x its batched
+                # per-crop cost that way, which is the difference between a
+                # 3-hour corpus build and an 11-hour one. Sub-batched rather
+                # than all at once because a chunk is up to 128 frames and a
+                # 1918x1080 frame is ~6 MB decoded.
+                ENC_BATCH = 32
+                chunk_fv: list = [None] * len(chunk)
+                for s0 in range(0, len(chunk), ENC_BATCH):
+                    grp = chunk[s0:s0 + ENC_BATCH]
+                    pairs, at = [], []
+                    for k, o in enumerate(grp):
+                        ip = image_root / o.src_frame
+                        if frame_cache[0] == str(ip):
+                            fr = frame_cache[1]
+                        else:
+                            fr = cv2.imread(str(ip))
+                            frame_cache = (str(ip), fr)
+                        if fr is None:
+                            continue
+                        pairs.append((fr, o.bbox_xyxy)); at.append(s0 + k)
+                    if pairs:
+                        vs = extractor.extract_many(pairs, batch=ENC_BATCH)
+                        for r, idx in enumerate(at):
+                            chunk_fv[idx] = vs[r]
+                for ci, obs in enumerate(chunk):
+                    fv = chunk_fv[ci]
+                    if fv is None:                 # unreadable frame
                         continue
-                    # TODO: regroup this per-track loop by frame so all students
-                    # of a frame share one extract_batch() CLIP call (5-10x
-                    # faster builds); requires restructuring the track loop.
-                    fv = extractor.extract(frame, obs.bbox_xyxy)
                     if cached_hp is not None:
                         fv = np.concatenate(
                             [fv, cached_hp.estimate_by_name(
