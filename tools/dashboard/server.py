@@ -227,12 +227,28 @@ class Runner:
     # Generous, because the live source checks the stop flag once per frame and
     # a single detector frame on CPU is seconds. A tight timeout would turn a
     # slow switch into a spurious 409.
-    def stop(self, join_timeout=60.0):
+    #
+    # 210s, not 60s, and the reason is measured: a cold live start on the Space
+    # spends ~139s loading the detector, CLIP and the head-pose backend BEFORE
+    # it reaches the loop that checks the stop flag (FINDINGS 23.3). A switch
+    # requested during that window could never be honoured in 60s, so it always
+    # raised.
+    def stop(self, join_timeout=210.0):
         self._stop.set()
         t = self.thread
         if t and t.is_alive():
             t.join(timeout=join_timeout)
             if t.is_alive():
+                # Refusing to start another must leave the current one ALONE.
+                # Clearing the flag is the whole point: it was set two lines up,
+                # and without this the run we just declined to replace sees it
+                # at its next frame and exits -- so a refused switch killed the
+                # camera, reported no error (run_live returned normally), and
+                # the page showed "sent" climbing against "analysed 0" with
+                # "the camera pipeline is not running". That is the SAME symptom
+                # as the released-buffer bug, reached by a completely different
+                # route, which is why fixing that one did not make it go away.
+                self._stop.clear()
                 raise RuntimeError(
                     "the previous run did not stop within "
                     f"{join_timeout:.0f}s; refusing to start another")

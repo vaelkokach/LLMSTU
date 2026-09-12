@@ -175,3 +175,55 @@ def test_the_frame_endpoint_pushes_into_the_run_s_buffer():
     assert endpoint_buf is run_buf
     endpoint_buf.put("z")
     assert run_buf.read(timeout=1.0) == (True, "z")
+
+
+# --------------------------------------------------------------------------
+# a refused switch must not kill the run it declined to replace
+#
+# Runner.stop() sets the stop flag, joins, and raises if the thread is still
+# alive -- but the flag stayed set. The run we just refused to replace then saw
+# it at its next frame and exited. The page got a 409 for the switch AND lost
+# the pipeline, with no error recorded anywhere, which is the same
+# "sent climbing / analysed 0 / not running" symptom as a released buffer
+# reached by an entirely different route.
+#
+# Reproducible because a cold live start spends ~139 s loading models before it
+# reaches the loop that checks the flag: any switch in that window could never
+# be honoured within the old 60 s timeout.
+# --------------------------------------------------------------------------
+
+def test_a_refused_switch_leaves_the_running_pipeline_alone():
+    import threading
+    server = pytest.importorskip("server")
+
+    r = server.Runner()
+    release = threading.Event()
+
+    def slow():
+        release.wait(timeout=10)
+
+    r.start(slow)
+    assert r.alive()
+
+    with pytest.raises(RuntimeError, match="refusing to start another"):
+        r.stop(join_timeout=0.2)
+
+    # The refusal must be a no-op for the run that is still going.
+    assert not r.should_stop(), \
+        "a refused switch left the stop flag set; the running pipeline will exit"
+    assert r.alive()
+    release.set()
+
+
+def test_a_successful_stop_still_stops():
+    server = pytest.importorskip("server")
+    done = []
+
+    def quick():
+        done.append(1)
+
+    r = server.Runner()
+    r.start(quick)
+    r.stop(join_timeout=5.0)
+    assert r.thread is None
+    assert done == [1]

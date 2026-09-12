@@ -4571,6 +4571,38 @@ constraint instead of restating it.
 "ended before a single frame" from "stopped after n frames", so the next
 instance of this class of failure arrives with its reason attached.
 
+### 23.2b The same symptom by a second route: a refused switch killed the run
+
+Fixing the buffer did not make the symptom go away, and the second cause is
+worth as much as the first.
+
+```python
+def stop(self, join_timeout=60.0):
+    self._stop.set()                  # ask the running pipeline to finish
+    ...
+    if t.is_alive():
+        raise RuntimeError("...refusing to start another")   # flag still set
+```
+
+`Runner.stop()` sets the stop flag, joins, and on timeout refuses the new run --
+leaving the flag **set**. The pipeline it just declined to replace then sees it
+at its next frame and exits. So the page gets a 409 for the switch *and* loses
+the camera, with no error recorded, because `run_live` again returned normally.
+
+It is reliably reachable rather than a rare race: a cold live start spends
+~139 s loading the detector, CLIP and the head-pose backend **before** it reaches
+the loop that checks the flag, so any switch requested in that window could never
+be honoured within the 60 s timeout. Pressing "Start camera" and then choosing a
+model -- the obvious order -- is exactly that window.
+
+Two changes: the timeout is now 210 s, above the measured cold start, so a switch
+during warm-up waits instead of failing; and a refused switch clears the flag, so
+that refusal is a genuine no-op rather than a silent kill.
+
+The general lesson is the one this log keeps relearning: an operation that gives
+up must undo what it already did. Both halves of this bug were a revive and a
+teardown in the wrong order.
+
 ### 23.3 Verified against the deployed Space
 
 Driving `/api/model` → `/api/source` → `/api/camera/frame` as the browser does,
@@ -4578,10 +4610,17 @@ twice in one process, on `a10g-small`:
 
 | | warm-up to first analysed frame | frames analysed | drop rate | processed fps |
 |---|---|---|---|---|
-| run 1 (cold) | 139 s | 97+ | 235 dropped, then **0** | — |
-| run 2 (**used to be dead**) | 16 s | 151 | 7% | **1.81** |
+| run 1 (cold) | 32 s | 331 | 13% | **1.81** |
+| run 2 (**used to be dead**) | 61 s | 82 | 54%, then **0** | **1.83** |
 
-Run 2 is the test. Before the fix it analysed nothing, forever.
+Run 2 is the test. Before the fix it analysed nothing, forever. Run 1 is the
+second test: its model switch was requested *during* warm-up, the window that
+used to return 409 and kill the pipeline (23.2b), and it now returns 200 and
+keeps running.
+
+The drop rates are an artefact of when each window starts -- both runs stop
+dropping entirely once warm, which is the number that matters: `dropped` freezes
+and every frame offered is analysed.
 
 Two things worth keeping from the numbers: the 139 s cold start is the
 detector + CLIP + head-pose backend loading, and it is consistent with the
