@@ -332,6 +332,15 @@ def main() -> int:
         # Falls back to a tracked cue log so the Space always renders something
         # rather than failing to boot. Model switching is unavailable here: a
         # recorded cue log stores decisions, not features.
+        #
+        # Name what was asked for and what is actually present. Landing in replay
+        # mode is visible; landing here because SESSION names a directory the
+        # artifact repo does not have is not, and the two look identical on the
+        # page -- no model selector, no explanation.
+        have = sorted(d.name for d in SESSIONS_DIR.glob("*") if d.is_dir()) \
+            if SESSIONS_DIR.exists() else []
+        print(f"[app] SESSION={session!r} unavailable (artifacts fetched: "
+              f"{have_artifacts}; sessions present: {have or 'none'})", flush=True)
         replay = HOME / "tools" / "dashboard" / "demo_session.jsonl"
         argv += ["--replay", str(replay)]
         print(f"[app] replay mode: {replay}", flush=True)

@@ -12,6 +12,7 @@ click away from public. Naming each file is the control.
 The Space rebuilds on commit; `--wait` polls until it is RUNNING again.
 """
 import argparse
+import os
 import subprocess
 import sys
 import time
@@ -57,6 +58,18 @@ def main():
     paths = sorted({p.resolve() for p in paths})
     if not paths:
         ap.error("nothing to push")
+
+    # Compile every .py before pushing. A syntax error costs a full rebuild to
+    # discover (the Space boots, crashes, and reports RUNTIME_ERROR minutes
+    # later), and it is free to catch here.
+    for p in paths:
+        if p.suffix == ".py" and p.exists():
+            try:
+                compile(p.read_text(), str(p), "exec")
+            except SyntaxError as e:
+                sys.exit(f"refusing to push, {p.name} does not compile:\n"
+                         f"  line {e.lineno}: {e.text and e.text.rstrip()}\n"
+                         f"  {e.msg}")
 
     ops = []
     for p in paths:
