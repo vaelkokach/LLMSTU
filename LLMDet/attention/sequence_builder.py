@@ -260,6 +260,7 @@ def build_sequences_llmstu(
     head_pose_cache: str = None,
     affect_cache: str = None,
     head_stream: bool = False,
+    object_cache: "Optional[str]" = None,
     dynamic_features: bool = False,
 ) -> None:
     """Build per-(video, seat) sequences with per-frame cue labels.
@@ -335,13 +336,39 @@ def build_sequences_llmstu(
             "--head-stream cannot be combined with --affect-cache or "
             "--dynamic-features: the head block occupies columns 556+, where "
             "express/dynamic live in the v570 layout. Build them separately.")
-    layout_name = "v1074_head" if head_stream else "v570"
+
+    # Object presence occupies [1074, 1080), i.e. it sits AFTER the head block,
+    # so a v1080_obj build is a v1074_head build plus six columns. Asking for
+    # objects without the head stream would leave [556, 1074) undefined and the
+    # width assert below would catch it -- but the message would be about a
+    # width rather than about the missing flag, so say it here.
+    objects = None
+    if object_cache:
+        if not head_stream:
+            raise SystemExit(
+                "--object-cache requires --head-stream: the object block is "
+                "defined at columns [1074, 1080) of the v1080_obj layout, which "
+                "is v1074_head plus six. Without the head stream those columns "
+                "do not exist.")
+        if extra:
+            raise SystemExit(
+                "--object-cache cannot be combined with --affect-cache or "
+                "--dynamic-features, for the same reason --head-stream cannot.")
+        d = np.load(object_cache, allow_pickle=False)
+        objects = ({str(n): i for i, n in enumerate(d["names"])},
+                   d["vecs"].astype(np.float32))
+        print(f"object cache: {len(objects[0])} crops, "
+              f"{objects[1].shape[1]} dims, "
+              f"objects={[str(x) for x in d['prompts']]}")
+    layout_name = ("v1080_obj" if object_cache
+                   else "v1074_head" if head_stream else "v570")
 
     extractor = StudentFeatureExtractor(
         allow_clip_fallback=allow_clip_fallback,
         head_pose=None if cached_hp is not None else hp,
         head_stream=head_stream)
-    total_dim = extractor.output_dim() + (4 if cached_hp is not None else 0) + extra
+    total_dim = (extractor.output_dim() + (4 if cached_hp is not None else 0)
+                 + extra + (objects[1].shape[1] if objects is not None else 0))
     print(f"feature dim: {total_dim} (layout={layout_name}, "
           f"head_pose={head_pose_backend or 'off'}, "
           f"head_stream={'on' if head_stream else 'off'})")
@@ -356,6 +383,7 @@ def build_sequences_llmstu(
         (output_dir / split).mkdir(parents=True, exist_ok=True)
 
     sample_idx = 0
+    n_obj_missing = 0
     meta_rows = []
     frame_cache: Tuple[Optional[str], Optional[np.ndarray]] = (None, None)
 
@@ -401,6 +429,19 @@ def build_sequences_llmstu(
                         av = avecs[j] if j is not None else np.zeros(
                             avecs.shape[1], dtype=np.float32)
                         fv = np.concatenate([fv, av]).astype(np.float32)
+                    if objects is not None:
+                        omap, ovecs = objects
+                        j = omap.get(obs.meta.get("file_name", ""))
+                        # A crop with no cache entry gets zeros, which is what
+                        # "no object detected" already looks like. Counted below
+                        # so a systematically missing cache is visible rather
+                        # than silently training every student as object-free.
+                        if j is None:
+                            n_obj_missing += 1
+                            ov = np.zeros(ovecs.shape[1], dtype=np.float32)
+                        else:
+                            ov = ovecs[j]
+                        fv = np.concatenate([fv, ov]).astype(np.float32)
                     feats.append(fv)
                     track_boxes.append(list(obs.bbox_xyxy))
                     labels.append(obs.label_id)
@@ -548,6 +589,10 @@ def parse_args():
     p.add_argument("--val-fraction", type=float, default=0.2)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--allow-filename-video-fallback", action="store_true")
+    p.add_argument("--object-cache", default=None,
+                   help="npz from attention.precompute_objects: per-crop "
+                        "object-presence features (cell phone, laptop). "
+                        "Requires --head-stream; produces a v1080_obj build.")
     p.add_argument("--head-stream", action="store_true",
                    help="add the 518-dim head stream: a second CLIP pass over "
                         "the head region cropped from the full frame. A person "
@@ -592,4 +637,5 @@ if __name__ == "__main__":
         affect_cache=args.affect_cache,
         dynamic_features=args.dynamic_features,
         head_stream=args.head_stream,
+        object_cache=args.object_cache,
     )
