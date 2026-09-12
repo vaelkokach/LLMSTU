@@ -4524,8 +4524,21 @@ whole process:
 reader.release() if live else cap.release()      # pipeline_bridge.py:507
 ```
 
-`PushedFrames.release()` sets `closed = True`, and nothing ever cleared it.
-`camera_buffer()` returned that same object forever. So:
+`PushedFrames.release()` sets `closed = True`. `start()` *did* try to clear it --
+`buf.reopen()`, two lines above -- and that is the part worth keeping:
+
+```python
+buf = camera_buffer()
+buf.reopen()                                        # alive again
+return RUNNER.start(run_live_source, ...)           # ...and RUNNER.start()
+                                                    # BEGINS by joining the
+                                                    # previous run, whose last
+                                                    # act is release()
+```
+
+**The revive always lost to the teardown that followed it**, deterministically,
+because the previous run checks the stop flag once per frame and so is still
+alive when `reopen()` runs. So:
 
 * the **first** camera run of a process works, and closes the buffer on its way out;
 * every run after it gets a corpse. `read()` checks death first, returns
@@ -4537,17 +4550,22 @@ So the page sees `sent` climbing, `analysed` frozen, "the camera pipeline is not
 running", and no error anywhere. `analysed 1` rather than `0` is the first run's
 last frame, still counted on the shared buffer.
 
-`PushedFrames.reopen()` already existed, with a passing test. **Nothing called
-it.** A tested method and no caller is a worse signal than a missing method,
-because the test says the lifecycle was thought about.
+`PushedFrames.reopen()` existed, had a passing test, and **was called**. The
+lifecycle had been thought about and the call sat in the wrong place by two
+lines. That is why reading `PushedFrames` in isolation made the bug look
+impossible: every piece was present and correct, and only their order was wrong.
+The unit test could not catch it because it exercised the buffer, and the defect
+lives in the caller.
 
 ### 23.2 The fix, and why a fresh buffer rather than reopen()
 
-`camera_buffer(reset=True)` at the start of a camera run, returning a **new**
-object rather than reopening the old one. A lagging worker from a previous run
-still holds a reference and will call `release()` on it when it finishes; with
-`reopen()` that release lands on the *new* session's buffer and kills it. The
-race is narrow and would have looked exactly like this bug.
+`camera_buffer(reset=True)` **inside `run_live_source`**, which runs after
+`RUNNER.start()` has joined the predecessor -- so there is no longer anything
+alive that could close it. It returns a **new** object rather than reopening the
+old one, which closes the residual case too: a straggler that releases late
+releases the object it was actually given, not its successor. Moving `reopen()`
+below the join would also have worked; replacing the object removes the ordering
+constraint instead of restating it.
 
 `run_live` now also returns why a live source stopped, and distinguishes
 "ended before a single frame" from "stopped after n frames", so the next
@@ -4652,13 +4670,36 @@ ambiguity rather than adding capacity. And `turned_to_peer` is still 0.22: it ha
 now survived head pose, the 240-epoch budget and object features, and remains
 without any validated intervention.
 
-### 25.2 What deployment costs
+### 25.2 What deployment costs, measured on the Space
 
-The live path must now run the object prompts as well as the student prompt --
-two extra open-vocabulary queries per frame -- and `v1080_obj` is a new layout,
-so the cache and the registry entry are not interchangeable with `v1074_head`.
-Not yet measured on `a10g-small`; the live figure to beat is the 1.81 processed
-fps of §23.3.
+`v1080_obj` is a new layout, so neither the session cache nor the `v1074_head`
+registry entry is interchangeable with it -- the registry classifies it
+live-only, on its own, from the block list.
+
+Driven through the deployed camera path on `a10g-small`, same synthetic frames as
+§23.3, one request in flight as the browser does it:
+
+| | warm-up to first analysed frame | steady-state | drop |
+|---|---|---|---|
+| `epochs240/mstcn_556_hp` | 139 s | 1.81 fps | 7% |
+| `objfeat/mstcn_1080_hp_head_obj` | ~120 s, plus a ~6 min model switch | 1.82 fps | 0 once warm |
+
+**The steady-state cost is not visible at this frame rate**, and the reason is
+that the measurement is bounded by the prober rather than by the pipeline: the
+drop counter stops rising in both cases, so both models consume every frame
+offered. What the object block actually costs is paid in the **switch**: loading
+a second 1.1 GB detector took minutes, and HF's gateway returns 502 on
+`/api/model` well before the app finishes -- the switch succeeds anyway, which
+makes the 502 a misleading but harmless symptom.
+
+So the honest statement is that the object model is no slower than the base model
+at the rate a browser can push frames, and that the true per-frame ceiling of
+neither is established by this measurement.
+
+The detector itself is a separate 1.1 GB pretrained MM-GroundingDINO, now in the
+artifact repo under `huggingface/mm_grounding_dino/`, fetched at boot like the
+others. It is **not** the fine-tuned student detector: that one ignores its text
+prompt entirely (§21), so prompting it for "cell phone" returns students.
 
 
 ## 26. Which VLM, measured against human gold (2026-09-12) ★★

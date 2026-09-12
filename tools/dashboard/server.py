@@ -752,8 +752,12 @@ def start(source, entry=None):
         CONTEXT["switch_cost"] = (
             "restarts the capture; the browser keeps streaming and the new "
             "model picks up from the next frame")
-        buf = camera_buffer()
-        buf.reopen()
+        # No reopen() here. There used to be one, and it was undone by the
+        # very next line: RUNNER.start() begins by joining the PREVIOUS run,
+        # whose last act is reader.release() -- on this same buffer. The revive
+        # therefore always lost to the teardown that followed it, and the camera
+        # worked exactly once per process. run_live_source takes a fresh buffer
+        # instead, after the join, where nothing can close it behind us.
         return RUNNER.start(run_live_source, entry, SRC.BROWSER_CAMERA_ID)
 
     if source["kind"] == "session":
