@@ -213,7 +213,18 @@
 // sends /api/state to the hub rather than to us, so every call 404s while the
 // page itself loads fine. Resolving against document.baseURI works at the root
 // and under any prefix.
-const api = p => new URL(p, document.baseURI).href;
+// ...but baseURI is only a DIRECTORY when the URL ends in a slash. Open
+// /proxy/8010 without it and the browser resolves "api/sources" against the
+// parent, i.e. /proxy/api/sources, which the hub answers with its own 404 --
+// so the page renders, every call fails, and the dashboard reports itself
+// disconnected while the 404 never reaches this server at all. This page is
+// always served at a path root, so a missing trailing slash is always a typo
+// and is safe to supply.
+const api = p => {
+  const base = new URL(document.baseURI);
+  if (!base.pathname.endsWith("/")) base.pathname += "/";
+  return new URL(p, base).href;
+};
 
 function fmt(s){ s=Math.round(s); return s<60 ? s+"s" : Math.floor(s/60)+"m "+(s%60)+"s"; }
 function f4(x){ return (x==null||isNaN(x)) ? "—" : Number(x).toFixed(4); }
