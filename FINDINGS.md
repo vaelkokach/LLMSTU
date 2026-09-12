@@ -4821,7 +4821,118 @@ That is an argument for asking it selectively rather than on every class, and it
 is not yet built or measured.
 
 
+## 27. The deployment served the model at the wrong frame rate (2026-09-12) ★★★
+
+Asked for higher live FPS on the HPC, on the assumption that more frames means
+smoother and more accurate analysis. The first half is true. The second is
+backwards, and finding out why uncovered the largest single defect in this
+project.
+
+### 27.1 The model has a frame rate, and nothing enforced it
+
+The temporal model's receptive field is **32 frames**. The behaviour it has to
+recognise happens in **seconds**. Those two agree at exactly one frame rate, and
+for this family that rate is **~1.0 fps**: the LLMSTU sequences are one frame per
+annotated crop and the annotations are ~1 s apart -- median gap **0.995 s**, 92%
+within 0.9-1.0 s, over 300 sampled sequences. A training window therefore spans
+**~31 s of real time**.
+
+Both deployed paths appended *every* frame they analysed to each student's
+history. So the window spanned whatever the pipeline happened to achieve:
+
+| path | rate | 32-frame window spans |
+|---|---|---|
+| evaluator, and every number in this log | 1.05 fps | 30.5 s |
+| live camera, HF Space `a10g-small` | 2.29 fps | 14.0 s |
+| live camera, one A100 saturated | 4.33 fps | 7.4 s |
+| **session replay** (the dashboard's default view) | **30 fps** | **1.0 s** |
+
+The replay path is the one that matters most: session `0325` records `fps: 30.0`,
+the cache holds all 900 frames, and `session_replay` appended all of them. Every
+demonstration of this dashboard has been running the model over a **one-second**
+window.
+
+### 27.2 What it costs
+
+`tools/bench_framerate_skew.py` resamples the val split and reads the predictions
+back **at the real frame positions**, so the labels, the frames scored and the
+protocol are identical across rows and the only thing that changes is how much
+real time a window covers. 400-600 val sequences, `mstcn_556_cue6_s42`:
+
+| served at | window spans | macro-F1 | vs trained rate |
+|---|---|---|---|
+| 0.50 fps | 63.6 s | 0.5575 | −0.109 |
+| **1.05 fps** | **30.5 s** | **0.6801** | **(reference)** |
+| 2.10 fps | 15.3 s | 0.5008 | −0.179 |
+| 4.19 fps | 7.6 s | 0.3941 | −0.286 |
+| 8.39 fps | 3.8 s | 0.3419 | −0.338 |
+| 15.72 fps | 2.0 s | 0.3156 | −0.365 |
+| **31.45 fps** | **1.0 s** | **0.2960** | **−0.384** |
+
+For scale: the 90 -> 240 epoch budget, the largest modelling gain in this log, was
+**+0.036** (§18). Object features were **+0.028** (§25). The frame rate was worth
+**−0.384**, and nobody was looking at it.
+
+**Two controls, because an effect this large is usually a mistake.**
+
+*It is not an artefact of repeated frames.* macro-F1 **peaks at the trained rate
+and falls away in both directions** -- serving at half rate costs 0.109. A
+duplication artefact would not care which side of 1.0 fps you were on. And adding
+Gaussian noise at 25% of each column's own standard deviation to the duplicated
+frames moves the result by 0.003 (0.5212 -> 0.5180 at 2x, 0.4317 -> 0.4324 at 4x),
+so the model is not keying on exact repeats.
+
+*The absolute values are not comparable to §18.* This protocol predicts over the
+whole sequence non-causally and applies no calibration, which is why the reference
+row is 0.6801 rather than the published 0.5200. **Only the deltas are the
+result**; every row shares the protocol.
+
+### 27.3 The fix, and what it costs in responsiveness
+
+`HistorySampler` (`thesis_eval/runtime.py`) admits a frame into a student's
+history only once `1 / temporal_input_fps` seconds of **source** time have passed
+for that student -- source time, not wall clock, so a file replayed at 4x samples
+the same frames as at 1x and the cues do not move with the playback speed. Wired
+into both paths; `inference.temporal_input_fps: 1.0` in the runtime config, and
+0 restores the old behaviour for measurement.
+
+This **separates the detector rate from the model rate**, which is what makes the
+original request coherent: running the detector faster still buys smoother boxes
+and better tracking, and now it no longer rescales the model's window while doing
+it.
+
+The cost, stated plainly: at 1 fps, `min_frames_for_pred: 10` means **~10 s before
+a student's first cue**, against 0.3 s at 30 fps. No alert was ever faster than
+its dwell (15-30 s), so nothing an instructor acts on got slower.
+
+One consequence for the demo: session `0325` is 30 s, i.e. **30 samples at 1 Hz --
+less than one 32-frame window**. `0325_full` (64.4 s, 64 samples) is now the only
+session that fills a window, and is what the dashboard should demonstrate. Verified
+after the fix: 5-6 students tracked, cues from ~10 s, `phone_use` and
+`turned_to_peer` both appearing.
+
+### 27.4 What this does to the numbers in this log
+
+Nothing, and that is worth being explicit about. Every macro-F1 in FINDINGS comes
+from `run_eval` over the val sequences at their native ~1 fps, so the *measured*
+numbers were always taken in the regime the model was trained for. What was wrong
+was the **deployment**, which was showing far less than the model had. The gap
+between "0.52 on val" and how the dashboard looked was not the usual
+research-to-demo disappointment; it was a 30x frame-rate error.
+
+
 ## 10. Changelog
+
+**2026-09-12**
+- **The deployment served the model at the wrong frame rate** (§27). The temporal
+  window is 32 frames and the sequences are ~1 s apart, so training spans ~31 s;
+  session replay appended all 30 fps of the cached video, giving a 1.0 s window
+  and costing **0.384 val macro-F1** -- ten times the largest modelling gain in
+  this log. Fixed with `HistorySampler`, which admits frames at the trained rate
+  in both paths and decouples the detector rate from the model rate.
+- Dashboard now serves from the HPC through `jupyter-server-proxy`
+  (`tools/serve_hpc.py`); one A100 reaches **4.33 fps** on the live camera path
+  against 2.29 on the Space's a10g-small, measured saturated.
 
 **2026-09-12**
 - **Measured the VLM against human gold and kept the one we have** (§26).

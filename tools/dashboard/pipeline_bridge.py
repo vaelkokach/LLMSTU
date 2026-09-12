@@ -366,7 +366,11 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=0,
     #: model has two or three of them, and the UI renders whatever it is sent.
     class_names = list(bundle.class_names)
 
-    from attention.thesis_eval.runtime import StrideController
+    from attention.thesis_eval.runtime import HistorySampler, StrideController
+    # Feeds each student's history at the rate the model was trained on, however
+    # fast the detector runs. Without it the 32-frame window spans 1/fps * 32
+    # seconds instead of the ~31 s it spanned in training -- see HistorySampler.
+    sampler = HistorySampler(float(cfg["inference"].get("temporal_input_fps", 1.0)))
     stride = StrideController(
         detector_stride=int(cfg["inference"].get("detector_stride", 1)),
         temporal_stride=int(cfg["inference"].get("temporal_stride", 1)))
@@ -454,6 +458,7 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=0,
             tracks = tracker.coast()
         live_ids = [tr.track_id for tr in tracks]
         stride.drop_missing(live_ids)
+        sampler.drop(live_ids)
         smooth_box.drop(live_ids)
         smooth_label.drop(live_ids)
         students = {}
@@ -467,7 +472,12 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=0,
                 # else would train and serve happily on nonsense.
                 fv = np.hstack([fv, objdet.features(frame, boxes)])
             for tr, f in zip(tracks, fv):
-                hist[tr.track_id].append(f)
+                # `t` is the same clock the dwell thresholds use: elapsed
+                # wall time for a live source, frame index / fps for a file. Both
+                # are source time, so a file sampled here yields the same frames
+                # however fast it is replayed.
+                if sampler.should_append(tr.track_id, t):
+                    hist[tr.track_id].append(f)
 
             for tr in tracks:
                 h = hist[tr.track_id]

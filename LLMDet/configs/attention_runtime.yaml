@@ -151,6 +151,26 @@ inference:
   temporal_stride: 2
   window_size: 32
   min_frames_for_pred: 10
+  # The rate at which frames enter a student's HISTORY, independent of how fast
+  # the detector runs. The model's receptive field is 32 frames; the LLMSTU
+  # sequences it was trained on are ~1 s apart (median gap 0.995 s), so a
+  # training window spans ~31 s of real time. Serving at any other rate rescales
+  # that window, and it costs more than any modelling change in this project:
+  #
+  #   served at   window spans   val macro-F1
+  #   1.05 fps        30.5 s       0.6801   <- trained rate
+  #   2.10 fps        15.3 s       0.5008
+  #   4.19 fps         7.6 s       0.3941   <- one A100, live, saturated
+  #  31.45 fps         1.0 s       0.2960   <- what session replay was doing
+  #
+  # (tools/bench_framerate_skew.py; macro-F1 peaks AT the trained rate and falls
+  # away in both directions, so this is rate matching, not a repeated-frame
+  # artefact.) Raising the detector rate still buys smoother boxes and better
+  # tracking -- it just must not be allowed to rescale the model's window.
+  #
+  # 0 disables sampling and restores the old every-frame behaviour, for
+  # measurement only.
+  temporal_input_fps: 1.0
   # Display smoothing. These steady what is DRAWN; the raw prediction, its
   # confidence and the alert gate are untouched, so an alert still fires on what
   # the model actually decided.

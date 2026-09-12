@@ -356,6 +356,73 @@ if __name__ == "__main__":
 # striding
 # --------------------------------------------------------------------------
 
+class HistorySampler:
+    """Admits frames into a student's history at the rate the model was TRAINED on.
+
+    The temporal model's receptive field is measured in **frames**, but the
+    behaviour it has to recognise happens in **seconds**. Those two are only the
+    same thing at one frame rate, and for this family that rate is ~1.0 fps: the
+    LLMSTU sequences were built one frame per annotated crop, and the annotations
+    are ~1 s apart (median gap 0.995 s; 92% within 0.9-1.0 s over 300 sampled
+    sequences). With ``window_size`` 32 a training window therefore spans ~31 s.
+
+    Nothing enforced that at serving time. Both deployed paths appended **every**
+    frame they analysed, so the window spanned whatever the pipeline happened to
+    achieve:
+
+    | path | rate | window spans | val macro-F1 |
+    |---|---|---|---|
+    | evaluator / training | 1.05 fps | 30.5 s | 0.6801 |
+    | live camera, HF Space a10g | 2.29 fps | 14.0 s | ~0.50 |
+    | live camera, one A100 saturated | 4.33 fps | 7.4 s | 0.3941 |
+    | **session replay, 30 fps video** | **30 fps** | **1.0 s** | **0.2960** |
+
+    Measured with ``tools/bench_framerate_skew.py`` by resampling the val split
+    and reading predictions back at the real frame positions, so only the real
+    time a window covers changes. macro-F1 **peaks at the trained rate and falls
+    away in both directions** -- serving slower costs 0.109 -- which is the
+    signature of rate matching rather than an artefact of repeated frames.
+    Adding 25% per-column noise to the repeats moves it by 0.003.
+
+    So the replay path -- the dashboard's default view, and every screenshot of
+    it -- was showing roughly half the accuracy the model has.
+
+    This admits a frame only once ``1 / target_fps`` seconds of SOURCE time have
+    passed for that student. Source time, not wall clock: a file replayed at 4x
+    must sample the same frames as the same file replayed at 1x, or the cues
+    change with the playback speed.
+
+    The cost is honest and worth stating: at 1 fps, ``min_frames_for_pred`` 10
+    means ~10 s before a student's first cue, against 0.3 s at 30 fps. Alert
+    dwells are 15-30 s, so nothing an instructor sees was ever faster than that.
+    """
+
+    def __init__(self, target_fps: float, epsilon: float = 1e-3):
+        #: <= 0 disables sampling -- every frame is admitted. Kept as an escape
+        #: hatch for measuring the unsampled behaviour, not as a default.
+        self.period = (1.0 / float(target_fps)) if target_fps and target_fps > 0 else 0.0
+        self.epsilon = float(epsilon)
+        self._last: Dict[object, float] = {}
+
+    def should_append(self, key, ts: float) -> bool:
+        if self.period <= 0.0:
+            return True
+        last = self._last.get(key)
+        # A first sighting always counts, and so does a frame that arrives out of
+        # order or after a seek (ts < last): treating that as "too soon" would
+        # stall a student's history for the rest of the run.
+        if last is None or ts < last or (ts - last) >= self.period - self.epsilon:
+            self._last[key] = ts
+            return True
+        return False
+
+    def drop(self, live_keys) -> None:
+        """Forget students that are no longer tracked, so the dict cannot grow."""
+        live = set(live_keys)
+        for k in [k for k in self._last if k not in live]:
+            del self._last[k]
+
+
 class StrideController:
     """Decides which frames pay for the detector and the temporal head.
 

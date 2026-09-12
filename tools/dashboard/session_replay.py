@@ -259,7 +259,8 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
     """
     import cv2
     from attention.display_smoothing import BoxSmoother, LabelSmoother
-    from attention.thesis_eval.runtime import StrideController, predict_window
+    from attention.thesis_eval.runtime import (HistorySampler, StrideController,
+                                                predict_window)
 
     # The names the MODEL predicts, from its own checkpoint spec. Pushing
     # CUE_CLASSES here would have told the UI to render six cue chips for a
@@ -324,6 +325,11 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
                                  margin=int(inf.get("label_switch_margin", 0)))
 
     hist = defaultdict(lambda: deque(maxlen=win))
+    # The cache holds EVERY frame of the source video -- 30 fps for session 0325
+    # -- and this used to append all of them, so the 32-frame window spanned 1.0 s
+    # against the ~31 s it spanned in training. That cost 0.384 val macro-F1, on
+    # the dashboard's default view. See HistorySampler.
+    sampler = HistorySampler(float(inf.get("temporal_input_fps", 1.0)))
     dwell: Dict[int, Dict] = {}
     #: Last frame the VLM was asked, and how often to ask. 25 frames is about
     #: one opinion per second of source video.
@@ -347,13 +353,17 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
         # reused track id would inherit a stale cached prediction.
         live_ids = [int(cache.track_id[r]) for r in rows]
         stride.drop_missing(live_ids)
+        sampler.drop(live_ids)
         smooth_box.drop(live_ids)
         smooth_label.drop(live_ids)
 
         if rows:
             vec = cache.live_vector(rows, entry.head_pose_backend)
             for k, r in enumerate(rows):
-                hist[int(cache.track_id[r])].append(vec[k])
+                # `t` is frame / fps, i.e. source time, so the frames admitted do
+                # not change when the page replays faster or slower.
+                if sampler.should_append(int(cache.track_id[r]), t):
+                    hist[int(cache.track_id[r])].append(vec[k])
 
             for k, r in enumerate(rows):
                 tid = int(cache.track_id[r])

@@ -227,3 +227,78 @@ def test_a_successful_stop_still_stops():
     r.stop(join_timeout=5.0)
     assert r.thread is None
     assert done == [1]
+
+
+# --------------------------------------------------------------------------
+# HistorySampler: the model must see frames at the rate it was trained on
+#
+# The receptive field is 32 FRAMES; the behaviour it recognises happens in
+# SECONDS. Those agree at exactly one frame rate, ~1.0 fps for this family.
+# Both deployed paths appended every analysed frame, so session replay ran the
+# model at 30 fps -- a 1.0 s window against the ~31 s it trained on, worth
+# 0.384 val macro-F1 (tools/bench_framerate_skew.py, FINDINGS 27).
+# --------------------------------------------------------------------------
+
+def _sampler(fps):
+    rt = pytest.importorskip("attention.thesis_eval.runtime")
+    return rt.HistorySampler(fps)
+
+
+def test_it_admits_one_frame_per_period():
+    s = _sampler(1.0)
+    # 30 fps of source time over 3 seconds -> 3 admitted, not 90.
+    admitted = [i for i in range(90) if s.should_append("a", i / 30.0)]
+    assert len(admitted) == 3
+    assert admitted[0] == 0
+
+
+def test_each_student_is_sampled_independently():
+    s = _sampler(1.0)
+    assert s.should_append("a", 0.0)
+    assert s.should_append("b", 0.0), "b's first frame must not be gated by a's"
+    assert not s.should_append("a", 0.5)
+    assert s.should_append("a", 1.0)
+
+
+def test_a_first_sighting_always_counts():
+    s = _sampler(1.0)
+    # A student appearing 100 s in must be admitted immediately, not wait.
+    assert s.should_append("late", 100.0)
+
+
+def test_time_going_backwards_does_not_stall_a_student():
+    """A seek, or a live source whose clock restarts, must not freeze history."""
+    s = _sampler(1.0)
+    assert s.should_append("a", 10.0)
+    assert s.should_append("a", 0.0), "a backwards jump must re-admit, not gate"
+    assert s.should_append("a", 1.0)
+
+
+def test_zero_disables_sampling():
+    s = _sampler(0.0)
+    assert all(s.should_append("a", i / 30.0) for i in range(30))
+
+
+def test_dropping_forgets_untracked_students():
+    s = _sampler(1.0)
+    s.should_append("a", 0.0)
+    s.should_append("b", 0.0)
+    s.drop(["a"])
+    # b is gone, so its next frame is a first sighting again rather than gated.
+    assert s.should_append("b", 0.1)
+    assert not s.should_append("a", 0.1)
+
+
+@pytest.mark.parametrize("fps,span", [(1.0, 31.0), (2.0, 15.5), (0.5, 62.0)])
+def test_a_full_window_covers_the_right_real_time(fps, span):
+    """32 admitted frames must span window_size/fps seconds of source time.
+
+    This is the quantity that actually has to match training: 32 frames at
+    ~1.0 fps is the ~31 s the sequences were built over.
+    """
+    s = _sampler(fps)
+    step = 1 / 30.0                      # a 30 fps source, as session 0325 is
+    n = int((span + 5) / step)
+    admitted = [i * step for i in range(n) if s.should_append("a", i * step)]
+    assert len(admitted) >= 32, f"only {len(admitted)} admitted in {n*step:.0f}s"
+    assert abs((admitted[31] - admitted[0]) - span) < 2 * step
