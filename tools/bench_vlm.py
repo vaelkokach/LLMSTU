@@ -141,8 +141,26 @@ def main():
         texts = [proc.apply_chat_template(m, tokenize=False,
                                           add_generation_prompt=True)
                  for m in msgs]
-        inputs = proc(text=texts, images=images, return_tensors="pt",
-                      padding=True).to(a.device)
+        # Qwen's processor takes a FLAT image list alongside a batch of texts;
+        # SmolVLM's takes one list per sample and refuses the flat form
+        # ("The number of images in the text [1,1,...] and images [8] should be
+        # the same"). Neither is wrong; they are different conventions, and a
+        # benchmark that only spoke one would report a model as unusable when it
+        # is merely shaped differently.
+        try:
+            inputs = proc(text=texts, images=images, return_tensors="pt",
+                          padding=True).to(a.device)
+        except ValueError:
+            inputs = proc(text=texts, images=[[im] for im in images],
+                          return_tensors="pt", padding=True).to(a.device)
+        # Qwen's processor returns pixel_values already in the model's dtype;
+        # SmolVLM's returns float32 against fp16 weights and the first conv
+        # raises. Cast the floating inputs rather than running the model in
+        # fp32, which would make the latency comparison meaningless.
+        td = next(model.parameters()).dtype
+        inputs = {k: (v.to(td) if hasattr(v, "is_floating_point")
+                      and v.is_floating_point() else v)
+                  for k, v in inputs.items()}
         torch.cuda.synchronize()
         t1 = time.time()
         with torch.inference_mode():

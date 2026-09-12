@@ -4661,7 +4661,93 @@ Not yet measured on `a10g-small`; the live figure to beat is the 1.81 processed
 fps of §23.3.
 
 
+## 26. Which VLM, measured against human gold (2026-09-12) ★★
+
+Asked whether the Space's VLM should be replaced with "a better open source
+model" to improve prediction and speed. The deployed one is
+**Qwen2-VL-2B-Instruct** (`model_registry.VLM_MODEL_ID`), scoring the cue
+phrases by option likelihood -- one forward pass per student, reading the logit
+of each option letter -- not by generating text.
+
+### 26.1 The benchmark
+
+`tools/bench_vlm.py` scores the **969 scorable crops of the human gold set**
+(`Gold_annotation_wael`, 1,000 crops; 31 dropped because the gold cue is
+`uncertain`, which is an abstention rather than something visible to be right
+about). Human gold on purpose: the LLMSTU labels were made by a Qwen3.5-VL
+teacher, so scoring a Qwen backbone against them measures agreement with itself.
+
+Same question, same option-likelihood read, same crops as the pipeline uses.
+
+### 26.2 The option order moves the answer by 0.12 macro-F1
+
+`screen_oriented` is option **A**, and the model answers A 62% of the time
+against 33% in the gold. The obvious suspicion is letter-position bias. It is
+not:
+
+| option A is | share answered "A" | share answered `screen_oriented` |
+|---|---|---|
+| `screen_oriented` | 61.9% | 61.9% |
+| `head_down` (rotated by 2) | 4.6% | **75.0%** (now option E) |
+
+**The bias follows the class, not the letter.** Rotating the options moves the
+mass with `screen_oriented` to wherever it sits. So the model is answering about
+the image, not reciting "A".
+
+But the *magnitude* is order-dependent, and badly: macro-F1 **0.4987 → 0.3810**
+under rotation, with `head_down` recall collapsing 0.596 → 0.172. Any single
+number from this backend is one of a family that spans 0.12 macro-F1 depending
+on an arbitrary choice in the prompt. Quoted alone it would be an overstatement,
+which is the §21 lesson arriving in a second place.
+
+### 26.3 Three candidates, one idle GPU, same 240-crop subset, same batch
+
+| model | accuracy | macro-F1 | ms / batch of 8 | params |
+|---|---|---|---|---|
+| **Qwen2-VL-2B-Instruct** (deployed) | **0.554** | **0.448** | **878** | 2B |
+| Qwen2.5-VL-3B-Instruct | 0.467 | 0.414 | 2972 | 3B |
+| SmolVLM2-2.2B-Instruct | 0.392 | 0.328 | 1446 | 2.2B |
+
+**The deployed model is the best of the three on both axes.** The newer, larger
+Qwen2.5-VL is 3.4x slower *and* less accurate here; SmolVLM2 is slower and
+worse. Newer and bigger bought nothing on this task, so the recommendation is to
+keep Qwen2-VL-2B and not to buy hardware for a replacement -- the ceiling is the
+task, not the card.
+
+Both candidates needed transformers >= 4.49, against the Space's 4.45.2 and the
+HPC's pinned 4.44.2, and the pin protects mmcv's compiled `_ext` against torch
+2.2.2. They were measured in a throwaway venv so nothing the detector depends on
+moved.
+
+### 26.4 What the VLM is actually good at
+
+Per class, deployed model, unrotated, n=969:
+
+| gold class | recall | precision |
+|---|---|---|
+| `screen_oriented` | 0.906 | 0.482 |
+| `phone_use` | 0.636 | **0.794** |
+| `head_down` | 0.596 | 0.733 |
+| `turned_to_peer` | 0.272 | 0.837 |
+| `looking_away` | **0.050** | 0.462 |
+
+It is nearly blind to `looking_away` (13 predictions in 969) and rarely commits
+to `turned_to_peer`, but when it does commit to `turned_to_peer` or `phone_use`
+it is right ~80% of the time. Its `phone_use` F1 of **0.712** is higher than the
+temporal model's 0.647 *with* object features (§25) -- the one class where the
+second opinion is genuinely stronger than the model it is advising.
+
+That is an argument for asking it selectively rather than on every class, and it
+is not yet built or measured.
+
+
 ## 10. Changelog
+
+**2026-09-12**
+- **Measured the VLM against human gold and kept the one we have** (§26).
+  Qwen2-VL-2B beats Qwen2.5-VL-3B (3.4x slower, less accurate) and SmolVLM2-2.2B
+  on the same crops and GPU. Option order alone moves macro-F1 by 0.12, and the
+  bias follows the class, not the letter.
 
 **2026-09-12**
 - **Object features fix `phone_use`: 0.554 -> 0.647 per-class F1, +0.0281 macro-F1
