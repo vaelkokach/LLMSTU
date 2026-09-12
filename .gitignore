@@ -104,3 +104,9 @@ results_v2/
 /gold_*.tar.gz
 /event_gold_bundle_part*.tar.gz
 /cue_rules_v2.tar.gz
+
+# The dashboard-only venv (tools/serve_hpc.py --setup-vlm): a newer transformers
+# for the +vlm entries, inheriting torch/mmcv from the system environment.
+# Anchored with a leading slash -- an unanchored pattern has excluded vendored
+# source from this repo twice.
+/.venv-dashboard/

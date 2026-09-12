@@ -41,6 +41,22 @@ import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
+#: A venv that exists only to give the dashboard a NEWER transformers than the
+#: one the training environment is pinned to.
+#:
+#: The VLM entries need >= 4.45 (Qwen2VLForConditionalGeneration); the shared
+#: environment is pinned at 4.44.2, and that pin protects mmcv's compiled _ext
+#: against torch 2.2.2. Rather than move the environment every training run
+#: depends on, this venv is created with --system-site-packages, so it inherits
+#: torch, mmcv and mmdet unchanged and overrides transformers alone.
+#:
+#: Verified before adopting it, because a silent feature change would be the
+#: frame-rate bug all over again (FINDINGS 27): the 552-dim live feature vector
+#: for the same frame is BYTE-IDENTICAL under 4.44.2 and 4.45.2 (549 of 552
+#: columns non-zero, so it is a real comparison), and mmdet's registry imports
+#: cleanly with torch still 2.2.2+cu121. 4.45.2 is also exactly what the
+#: deployed Space runs, so it is proven in production rather than only here.
+VLM_VENV = REPO / ".venv-dashboard"
 PIDFILE = REPO / "tools" / "dashboard" / ".serve_hpc.pid"
 LOGFILE = REPO / "tools" / "dashboard" / "serve_hpc.log"
 #: Written next to the app, like the Space's `_runtime_override.yaml`. The
@@ -100,6 +116,45 @@ def jupyter_proxy_url(port):
     return internal, f"{base.rstrip('/')}/proxy/{port}/"
 
 
+def interpreter(prefer_vlm=True):
+    """Which python runs the dashboard, and say so rather than guessing silently.
+
+    Falls back to this interpreter when the venv is absent, which is the right
+    default: the dashboard works without the VLM, it simply does not offer the
+    `+vlm` entries, and the registry already explains that on /api/models.
+    """
+    py = VLM_VENV / "bin" / "python"
+    if prefer_vlm and py.exists():
+        return str(py), True
+    return sys.executable, False
+
+
+def setup_vlm_venv():
+    """Create the venv the `+vlm` entries need. Idempotent."""
+    py = VLM_VENV / "bin" / "python"
+    if not py.exists():
+        print(f"[serve] creating {VLM_VENV.relative_to(REPO)} "
+              f"(--system-site-packages: inherits torch/mmcv/mmdet)")
+        subprocess.run([sys.executable, "-m", "venv", "--system-site-packages",
+                        str(VLM_VENV)], check=True)
+    print("[serve] installing transformers==4.45.2 (the version the Space runs)")
+    subprocess.run([str(VLM_VENV / "bin" / "pip"), "install", "-q",
+                    "transformers==4.45.2"], check=True)
+    out = subprocess.run(
+        [str(py), "-c",
+         "import transformers, torch;"
+         "print(transformers.__version__, torch.__version__,"
+         " hasattr(transformers,'Qwen2VLForConditionalGeneration'))"],
+        capture_output=True, text=True, check=True).stdout.split()
+    print(f"[serve] transformers {out[0]} | torch {out[1]} | Qwen2-VL loadable: {out[2]}")
+    if out[2] != "True":
+        sys.exit("[serve] the venv still cannot load Qwen2-VL; not usable")
+    if not out[1].startswith("2.2.2"):
+        sys.exit(f"[serve] torch moved to {out[1]}; that breaks mmcv's _ext. "
+                 f"Remove {VLM_VENV} and do not use it.")
+    return 0
+
+
 def running():
     if not PIDFILE.exists():
         return None
@@ -141,10 +196,16 @@ def main():
                          "locally, and 0.0.0.0 would expose restricted student "
                          "video unauthenticated on a shared network")
     ap.add_argument("--stop", action="store_true")
+    ap.add_argument("--setup-vlm", action="store_true",
+                    help="create/refresh the venv that enables the +vlm entries")
+    ap.add_argument("--no-vlm", action="store_true",
+                    help="run under this interpreter even if the venv exists")
     ap.add_argument("--replay-only", action="store_true",
                     help="no --config: replay cached sessions, no detector, no GPU")
     a = ap.parse_args()
 
+    if a.setup_vlm:
+        return setup_vlm_venv()
     if a.stop:
         return stop()
     pid = running()
@@ -152,7 +213,11 @@ def main():
         sys.exit(f"already running as pid {pid} (tools/serve_hpc.py --stop)")
 
     device = a.device or free_gpu()
-    cmd = [sys.executable, "tools/dashboard/server.py",
+    py, with_vlm = interpreter(prefer_vlm=not a.no_vlm)
+    print(f"[serve] python {py}"
+          + ("  (+vlm entries enabled)" if with_vlm else
+             "  (no +vlm: run --setup-vlm to enable them)"))
+    cmd = [py, "tools/dashboard/server.py",
            "--host", a.host, "--port", str(a.port)]
     if not a.replay_only:
         cmd += ["--config", str(derived_config().relative_to(REPO)),
