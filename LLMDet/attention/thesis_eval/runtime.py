@@ -72,8 +72,14 @@ ABSTAIN_LABEL = "uncertain"
 #: [base(552) | yaw, pitch, roll, face_found] = 556, and a further 518 columns
 #: (512 CLIP over the head crop + 6 head-box geometry) when
 #: ``head_stream=True`` (features.py:116).
+from attention.object_features import OBJECT_DIM
+
 LIVE_WIDTH_BASE = 556
 LIVE_WIDTH_HEAD = 1074
+#: `1080_hp_head_obj` adds the six object columns on top of the head-stream
+#: vector. Deployable, but only with a SECOND detector in the live path -- see
+#: `needs_objects`.
+LIVE_WIDTH_HEAD_OBJ = 1080
 
 #: Kept for callers that imported it. It is the width of the DEFAULT live
 #: vector, not a ceiling on deployability — see :func:`live_input_width`.
@@ -105,7 +111,12 @@ def live_input_width(feature_config: str) -> int:
             f"path cannot produce: "
             + "; ".join(UNDEPLOYABLE_BLOCKS[b] for b in bad)
             + ". This checkpoint is not deployable in a streaming path.")
-    return LIVE_WIDTH_HEAD if "head" in blocks else LIVE_WIDTH_BASE
+    base = LIVE_WIDTH_HEAD if "head" in blocks else LIVE_WIDTH_BASE
+    # The object block sits ON TOP of whatever came before it, so its width is
+    # additive rather than a third alternative. Returning LIVE_WIDTH_HEAD here
+    # for a 1080 config would trip the extractor-width assert with a message
+    # about padding, which says nothing about the missing detector.
+    return base + OBJECT_DIM if "objects" in blocks else base
 
 
 def bundle_classes(spec: dict) -> "List[str]":
@@ -145,6 +156,11 @@ class RuntimeBundle:
     class_names: List[str] = field(default_factory=lambda: list(CUE_CLASSES))
     #: True when the live extractor must be built with ``head_stream=True``.
     needs_head_stream: bool = False
+    #: True when the live path must additionally run an open-vocabulary detector
+    #: for `cell phone` and `laptop` and append its six columns. A second
+    #: detector pass per frame, so it costs frame rate -- but it is what carries
+    #: `phone_use` from 0.554 to 0.647 (FINDINGS 25).
+    needs_objects: bool = False
 
     def describe(self) -> str:
         sel = "" if self.live_columns is None else \
@@ -190,7 +206,8 @@ def load_runtime_model(ckpt_path: str, device: str = "cuda:0",
         live_input_width=width,
         taxonomy=str(spec.get("taxonomy", "cue6") or "cue6"),
         class_names=classes,
-        needs_head_stream="head" in D.FEATURE_CONFIGS[fc])
+        needs_head_stream="head" in D.FEATURE_CONFIGS[fc],
+        needs_objects="objects" in D.FEATURE_CONFIGS[fc])
 
     if calibration:
         c = json.loads(Path(calibration).read_text())

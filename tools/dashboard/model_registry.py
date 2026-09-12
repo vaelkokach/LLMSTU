@@ -92,7 +92,11 @@ THESIS = REPO / "LLMDet" / "work_dirs" / "thesis"
 
 #: Feature blocks a streaming extractor can produce, and why the others cannot.
 #: Keyed by the block names in ``thesis_eval.data.LAYOUTS``.
-LIVE_BLOCKS = {"base", "headpose", "hp_angles", "hp_facefound", "head"}
+#: `objects` is live-capable but needs a SECOND detector in the path (see
+#: pipeline_bridge), which is why it is not in CACHED_BLOCKS: no existing
+#: session cache holds those six columns.
+LIVE_BLOCKS = {"base", "headpose", "hp_angles", "hp_facefound", "head",
+               "objects"}
 BLOCKED_BLOCKS = {
     "express": "the 7 expression dims need a second per-crop FER model",
     "dynamic": "the 7 dynamic dims are whole-track statistics (fidget variance, "
@@ -115,6 +119,7 @@ _FALLBACK_BLOCKS = {
     "570_full": ["base", "headpose", "express", "dynamic"],
     "1070_head": ["base", "head"],
     "1074_hp_head": ["base", "headpose", "head"],
+    "1080_hp_head_obj": ["base", "headpose", "head", "objects"],
 }
 
 #: Human labels. Keys are the trainer's ``feature_config`` strings.
@@ -128,6 +133,8 @@ FEATURE_LABEL = {
     "570_full": "+ expression + dynamics",
     "1070_head": "+ head-crop CLIP stream",
     "1074_hp_head": "+ head pose + head-crop CLIP stream",
+    "1080_hp_head_obj": "+ head pose + head-crop CLIP stream + phone/laptop "
+                        "detections",
 }
 
 ARCH_LABEL = {"transformer": "Transformer", "mstcn": "MS-TCN", "asrf": "ASRF"}
@@ -148,6 +155,9 @@ SWEEP_LABEL = {
     "cue9": "screen_oriented split into four on-task cues",
     "cue9_probe": "cue9 convergence probe (single seed, not a reported result)",
     "epochs240": "the full_det family re-run at 240 epochs (FINDINGS 15.4)",
+    "cue7": "reading + listening merged back into using_laptop",
+    "objfeat": "phone/laptop object columns, matched against the same tree "
+               "without them (FINDINGS 25)",
 }
 
 #: The target every published number in FINDINGS.md is measured against. Only

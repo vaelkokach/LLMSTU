@@ -85,6 +85,12 @@ def main():
                     help="students per forward pass, as one frame would give")
     ap.add_argument("--device", default="cuda:0")
     ap.add_argument("--dtype", default="float16")
+    ap.add_argument("--rotate-options", type=int, default=0,
+                    help="rotate the class->letter mapping by N. The answer is "
+                         "a letter, so a model with a position prior answers "
+                         "the same LETTER whichever class sits there. Rotating "
+                         "separates that from vision: a real opinion follows "
+                         "the class, a prior follows the letter.")
     ap.add_argument("--out", default="")
     a = ap.parse_args()
 
@@ -117,7 +123,14 @@ def main():
         assert len(enc) == 1, f"{L!r} is {len(enc)} tokens under {a.model}"
         letter_ids.append(enc[0])
 
-    prompt = build_prompt(classes)
+    # order[i] is the class shown at option i; inv maps a chosen option back to
+    # a class id, so y_pred stays in class space and the metrics are comparable.
+    r = a.rotate_options % len(classes)
+    order = classes[r:] + classes[:r]
+    inv = [classes.index(c) for c in order]
+    prompt = build_prompt(order)
+    if r:
+        print(f"rotated by {r}: option A is now {order[0]!r}")
     y_true, y_pred, lat = [], [], []
     for s in range(0, len(rows), a.batch):
         chunk = rows[s:s + a.batch]
@@ -138,7 +151,7 @@ def main():
         dt = time.time() - t1
         lat.append((dt, len(chunk)))
         pred = logits[:, letter_ids].argmax(-1).cpu().tolist()
-        y_pred += pred
+        y_pred += [inv[i] for i in pred]
         y_true += [y for _, y in chunk]
         if s % (a.batch * 10) == 0:
             print(f"  {s + len(chunk)}/{len(rows)}", flush=True)
@@ -167,6 +180,7 @@ def main():
     if a.out:
         Path(a.out).write_text(json.dumps(
             {"model": a.model, "taxonomy": a.taxonomy, "n": len(y_true),
+             "rotate_options": r, "option_order": order,
              "accuracy": acc, "macro_f1": f1, "n_classes_present": n_present,
              "ms_per_batch": per_batch * 1e3, "ms_per_crop": per_crop * 1e3,
              "batch": a.batch, "load_s": load_s,

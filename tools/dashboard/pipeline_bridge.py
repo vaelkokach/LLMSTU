@@ -322,10 +322,42 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=0,
     # The extractor always emits base + the 4 head-pose columns; a checkpoint
     # trained on a subset (e.g. 553_facefound) selects its columns inside
     # predict_window. Assert the EXTRACTOR width, not the model width.
+    # A second detector, only for a checkpoint that reads the object block. Its
+    # six columns are what carry `phone_use` from 0.554 to 0.647 (FINDINGS 25),
+    # and they cost a full extra open-vocabulary pass per frame.
+    from attention.object_features import OBJECT_DIM, ObjectDetector
+    objdet = None
+    if bundle.needs_objects:
+        oc = cfg.get("object_detector") or {}
+        if not oc.get("config_path") or not oc.get("checkpoint_path"):
+            raise SystemExit(
+                f"{bundle.experiment_id} reads the object block, but the config "
+                "has no `object_detector` section. Its six columns cannot be "
+                "faked: a zero block means 'no phone present', which is a "
+                "measurement, not a missing value.")
+        ock = Path(oc["checkpoint_path"])
+        if not ock.is_absolute():
+            ock = (LLMDET_ROOT / ock).resolve()
+        if not ock.exists():
+            raise SystemExit(
+                f"{bundle.experiment_id} needs the pretrained open-vocabulary "
+                f"detector at {ock}, which is not on this host. It is a "
+                "separate 1.1 GB checkpoint from the student detector.")
+        objdet = ObjectDetector(
+            str((LLMDET_ROOT / oc["config_path"]).resolve()), str(ock),
+            device=str(dev), prompts=tuple(oc.get("prompts") or ()),
+            min_score=float(oc.get("min_score", 0.05)))
+        print(f"[dashboard] object detector ON — a second open-vocabulary pass "
+              f"per frame for {list(objdet.prompts)}, {OBJECT_DIM} extra dims")
+
     want = bundle.live_input_width
-    if feat.output_dim() != want:
+    # The extractor produces everything EXCEPT the object block, which is
+    # appended below from a different model; assert against what each side
+    # actually contributes rather than against the total.
+    produced = feat.output_dim() + (OBJECT_DIM if objdet is not None else 0)
+    if produced != want:
         raise SystemExit(
-            f"live features are {feat.output_dim()}-dim but "
+            f"live features are {produced}-dim but "
             f"{bundle.experiment_id} needs an extractor producing {want} "
             f"({bundle.feature_config}). Refusing to pad — a zero block is "
             "indistinguishable from a real measurement.")
@@ -426,7 +458,14 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=0,
         smooth_label.drop(live_ids)
         students = {}
         if tracks:
-            fv = feat.extract_batch(frame, [tr.bbox_xyxy for tr in tracks])
+            boxes = [tr.bbox_xyxy for tr in tracks]
+            fv = feat.extract_batch(frame, boxes)
+            if objdet is not None:
+                # One detector pass for the frame, then per-student containment.
+                # Appended in the same order the sequence builder used, which is
+                # why the column layout is named: reading these six as anything
+                # else would train and serve happily on nonsense.
+                fv = np.hstack([fv, objdet.features(frame, boxes)])
             for tr, f in zip(tracks, fv):
                 hist[tr.track_id].append(f)
 

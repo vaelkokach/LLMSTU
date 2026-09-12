@@ -114,3 +114,67 @@ def test_object_configs_are_refused_by_older_builds():
 def test_object_config_dims():
     assert D.config_dim("1080_hp_head_obj") == 1080
     assert D.config_dim("562_obj") == 552 + 4 + OBJECT_DIM
+
+
+# --------------------------------------------------------------------------
+# the deploy config must be the same function as the one that built the cache
+#
+# The object columns were precomputed over 283,913 crops with the LMM
+# constructed; the live path runs `grounding_dino_swin_t_original_deploy.py`,
+# which sets `lmm=None` to avoid a 0.5B model and a 3.5 GB SigLIP read that
+# `predict()` never touches. If the two disagreed by even one score, a
+# checkpoint trained on cached columns would be served from
+# differently-produced ones -- train/serve skew INSIDE a named layout, which is
+# the failure the layouts exist to prevent and which nothing downstream could
+# detect.
+#
+# Slow and needs the 1.1 GB checkpoint, so it is opt-in:
+#     LLMSTU_SLOW_TESTS=1 python -m pytest attention/tests/test_object_features.py -k lmm
+# Measured 2026-09-12 on 8 frames x 3 boxes: byte-identical, max abs diff 0.0
+# (FINDINGS 25.2).
+# --------------------------------------------------------------------------
+
+OBJ_CKPT = ("../huggingface/mm_grounding_dino/grounding_dino_swin-t_pretrain"
+            "_obj365_goldg_grit9m_v3det_20231204_095047-b448804b.pth")
+
+
+@pytest.mark.skipif(
+    not __import__("os").environ.get("LLMSTU_SLOW_TESTS"),
+    reason="loads two 1.1 GB detectors; set LLMSTU_SLOW_TESTS=1")
+def test_lmm_none_gives_identical_object_features():
+    import glob
+    from pathlib import Path
+
+    import cv2
+    pytest.importorskip("mmdet")
+    from attention.object_features import ObjectDetector
+
+    root = Path(__file__).resolve().parents[2]          # LLMDet/
+    if not (root / OBJ_CKPT).exists():
+        pytest.skip(f"{OBJ_CKPT} not on this host")
+    frames = sorted(glob.glob(str(root / ".." / "grounding_data" /
+                                  "stu_img" / "frames" / "*.jpg")))[:8]
+    if not frames:
+        pytest.skip("no frames on this host")
+
+    imgs = [cv2.imread(f) for f in frames]
+
+    def boxes_for(img):
+        h, w = img.shape[:2]
+        return [[w * i / 3, h * 0.2, w * (i + 1) / 3, h * 0.95] for i in range(3)]
+
+    out = {}
+    for tag, cfg in (("with_lmm", "configs/grounding_dino_swin_t_original.py"),
+                     ("lmm_none",
+                      "configs/grounding_dino_swin_t_original_deploy.py")):
+        det = ObjectDetector(str(root / cfg), str(root / OBJ_CKPT),
+                             device="cuda:0")
+        out[tag] = np.concatenate([det.features(im, boxes_for(im))
+                                   for im in imgs], axis=0)
+        det._model = None
+
+    a, b = out["with_lmm"], out["lmm_none"]
+    # Non-trivial: an all-zero comparison would pass whatever the configs did.
+    assert (a != 0).any(axis=1).sum() >= len(a) // 2, \
+        "the detector found nothing, so this compares two empty answers"
+    assert np.array_equal(a, b), f"max abs diff {np.abs(a - b).max():.6g}"

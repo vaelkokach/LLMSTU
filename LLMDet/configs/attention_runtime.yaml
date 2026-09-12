@@ -56,6 +56,22 @@ detector:
   nms_iou_thr: 0.45
   device: "cuda:0"
 
+#: A SECOND, pretrained open-vocabulary detector, run only when the selected
+#: checkpoint reads the object block (`1080_hp_head_obj`). Deliberately not the
+#: fine-tuned student detector: that one ignores its text prompt entirely
+#: (FINDINGS 21), so prompting it for "cell phone" returns students. It is also
+#: not filtered like the student detector -- min_rel_area 0.01 and an aspect
+#: ratio floor of 0.20 would reject a phone outright.
+object_detector:
+  # The `_deploy` variant: same detector, no LMM. predict() never reads it,
+  # so the boxes are identical, and constructing it costs a 0.5B model plus a
+  # 3.5 GB SigLIP read that is discarded -- which on a 16 GB Space is the
+  # difference between loading and swapping.
+  config_path: "configs/grounding_dino_swin_t_original_deploy.py"
+  checkpoint_path: "../huggingface/mm_grounding_dino/grounding_dino_swin-t_pretrain_obj365_goldg_grit9m_v3det_20231204_095047-b448804b.pth"
+  prompts: ["cell phone", "laptop"]
+  min_score: 0.05
+
 hybrid:
   enabled: false
 

@@ -4600,7 +4600,74 @@ Not yet measured: how much the cue9 `+vlm` entry's fused output changes now. The
 six cue6 classes were never affected — for them the question and the letters
 always agreed.
 
+## 25. Object features fix `phone_use` (2026-09-12) ★★★
+
+§21.4 argued that the temporal model cannot see a phone: the 1074-column feature
+vector carries appearance, geometry and head pose, and a phone is a small object
+whose presence is the whole evidence for `phone_use`. Six columns were added --
+for each of `cell phone` and `laptop`, the best containment-weighted detection
+score, the detection's vertical position in the student's box, and their product
+(`attention/object_features.py`) -- taking the layout from `v1074_head` to
+`v1080_obj`.
+
+**Matched pairs.** Both arms train on the *same* sequence tree
+(`llmstu_sequences_obj`), same seeds, same 240-epoch budget, same
+hyperparameters; the only difference is whether the six columns are read. The
+append step verified that columns [0, 1074) are byte-identical to the tree the
+baseline family was trained on, so the baseline arm is not a re-run on shifted
+data. 0 of 283,913 crops were missing from the object cache.
+
+| seed | baseline `1074_hp_head` | `+objects` `1080_hp_head_obj` | Δ |
+|---|---|---|---|
+| 42 | 0.5202 | 0.5629 | +0.0427 |
+| 43 | 0.5328 | 0.5599 | +0.0271 |
+| 44 | 0.5374 | 0.5519 | +0.0145 |
+| **mean** | **0.5301 ± 0.0089** | **0.5582 ± 0.0057** | **+0.0281** |
+
+Positive in every seed, and the gain is ~3x the pooled seed sd. The baseline arm
+reproduces the §18 cue6 figure (0.5301 here against 0.5200 there, one sd apart on
+a different tree), which is the check that matters for believing the pair.
+
+### 25.1 The gain is where it was predicted to be
+
+Per-class F1, mean over the three matched seeds:
+
+| class | baseline | +objects | Δ |
+|---|---|---|---|
+| **`phone_use`** | 0.554 ± 0.045 | **0.647 ± 0.031** | **+0.0933** |
+| `looking_away` | 0.291 ± 0.021 | 0.316 ± 0.007 | +0.0251 |
+| `screen_oriented` | 0.866 ± 0.010 | 0.882 ± 0.005 | +0.0163 |
+| `uncertain` | 0.569 ± 0.019 | 0.583 ± 0.014 | +0.0149 |
+| `turned_to_peer` | 0.209 ± 0.012 | 0.223 ± 0.007 | +0.0136 |
+| `head_down` | 0.692 ± 0.023 | 0.697 ± 0.006 | +0.0055 |
+
+`phone_use` gains **+0.093, twice the baseline's own seed sd**, and no class
+regresses. This is the first intervention that moved a named weak class by more
+than seed noise, and it moved the one the features were added for -- which is
+the form of evidence §21.4 asked for and did not have.
+
+Two caveats kept on the record. The seed spread *narrows* in every class under
+the object arm, which is consistent with the columns removing a source of
+ambiguity rather than adding capacity. And `turned_to_peer` is still 0.22: it has
+now survived head pose, the 240-epoch budget and object features, and remains
+without any validated intervention.
+
+### 25.2 What deployment costs
+
+The live path must now run the object prompts as well as the student prompt --
+two extra open-vocabulary queries per frame -- and `v1080_obj` is a new layout,
+so the cache and the registry entry are not interchangeable with `v1074_head`.
+Not yet measured on `a10g-small`; the live figure to beat is the 1.81 processed
+fps of §23.3.
+
+
 ## 10. Changelog
+
+**2026-09-12**
+- **Object features fix `phone_use`: 0.554 -> 0.647 per-class F1, +0.0281 macro-F1
+  over matched seeds** (§25). Six columns for `cell phone` and `laptop`
+  containment, position and their product. Positive in all three seeds, no class
+  regressed, and the gain lands on the class the columns were added for.
 
 **2026-09-12**
 - **Fixed the live camera: it worked exactly once per process** (§23). `run_live`
