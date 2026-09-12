@@ -255,6 +255,7 @@ def build_sequences_llmstu(
     seed: int = 42,
     allow_filename_fallback: bool = False,
     allow_clip_fallback: bool = False,
+    clip_model_name: str = "openai/clip-vit-base-patch32",
     max_gap_s: float = 15.0,
     head_pose_backend: str = None,
     head_pose_cache: str = None,
@@ -360,13 +361,30 @@ def build_sequences_llmstu(
         print(f"object cache: {len(objects[0])} crops, "
               f"{objects[1].shape[1]} dims, "
               f"objects={[str(x) for x in d['prompts']]}")
-    layout_name = ("v1080_obj" if object_cache
-                   else "v1074_head" if head_stream else "v570")
-
     extractor = StudentFeatureExtractor(
+        clip_model_name=clip_model_name,
         allow_clip_fallback=allow_clip_fallback,
         head_pose=None if cached_hp is not None else hp,
         head_stream=head_stream)
+    if extractor.clip_dim != 512:
+        # The embedding width decides every column after it, so a non-CLIP
+        # encoder produces a DIFFERENT layout under the same block names. Say so
+        # loudly: a v570 config sliced into one of these vectors would read the
+        # middle of the embedding as head pose and train without complaint.
+        print(f"encoder: {clip_model_name} -> {extractor.clip_dim}-dim embedding "
+              f"(NOT the 512-dim CLIP the v570/v1074/v1080 layouts assume)")
+    # The layout follows the ENCODER first: a 1152-dim embedding cannot be any
+    # of the CLIP layouts whatever else is switched on.
+    if extractor.clip_dim != 512:
+        if object_cache or head_stream:
+            raise SystemExit(
+                f"--clip-model {clip_model_name} embeds at {extractor.clip_dim} "
+                f"dims; no head-stream or object layout is declared for it yet. "
+                f"Build the base layout first.")
+        layout_name = "v1196_sig"
+    else:
+        layout_name = ("v1080_obj" if object_cache
+                       else "v1074_head" if head_stream else "v570")
     total_dim = (extractor.output_dim() + (4 if cached_hp is not None else 0)
                  + extra + (objects[1].shape[1] if objects is not None else 0))
     print(f"feature dim: {total_dim} (layout={layout_name}, "
@@ -612,6 +630,10 @@ def parse_args():
                    help="add 7 temporal dims: fidget/lean motion statistics and "
                         "personalised gaze deviation (Thesis_Topic body language "
                         "+ gaze direction)")
+    p.add_argument("--clip-model", default="openai/clip-vit-base-patch32",
+                   help="visual encoder. `google/siglip2-so400m-patch14-384` "
+                        "embeds at 1152 dims and therefore builds the v1196_sig "
+                        "layout, which is NOT interchangeable with v570.")
     p.add_argument("--allow-clip-fallback", action="store_true",
                    help="Continue with zeroed CLIP features if CLIP fails to load.")
     return p.parse_args()
@@ -632,6 +654,7 @@ if __name__ == "__main__":
         seed=args.seed,
         allow_filename_fallback=args.allow_filename_video_fallback,
         allow_clip_fallback=args.allow_clip_fallback,
+        clip_model_name=args.clip_model,
         head_pose_backend=args.head_pose_backend,
         head_pose_cache=args.head_pose_cache,
         affect_cache=args.affect_cache,

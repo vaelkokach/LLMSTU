@@ -299,6 +299,7 @@ the loss **and** from the metrics.
 | `coarse3_reliable` | `screen_oriented`, `down_or_hidden`, `phone_use` | `looking_away`, `turned_to_peer` |
 | `cue9` | `writing_notes`, `using_laptop`, `reading`, `listening`, `looking_away`, `head_down`, `turned_to_peer`, `phone_use`, `uncertain` | |
 | `cue7` | `writing_notes`, `using_laptop`, `looking_away`, `head_down`, `turned_to_peer`, `phone_use`, `uncertain` | |
+| `cue8` | `writing_notes`, `using_laptop`, `engaged`, `looking_away`, `head_down`, `turned_to_peer`, `phone_use`, `uncertain` | |
 
 Groupings:
 
@@ -307,6 +308,15 @@ Groupings:
   {`head_down`, `phone_use`, `uncertain`}.
 * `coarse3_reliable` — `down_or_hidden` = {`head_down`, `uncertain`}; the other
   two are singletons.
+* `cue8` — **a regrouping of Layer 2b**: `reading` and `listening` merged into
+  a class named `engaged`, `using_laptop` kept separate, everything else a
+  singleton. The question it asks is "is this student engaged with the lesson",
+  separately from "is this student working on a device" — where `cue7` answers
+  only the second by folding all three into `using_laptop`.
+  cue9's own per-class numbers are the motivation: `reading` is its worst class
+  at 0.337 while `listening` reaches 0.673, so the two are not equally
+  recoverable, and merging them tests whether the boundary between them was the
+  difficulty. Like `cue7` it needs no new label build.
 * `cue7` — **a regrouping of Layer 2b**: `reading` and `listening` merged into
   `using_laptop`, everything else a singleton. Unlike `cue9` it needs no new
   label build — the cue9 sidecar already carries the ids and `taxonomy_lut`

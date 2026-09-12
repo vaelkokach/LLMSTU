@@ -68,6 +68,12 @@ CUE_PHRASES: Dict[str, str] = {
         "a student working at an open laptop or computer screen, hands at the "
         "keyboard or trackpad",
     # gaze in {laptop, own_desk}
+    # cue8 merges `reading` and `listening`; the phrase has to describe the
+    # union without naming a device, or it would collide with `using_laptop`.
+    "engaged":
+        "a student attending to the lesson without a phone or a device in "
+        "hand -- reading from the desk, or watching and listening to the "
+        "teacher or the board",
     "reading":
         "a student reading from a book, sheet or screen on the desk in front "
         "of them, hands not writing or typing",

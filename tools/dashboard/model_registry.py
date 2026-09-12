@@ -624,12 +624,24 @@ def _vlm_entries(entries: List[ModelEntry]) -> List[ModelEntry]:
                           "vlm_model_id": VLM_MODEL_ID,
                           "vlm_policy": VLM_POLICY,
                           "is_default": False,
-                          "recommended": True,
+                          # NOT recommended, and that is a measurement rather
+                          # than caution. Fusion was evaluated on the val split
+                          # (tools/bench_vlm_fusion.py, FINDINGS 28) and does not
+                          # help: `agreement` reproduces the temporal model
+                          # exactly on the frames it answers (+0.0000) while
+                          # abstaining on 27% of them, and the two policies that
+                          # always answer are worse -- pool -0.072, product
+                          # -0.135. It stays listed because it is a reported
+                          # ablation, not because anyone should select it.
+                          "recommended": False,
                           "recommended_why": (
                               f"{e.variant_id} plus a second opinion from "
-                              f"{VLM_MODEL_ID}, combined under the "
-                              f"'{VLM_POLICY}' policy. Seconds per frame, not "
-                              f"frames per second.")})
+                              f"{VLM_MODEL_ID} under the '{VLM_POLICY}' policy. "
+                              f"MEASURED NOT TO HELP: agreement matches the "
+                              f"temporal model on the frames it answers and "
+                              f"abstains on 27%; pool -0.072 and product -0.135 "
+                              f"macro-F1. Kept as an ablation. Seconds per "
+                              f"frame, not frames per second.")})
         out.append(v)
     return out
 

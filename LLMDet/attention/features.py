@@ -75,7 +75,16 @@ class StudentFeatureExtractor:
         head_pose: Optional[HeadPoseEstimator] = None,
     ):
         self.device = device if torch.cuda.is_available() else "cpu"
+        #: Width of the visual embedding. NOT a constant: `siglip2-so400m
+        #: -patch14-384` is 1152 against CLIP ViT-B/32's 512, and the named
+        #: LAYOUTS are built from this, so it is read from the loaded model
+        #: rather than assumed. A wrong value here would place every block after
+        #: the embedding at the wrong column -- the exact failure the layouts
+        #: exist to make impossible.
         self.clip_dim = 512
+        #: True when the encoder is a SigLIP tower, which has no
+        #: `get_image_features` and is pooled from `pooler_output` instead.
+        self._siglip = False
         self.clip_model: Optional["CLIPModel"] = None
         self.clip_processor: Optional["CLIPProcessor"] = None
         self.head_pose = head_pose
@@ -91,8 +100,27 @@ class StudentFeatureExtractor:
                 )
         else:
             try:
-                self.clip_processor = CLIPProcessor.from_pretrained(clip_model_name)
-                self.clip_model = CLIPModel.from_pretrained(clip_model_name).to(self.device)
+                import transformers
+                mt = transformers.AutoConfig.from_pretrained(clip_model_name).model_type
+                if mt in ("siglip", "siglip2"):
+                    # The fixed-resolution siglip2 checkpoints declare model_type
+                    # "siglip" and load with the v1 classes; only `-naflex` uses
+                    # the Siglip2* ones, whose patch embedding is a Linear.
+                    vm = getattr(transformers, "Siglip2VisionModel") \
+                        if mt == "siglip2" else getattr(transformers, "SiglipVisionModel")
+                    # AutoImageProcessor, not AutoProcessor: the latter also
+                    # builds the TEXT tokenizer, which for SigLIP needs
+                    # sentencepiece and fails the whole load over a component
+                    # nothing here uses. Only images are encoded.
+                    self.clip_processor = transformers.AutoImageProcessor.from_pretrained(
+                        clip_model_name)
+                    self.clip_model = vm.from_pretrained(clip_model_name).to(self.device)
+                    self._siglip = True
+                    self.clip_dim = int(self.clip_model.config.hidden_size)
+                else:
+                    self.clip_processor = CLIPProcessor.from_pretrained(clip_model_name)
+                    self.clip_model = CLIPModel.from_pretrained(clip_model_name).to(self.device)
+                    self.clip_dim = int(self.clip_model.config.projection_dim)
                 self.clip_model.eval()
                 self.clip_enabled = True
             except Exception as e:
@@ -103,8 +131,15 @@ class StudentFeatureExtractor:
                     ) from e
                 print(f"[warn] CLIP disabled by explicit fallback; using zeros: {e}")
 
-    #: 512 CLIP over the head crop + 6 head-box geometry dims.
+    #: 512 CLIP over the head crop + 6 head-box geometry dims. Kept as a class
+    #: attribute because callers and tests read it off the class; instances with
+    #: a wider encoder override it in __init__ (see head_stream_dim).
     HEAD_STREAM_DIM = 512 + 6
+
+    @property
+    def head_stream_dim(self) -> int:
+        """Head-stream width for THIS encoder: embedding + 6 geometry dims."""
+        return self.clip_dim + 6
 
     def output_dim(self) -> int:
         # 512 clip + 8 bbox geom + 24 color stats + 8 posture geom
@@ -114,7 +149,7 @@ class StudentFeatureExtractor:
         if self.head_pose is not None and self.head_pose.available():
             d += HeadPoseEstimator.OUTPUT_DIM
         if self.head_stream:
-            d += self.HEAD_STREAM_DIM
+            d += self.head_stream_dim
         return d
 
     @staticmethod
@@ -226,7 +261,8 @@ class StudentFeatureExtractor:
         images = [Image.fromarray(cv2.cvtColor(c, cv2.COLOR_BGR2RGB)) for c in crops_bgr]
         inp = self.clip_processor(images=images, return_tensors="pt").to(self.device)
         with torch.inference_mode():
-            f = self.clip_model.get_image_features(**inp)
+            f = (self.clip_model(**inp).pooler_output if self._siglip
+                 else self.clip_model.get_image_features(**inp))
             f = f / (f.norm(dim=-1, keepdim=True) + 1e-6)
         return f.detach().float().cpu().numpy()
 

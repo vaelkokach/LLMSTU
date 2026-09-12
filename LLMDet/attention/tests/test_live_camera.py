@@ -302,3 +302,39 @@ def test_a_full_window_covers_the_right_real_time(fps, span):
     admitted = [i * step for i in range(n) if s.should_append("a", i * step)]
     assert len(admitted) >= 32, f"only {len(admitted)} admitted in {n*step:.0f}s"
     assert abs((admitted[31] - admitted[0]) - span) < 2 * step
+
+
+def test_due_does_not_record_and_mark_does():
+    """The split exists so a caller can skip the work; asking must not consume."""
+    s = _sampler(1.0)
+    assert s.due("a", 0.0)
+    assert s.due("a", 0.0), "asking twice must give the same answer"
+    s.mark("a", 0.0)
+    assert not s.due("a", 0.5)
+    assert s.due("a", 1.0)
+
+
+def test_should_append_is_still_due_plus_mark():
+    """Callers that compute first keep working unchanged."""
+    s = _sampler(1.0)
+    assert s.should_append("a", 0.0)
+    assert not s.should_append("a", 0.5)
+    assert s.should_append("a", 1.0)
+
+
+def test_gating_admits_exactly_what_computing_first_would_have():
+    """The optimisation must not change WHICH frames are kept, only the cost.
+
+    Same stream through both orders: ask-then-compute, and compute-then-ask.
+    """
+    gated, eager = _sampler(1.0), _sampler(1.0)
+    kept_gated, kept_eager = [], []
+    for i in range(120):
+        ts = i / 30.0
+        if gated.due("a", ts):
+            gated.mark("a", ts)
+            kept_gated.append(i)
+        if eager.should_append("a", ts):
+            kept_eager.append(i)
+    assert kept_gated == kept_eager
+    assert len(kept_gated) == 4

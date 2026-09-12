@@ -597,6 +597,35 @@ TAXONOMIES: Dict[str, Dict] = {
         },
         "note": "cue9 with reading and listening merged into using_laptop",
     },
+    # Requested 2026-09-12: keep `using_laptop` distinct, but merge `reading`
+    # and `listening` -- the two on-task cues that are NOT device-mediated --
+    # into one class named `engaged`.
+    #
+    # Different from cue7, which folds all three into `using_laptop`. Here the
+    # question is "is this student engaged with the lesson", separately from
+    # "is this student working on a device", and cue9's own per-class numbers
+    # are why: `reading` is its worst class at 0.337 while `listening` reaches
+    # 0.673, so the two are not equally recoverable and merging them tests
+    # whether the boundary between them was the difficulty.
+    #
+    # A regrouping of the cue9 SPACE, like cue7, so it needs no label rebuild:
+    # the cue9 sidecar already carries the ids and `taxonomy_lut` merges them.
+    "cue8": {
+        "space": "cue9",
+        "classes": ["writing_notes", "using_laptop", "engaged", "looking_away",
+                    "head_down", "turned_to_peer", "phone_use", "uncertain"],
+        "groups": {
+            "writing_notes": ["writing_notes"],
+            "using_laptop": ["using_laptop"],
+            "engaged": ["reading", "listening"],
+            "looking_away": ["looking_away"],
+            "head_down": ["head_down"],
+            "turned_to_peer": ["turned_to_peer"],
+            "phone_use": ["phone_use"],
+            "uncertain": ["uncertain"],
+        },
+        "note": "cue9 with reading and listening merged into `engaged`",
+    },
     "cue9": {
         "space": "cue9",
         "classes": CUE9_CLASSES,

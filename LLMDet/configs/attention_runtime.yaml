@@ -149,7 +149,28 @@ inference:
   # only moves 295.9 -> 291.7 ms.
   detector_stride: 3
   temporal_stride: 2
-  window_size: 32
+  # 48, not 32. Measured on the val split the way deployment predicts --
+  # causal windows ending at the scored frame -- with every window scored on the
+  # SAME 907 positions, so the only difference is how much history each was
+  # allowed to see:
+  #
+  #   window   8    16     24     32(ref)  40      48
+  #   s42    0.5865 0.6467 0.6517 0.6444  0.6622  0.6697   (+0.0253)
+  #   s43                         0.6203          0.7007   (+0.0804)
+  #   s44                         0.6254          0.6752   (+0.0498)
+  #
+  # Positive in all three seeds, mean +0.052 -- larger than object features
+  # (+0.028) or the 90->240 epoch budget (+0.036), for a config change.
+  # (tools/bench_context_length.py)
+  #
+  # 48 rather than more because that is roughly all the data supports: the
+  # training sequences have a MEDIAN length of 47 frames (p75 60), so a longer
+  # window would mostly be asking the model about context it never saw. The
+  # first version of this measurement let each window use the positions it could
+  # reach, which scored 64-frame windows on three frames and reported a macro-F1
+  # of 1.0; the common-position design is what makes the table above mean
+  # anything.
+  window_size: 48
   min_frames_for_pred: 10
   # The rate at which frames enter a student's HISTORY, independent of how fast
   # the detector runs. The model's receptive field is 32 frames; the LLMSTU

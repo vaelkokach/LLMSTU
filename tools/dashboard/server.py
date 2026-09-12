@@ -992,6 +992,19 @@ def main():
     if cfg.exists():
         SRC.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
         SRC.SESSION_DIR.mkdir(parents=True, exist_ok=True)
+        # Hand the live inference settings to replay. A session cache records
+        # the settings it was BUILT with, which is correct provenance for its
+        # features but wrong for decisions: window_size and the history rate are
+        # deployment choices, and pinning them to the cache means a measured
+        # improvement never reaches a recording made before it.
+        try:
+            import yaml
+            import session_replay as _SR
+            _SR.CONTEXT_INFERENCE = dict(
+                (yaml.safe_load(cfg.read_text()) or {}).get("inference") or {})
+        except Exception as e:                                   # noqa: BLE001
+            print(f"[dashboard] could not read inference config ({e}); "
+                  f"replay will use whatever each cache recorded")
     else:
         print(f"[dashboard] no detector config at {args.config}: sessions and "
               f"cue logs will work, analysing and streaming a video will not")

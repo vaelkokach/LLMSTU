@@ -48,6 +48,12 @@ CALIBRATION_DIR = (REPO / "LLMDet" / "work_dirs" / "thesis" / "runtime"
 #: green `screen_oriented` is, `off_task` and `down_or_hidden` are the red the
 #: cues they merge are. Any name not listed falls back to grey, which is the
 #: honest default — an unrecognised class is one this overlay cannot interpret.
+#: The `inference` block of the runtime config, when the dashboard was started
+#: with one. Replay-only servers leave it empty and fall back to whatever the
+#: cache recorded. Set by server.py at startup rather than threaded through
+#: every call, because `replay` is also used directly from scripts.
+CONTEXT_INFERENCE: dict = {}
+
 CUE_COLOUR = {
     # cue6
     "screen_oriented": (61, 220, 132),      # green
@@ -76,6 +82,11 @@ CUE_COLOUR = {
     "reading": (180, 210, 90),              # teal
     "listening": (220, 170, 70),            # blue
     "writing_notes": (120, 235, 200),       # lime
+    # cue8 -- `reading` and `listening` merged. Sits between the two it replaces
+    # (180,210,90) and (220,170,70), and stays well clear of the amber and red
+    # the off-task cues own: it is an ON-TASK class and the palette carries that
+    # meaning, so the wrong side would be worse than no colour at all.
+    "engaged": (200, 190, 80),
 }
 
 #: Grey. Also what an abstention draws as, since `displayed_cue` is the
@@ -312,7 +323,19 @@ def replay(cache: SessionCache, entry, bundle, push_fn: Callable,
             return fuse_frame(probs_by_track, vlm, policy=policy,
                               classes=fuse_classes), age
 
-    inf = cache.meta.get("inference", {})
+    # The cache records the inference settings it was BUILT with, which is the
+    # right provenance for the features it stores -- but window_size and
+    # min_frames_for_pred are deployment decisions, not properties of a feature
+    # cache. Pinning them here means a measured improvement (window 32 -> 48,
+    # +0.052 macro-F1) would never reach a session built before it, and the page
+    # would quietly serve two different configurations depending on which
+    # recording you picked. The live config wins where it says something.
+    inf = dict(cache.meta.get("inference", {}))
+    live_inf = (CONTEXT_INFERENCE or {})
+    for k in ("window_size", "min_frames_for_pred", "temporal_input_fps",
+              "label_smooth_window", "label_switch_margin"):
+        if k in live_inf:
+            inf[k] = live_inf[k]
     win = int(inf.get("window_size", 32))
     minf = int(inf.get("min_frames_for_pred", 4))
     # The detector stride is already baked into the cache (frames it skipped

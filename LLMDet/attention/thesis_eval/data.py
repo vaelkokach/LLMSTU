@@ -86,7 +86,30 @@ LAYOUTS: Dict[str, Dict[str, Tuple[int, int]]] = {
         "head": (556, 1074),
         "objects": (1074, 1080),
     },
+    # A SigLIP2 build. `google/siglip2-so400m-patch14-384` embeds at 1152 dims
+    # against CLIP ViT-B/32's 512, so every block after the embedding moves and
+    # this needs a layout of its own -- reading a v570 column index into one of
+    # these vectors lands in the middle of the embedding and trains happily on
+    # nonsense, which is the failure named layouts exist to prevent.
+    #
+    # 1192 = 1152 SigLIP2 + 8 bbox geometry + 24 colour + 8 posture.
+    # Adopted because a linear probe on the 969 human-gold crops preferred it at
+    # EVERY dimension, not only where it was allowed more of them:
+    #   raw +0.107, PCA384 +0.065, PCA256 +0.069, PCA128 +0.119
+    # (tools/probe_encoders.py). The first version of that control reduced only
+    # the larger encoder to the smaller one's width and reported a FAIL;
+    # reducing both is what made the comparison mean anything.
+    "v1196_sig": {
+        "base": (0, 1192),
+        "headpose": (1192, 1196),
+        "hp_angles": (1192, 1195),
+        "hp_facefound": (1195, 1196),
+    },
 }
+
+#: Layouts whose `base` is a SigLIP2 embedding rather than a CLIP one. Never
+#: interchangeable with the CLIP layouts: same block NAMES, different contents.
+SIGLIP_LAYOUTS = frozenset({"v1196_sig"})
 
 #: Backwards-compatible aliases; v570 is what every existing caller means.
 FEATURE_BLOCKS: Dict[str, Tuple[int, int]] = {
@@ -114,11 +137,16 @@ FEATURE_CONFIGS: Dict[str, List[str]] = {
     # object presence (needs a v1080_obj build)
     "562_obj": ["base", "headpose", "objects"],
     "1080_hp_head_obj": ["base", "headpose", "head", "objects"],
+    # SigLIP2 (needs a v1196_sig build). The counterpart of 556_hp, so the two
+    # differ in the encoder and nothing else.
+    "1192_sig": ["base"],
+    "1196_sig_hp": ["base", "headpose"],
 }
 
 #: Which layout each config must be sliced against.
 CONFIG_LAYOUT: Dict[str, str] = {
-    name: ("v1080_obj" if "objects" in blocks
+    name: ("v1196_sig" if name.endswith("_sig") or "_sig_" in name
+           else "v1080_obj" if "objects" in blocks
            else "v1074_head" if "head" in blocks else "v570")
     for name, blocks in FEATURE_CONFIGS.items()
 }
@@ -128,6 +156,7 @@ LAYOUT_WIDTH: Dict[str, int] = {
     "v570": 570,
     "v1074_head": 1074,
     "v1080_obj": 1080,
+    "v1196_sig": 1196,
 }
 
 

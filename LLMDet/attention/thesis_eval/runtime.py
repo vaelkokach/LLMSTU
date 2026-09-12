@@ -404,15 +404,32 @@ class HistorySampler:
         self.epsilon = float(epsilon)
         self._last: Dict[object, float] = {}
 
-    def should_append(self, key, ts: float) -> bool:
+    def due(self, key, ts: float) -> bool:
+        """Would this frame be admitted? Asks WITHOUT recording the answer.
+
+        Separate from :meth:`should_append` so the caller can skip the work
+        entirely. Feature extraction used to run on every analysed frame and the
+        decision to keep it came afterwards, so at 4.33 fps against a 1 Hz
+        history roughly 77% of the CLIP passes -- and every object-detector pass
+        -- were computed and thrown away. Identical output, wasted budget, and
+        invisible to every test because nothing about the result changed.
+        """
         if self.period <= 0.0:
             return True
         last = self._last.get(key)
         # A first sighting always counts, and so does a frame that arrives out of
         # order or after a seek (ts < last): treating that as "too soon" would
         # stall a student's history for the rest of the run.
-        if last is None or ts < last or (ts - last) >= self.period - self.epsilon:
-            self._last[key] = ts
+        return last is None or ts < last or (ts - last) >= self.period - self.epsilon
+
+    def mark(self, key, ts: float) -> None:
+        """Record that ``key`` was admitted at ``ts``."""
+        self._last[key] = ts
+
+    def should_append(self, key, ts: float) -> bool:
+        """``due`` and ``mark`` together, for callers that compute first."""
+        if self.due(key, ts):
+            self.mark(key, ts)
             return True
         return False
 

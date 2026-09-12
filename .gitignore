@@ -110,3 +110,9 @@ results_v2/
 # Anchored with a leading slash -- an unanchored pattern has excluded vendored
 # source from this repo twice.
 /.venv-dashboard/
+
+# Runtime artefacts of tools/serve_hpc.py: a pid file, a log, and the derived
+# runtime yaml. All regenerated on every start.
+/tools/dashboard/.serve_hpc.pid
+/tools/dashboard/serve_hpc.log
+/tools/dashboard/_hpc_runtime.yaml

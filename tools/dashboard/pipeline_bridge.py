@@ -318,7 +318,7 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=0,
         device=dev, head_pose=hp, head_stream=bundle.needs_head_stream)
     if bundle.needs_head_stream:
         print(f"[dashboard] head stream ON — a second CLIP pass over the head "
-              f"crop, {feat.HEAD_STREAM_DIM} extra dims per student")
+              f"crop, {feat.head_stream_dim} extra dims per student")
     # The extractor always emits base + the 4 head-pose columns; a checkpoint
     # trained on a subset (e.g. 553_facefound) selects its columns inside
     # predict_window. Assert the EXTRACTOR width, not the model width.
@@ -463,21 +463,25 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=0,
         smooth_label.drop(live_ids)
         students = {}
         if tracks:
-            boxes = [tr.bbox_xyxy for tr in tracks]
-            fv = feat.extract_batch(frame, boxes)
-            if objdet is not None:
-                # One detector pass for the frame, then per-student containment.
-                # Appended in the same order the sequence builder used, which is
-                # why the column layout is named: reading these six as anything
-                # else would train and serve happily on nonsense.
-                fv = np.hstack([fv, objdet.features(frame, boxes)])
-            for tr, f in zip(tracks, fv):
-                # `t` is the same clock the dwell thresholds use: elapsed
-                # wall time for a live source, frame index / fps for a file. Both
-                # are source time, so a file sampled here yields the same frames
-                # however fast it is replayed.
-                if sampler.should_append(tr.track_id, t):
+            # Decide BEFORE paying. `t` is the same clock the dwell thresholds
+            # use -- elapsed wall time for a live source, frame index / fps for a
+            # file -- so a file sampled here yields the same frames however fast
+            # it is replayed.
+            due = [tr for tr in tracks if sampler.due(tr.track_id, t)]
+            if due:
+                boxes = [tr.bbox_xyxy for tr in due]
+                fv = feat.extract_batch(frame, boxes)
+                if objdet is not None:
+                    # One detector pass for the frame, then per-student
+                    # containment. Appended in the order the sequence builder
+                    # used, which is why the column layout is named: reading
+                    # these six as anything else would train and serve happily
+                    # on nonsense. Skipped entirely when nobody is due -- it is
+                    # the most expensive thing in the loop after the detector.
+                    fv = np.hstack([fv, objdet.features(frame, boxes)])
+                for tr, f in zip(due, fv):
                     hist[tr.track_id].append(f)
+                    sampler.mark(tr.track_id, t)
 
             for tr in tracks:
                 h = hist[tr.track_id]

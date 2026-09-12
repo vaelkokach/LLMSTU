@@ -38,12 +38,20 @@ def test_every_cue_has_a_phrase_and_order_follows_the_taxonomy():
     class is dead weight that will eventually be pressed into service for the
     wrong one.
     """
-    from attention.taxonomy import LABEL_SPACES
+    from attention.taxonomy import LABEL_SPACES, TAXONOMIES
     every_class = {c for cl in LABEL_SPACES.values() for c in cl}
+    # Every class of a base SPACE needs a phrase: those are what the VLM scores.
     assert every_class <= set(CUE_PHRASES), (
         f"classes with no phrase: {sorted(every_class - set(CUE_PHRASES))}")
-    assert set(CUE_PHRASES) <= every_class, (
-        f"phrases with no class: {sorted(set(CUE_PHRASES) - every_class)}")
+    # No ORPHAN phrases -- dead weight eventually gets pressed into service for
+    # the wrong cue. But a regrouping may introduce a class name of its own
+    # (cue8's `engaged` merges reading + listening) and that is not an orphan,
+    # so the allowed set is every class of every taxonomy, not only the spaces.
+    # Merges that are not observable behaviours (`on_task`, `down_or_hidden`)
+    # still have no phrase, and `_has_phrases` skips those taxonomies.
+    owned = every_class | {c for t in TAXONOMIES.values() for c in t["classes"]}
+    assert set(CUE_PHRASES) <= owned, (
+        f"phrases with no class: {sorted(set(CUE_PHRASES) - owned)}")
 
     for space, classes in LABEL_SPACES.items():
         got = phrases_in_class_order(classes)

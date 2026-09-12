@@ -4921,7 +4921,193 @@ between "0.52 on val" and how the dashboard looked was not the usual
 research-to-demo disappointment; it was a 30x frame-rate error.
 
 
+## 28. The VLM second opinion does not help (2026-09-12) ★★★
+
+The `+vlm` entries have been deployed and marked **recommended** since they were
+built, and nothing had ever measured whether fusing the two opinions beats the
+temporal model alone. What was known (§26) is that the VLM is worse overall on
+human gold but better on `phone_use`, so fusion had a plausible mechanism to help
+one class and hurt others. That is a hypothesis, and it was shipping as a
+recommendation.
+
+`tools/bench_vlm_fusion.py` scores 150 val sequences / 5,893 frames, recovering
+each frame's crop through `replay_chunks` and verifying its timestamp against the
+npz's own `t`, so a frame is never paired with the wrong image.
+
+| | macro-F1 | coverage |
+|---|---|---|
+| temporal alone | **0.6436** | 100% |
+| VLM alone | 0.3414 | — |
+| fused, `agreement` | 0.4995 | **73.0%** |
+| fused, `pool` | 0.5718 | 100% (**−0.072**) |
+| fused, `product` | 0.5086 | 100% (**−0.135**) |
+
+**`agreement` adds exactly nothing**, and the +0.0000 is not a coincidence: when
+the two agree the fused cue *is* the temporal cue, by construction. So the policy
+is a coverage filter, not a decision improvement -- it discards 27% of frames and
+returns the temporal model's answer on the rest. The two policies that always
+answer are both worse than the model they were meant to improve.
+
+### 28.1 Where it does and does not help
+
+Per class under `pool`, on the frames it answered:
+
+| class | temporal | fused | |
+|---|---|---|---|
+| `turned_to_peer` | 0.462 | **0.557** | **+0.094** |
+| `screen_oriented` | 0.881 | 0.918 | +0.037 |
+| `phone_use` | 0.721 | 0.687 | −0.035 |
+| `looking_away` | 0.400 | 0.358 | −0.042 |
+| `head_down` | 0.746 | 0.680 | −0.066 |
+| `uncertain` | 0.651 | **0.232** | **−0.420** |
+
+Two things worth keeping. It genuinely helps `turned_to_peer`, the weakest class
+and the one with no validated intervention (§25). And it destroys `uncertain`,
+because the VLM is never asked to abstain and effectively never chooses it -- so
+pooling washes out the calibrated abstention the temporal model was fitted to
+produce. That single class accounts for most of the aggregate loss.
+
+A *selective* fusion -- ask the VLM only about `turned_to_peer`, never let it
+touch the abstention -- is the version of this idea that the numbers support. It
+is not built and not measured.
+
+### 28.2 What changed
+
+The `+vlm` entries are no longer `recommended`, and the tooltip now states the
+measurement rather than the aspiration. They stay listed: a reported ablation
+belongs in the dropdown, the way `posefix` does. Nothing was deleted.
+
+## 29. A longer decision window is worth more than most of the model work (2026-09-12) ★★★
+
+`inference.window_size` was 32 frames, chosen before anything measured it. Since
+the frame-rate fix that is ~32 s of real time, and the training sequences run to a
+median of 47 frames, so the model had seen more context than it was being given.
+
+`tools/bench_context_length.py` predicts the way deployment does -- a causal
+window ending at the scored frame -- and scores **every window on the same 907
+positions**, so the only thing that differs is how much history each was allowed.
+
+| window | real time @1 Hz | s42 | s43 | s44 |
+|---|---|---|---|---|
+| 8 | 8 s | 0.5865 | | |
+| 16 | 16 s | 0.6467 | | |
+| 24 | 24 s | 0.6517 | | |
+| **32** | 32 s | 0.6444 | 0.6203 | 0.6254 |
+| 40 | 40 s | 0.6622 | | |
+| **48** | 48 s | **0.6697** | **0.7007** | **0.6752** |
+| | | **+0.0253** | **+0.0804** | **+0.0498** |
+
+**Mean +0.052, positive in all three seeds, for a config change.** Larger than
+object features (+0.028) and the 90→240 epoch budget (+0.036).
+
+48 rather than more because that is about all the data supports: the median
+training sequence is 47 frames long, so a longer window would mostly ask the model
+about context it never saw.
+
+### 29.1 The first version of this measurement was wrong
+
+Letting each window use the positions it could reach scored 64-frame windows on
+**three frames** and reported a macro-F1 of 1.0, with 48 apparently gaining
++0.1023. Longer windows need more history behind them, so they were being scored
+on later positions in longer sequences -- a different and easier population. The
+common-position design is the whole result; without it the table is an artefact.
+This is the third time in this log that an uncontrolled comparison produced a
+large, wrong, plausible number.
+
+## 30. cue8 — `reading` + `listening` merged into `engaged` (2026-09-12)
+
+Requested: keep `using_laptop` distinct but merge the two non-device on-task cues
+into one class called `engaged`. A regrouping of the cue9 space, like cue7, so it
+needed no label build. Same tree, budget, hyperparameters and seeds as cue7.
+
+| taxonomy | classes | macro-F1 | seed sd |
+|---|---|---|---|
+| `cue6` | 6 | 0.5200 | ± 0.0122 |
+| `cue7` | 7 | 0.4656 | ± 0.0061 |
+| **`cue8`** | **8** | **0.4720** | **± 0.0032** |
+| `cue9` | 9 | 0.4612 | ± 0.0104 |
+
+cue8 beats cue9 by +0.0108 (about one seed sd) while asking a strictly harder
+question than cue7 -- it keeps a distinction cue7 throws away and still scores
+higher. The comparability rule from §22 still applies: 7, 8 and 9 classes are
+different averages and the column is not a ranking.
+
+The motivation was cue9's own per-class split: `reading` is its worst class at
+0.337 while `listening` reaches 0.673, so the two were never equally recoverable,
+and the merge tests whether the boundary between them was the difficulty. The
+seed sd falling to ± 0.0032 -- the tightest of the four -- is consistent with
+that reading.
+
+## 31. SigLIP2 beats CLIP on a linear probe, at every dimension (2026-09-12) ★★★
+
+The deployed visual encoder is `openai/clip-vit-base-patch32`, and the prior from
+this log was that appearance encoding is the weakest lever available: the head
+stream, a whole second CLIP pass, is worth about +0.010 against 0.384 for the
+frame rate. So the swap was gated on a probe rather than attempted.
+
+`tools/probe_encoders.py` embeds the **969 human-gold crops** with each encoder
+and fits multinomial logistic regression with the regularisation swept under
+5-fold CV. Human gold on purpose: the LLMSTU labels were made by a Qwen3.5-VL
+teacher, and probing against them would reward agreeing with that teacher.
+
+| encoder | dim | raw | PCA384 | PCA256 | PCA128 |
+|---|---|---|---|---|---|
+| CLIP ViT-B/32 | 512 | 0.5583 | 0.4693 | 0.5021 | 0.5343 |
+| **SigLIP2-so400m-384** | 1152 | **0.6656** | **0.5343** | **0.5706** | **0.6532** |
+| | | **+0.107** | +0.065 | +0.069 | **+0.119** |
+
+**It wins at every dimension**, so the gain is not the capacity artefact the
+control was built to catch. This overturns the prior, which is why the gate
+existed.
+
+### 31.1 The control that nearly produced the wrong answer
+
+The first version reduced only SigLIP2 to CLIP's 512 dims and left CLIP
+untouched. SigLIP2 fell to 0.4762 and the gate reported **FAIL**. That is not a
+dimension control, it is a handicap: one side is compressed and the other is not.
+Reducing **both** to common dimensions reverses the verdict completely. Same
+family of error as §29.1 and §21.2.
+
+### 31.2 Practical notes
+
+`google/siglip2-so400m-patch14-384` is the fixed-resolution variant and declares
+`model_type: "siglip"`, so it loads with the **v1** classes and works in the
+pinned transformers 4.44.2 -- no environment change needed. Only the `-naflex`
+checkpoints need `Siglip2*`, whose patch embedding is a Linear rather than a
+Conv2d; loading the wrong one fails with a shape mismatch of [1152,3,14,14]
+against [1152,588]. And `AutoImageProcessor`, not `AutoProcessor`: the latter
+also builds the text tokenizer, which needs sentencepiece and fails the load over
+a component nothing here uses.
+
+Cost: **40.84 ms/crop against CLIP's 2.97** (13.8x) on an A100. At the 1 Hz the
+temporal model now consumes, that is 204 ms per second of video for five
+students -- affordable at serve time, which it was not before the frame-rate fix.
+
+### 31.3 Stage 2, in progress
+
+Layout `v1196_sig` (1192 = 1152 SigLIP2 + 8 bbox + 24 colour + 8 posture, +4 head
+pose), configs `1192_sig` and `1196_sig_hp`, and `sequence_builder --clip-model`.
+The layout follows the **encoder** first: a 1152-dim embedding cannot be any of
+the CLIP layouts whatever else is switched on, and the builder refuses rather
+than writing a width the layout does not declare. Corpus rebuild running;
+matched-pair training against `556_hp` to follow.
+
+
 ## 10. Changelog
+
+**2026-09-12 (later)**
+- **The VLM second opinion does not help** (§28) -- `agreement` returns the
+  temporal model's answer on the 73% it covers, `pool` −0.072, `product` −0.135.
+  De-recommended; kept listed as an ablation. It DOES help `turned_to_peer`
+  (+0.094) and destroys `uncertain` (−0.420).
+- **Decision window 32 → 48**: +0.052 macro-F1 mean over three seeds, from a
+  config change (§29).
+- **cue8**: `reading` + `listening` merged into `engaged`, 0.4720 ± 0.0032 (§30).
+- **SigLIP2 beats CLIP on a linear probe at every dimension** (+0.107 raw,
+  +0.119 at PCA128), overturning the prior that the encoder was a weak lever
+  (§31). Corpus rebuild under way.
+- Feature extraction is now gated by the history sampler: at 4.33 fps against a
+  1 Hz history, ~77% of CLIP passes were computed and discarded.
 
 **2026-09-12**
 - **The deployment served the model at the wrong frame rate** (§27). The temporal
