@@ -4503,7 +4503,117 @@ comparable averages, which is the rule this log keeps restating.
 
 ---
 
+
+## 23. The live camera worked exactly once per process (2026-09-12) ★★
+
+Reported from the deployed Space: `status: not consuming: the camera pipeline is
+not running`, **sent 233, analysed 1, skipped 232**. The page was pushing frames
+and nothing was reading them.
+
+`STATE["error"]` was empty, which is what made it worth reading rather than
+guessing. The dashboard records a reason whenever a run dies badly (§14), so an
+empty error means `run_live` **returned normally**.
+
+### 23.1 The defect
+
+`run_live` ends by releasing its reader. For the browser camera the reader is not
+a capture it owns — it is `server.CAMERA`, the one `PushedFrames` buffer for the
+whole process:
+
+```python
+reader.release() if live else cap.release()      # pipeline_bridge.py:507
+```
+
+`PushedFrames.release()` sets `closed = True`, and nothing ever cleared it.
+`camera_buffer()` returned that same object forever. So:
+
+* the **first** camera run of a process works, and closes the buffer on its way out;
+* every run after it gets a corpse. `read()` checks death first, returns
+  `(False, None)` on its first call, the loop breaks at once, nothing raises,
+  no error is recorded;
+* `put()` still works — it takes the lock, stores the frame, bumps `seq`.
+
+So the page sees `sent` climbing, `analysed` frozen, "the camera pipeline is not
+running", and no error anywhere. `analysed 1` rather than `0` is the first run's
+last frame, still counted on the shared buffer.
+
+`PushedFrames.reopen()` already existed, with a passing test. **Nothing called
+it.** A tested method and no caller is a worse signal than a missing method,
+because the test says the lifecycle was thought about.
+
+### 23.2 The fix, and why a fresh buffer rather than reopen()
+
+`camera_buffer(reset=True)` at the start of a camera run, returning a **new**
+object rather than reopening the old one. A lagging worker from a previous run
+still holds a reference and will call `release()` on it when it finishes; with
+`reopen()` that release lands on the *new* session's buffer and kills it. The
+race is narrow and would have looked exactly like this bug.
+
+`run_live` now also returns why a live source stopped, and distinguishes
+"ended before a single frame" from "stopped after n frames", so the next
+instance of this class of failure arrives with its reason attached.
+
+### 23.3 Verified against the deployed Space
+
+Driving `/api/model` → `/api/source` → `/api/camera/frame` as the browser does,
+twice in one process, on `a10g-small`:
+
+| | warm-up to first analysed frame | frames analysed | drop rate | processed fps |
+|---|---|---|---|---|
+| run 1 (cold) | 139 s | 97+ | 235 dropped, then **0** | — |
+| run 2 (**used to be dead**) | 16 s | 151 | 7% | **1.81** |
+
+Run 2 is the test. Before the fix it analysed nothing, forever.
+
+Two things worth keeping from the numbers: the 139 s cold start is the
+detector + CLIP + head-pose backend loading, and it is consistent with the
+~2 minutes the status string already quotes; and once warm the pipeline
+consumed **every frame pushed** at ~1.8/s, so the drop counter went flat.
+1.81 fps on a10g-small is the honest live figure — earlier ~1 fps numbers were
+t4-medium.
+
+## 24. The nine-class VLM asked a six-option question (2026-09-12) ★★
+
+Found by reading `QwenGrounder.score_students` while answering a question about
+which VLM the Space uses:
+
+```python
+prompt = build_prompt()          # no argument -> the SIX cue6 options
+...
+sel = logits[:, self._letter_ids]     # NINE letters, from self.classes
+```
+
+`_letter_ids` is built from `self.classes`, so a cue9 grounder read logits for
+**A–I** off a question that offered **A–F**. Options G, H and I — three of the
+four classes cue9 exists to separate — were scored from letters the model was
+never shown. Nothing malformed comes out: `softmax` over nine arbitrary logits is
+a valid distribution, `fuse_student` combines it happily, and the box gets a
+label. It is noise wearing the right shape, which is the same failure class as
+§21.2 and the six uniform rows.
+
+Fixed by `QwenGrounder.prompt()`, which builds the question from the grounder's
+own classes, plus two tests: the offered letters must equal the scored letters
+for every class count, and a nine-class grounder must not produce the six-option
+question.
+
+Not yet measured: how much the cue9 `+vlm` entry's fused output changes now. The
+six cue6 classes were never affected — for them the question and the letters
+always agreed.
+
 ## 10. Changelog
+
+**2026-09-12**
+- **Fixed the live camera: it worked exactly once per process** (§23). `run_live`
+  released the process-wide `PushedFrames` buffer on its way out, so every camera
+  run after the first read a closed buffer, broke out of the loop on its first
+  `read()`, and recorded no error. Verified twice in one process against the
+  deployed Space: run 2 now analyses 151 frames at **1.81 fps** on `a10g-small`,
+  7% drop, 16 s warm start.
+- **Fixed a nine-class VLM asking a six-option question** (§24).
+  `score_students` called `build_prompt()` with no argument, so a cue9 grounder
+  scored letters A–I against a question that offered A–F.
+- `run_live` now returns why a live source stopped; `tools/deploy_space.py`
+  replaces the ad-hoc Space pushes (named files only, never `upload_folder`).
 
 **2026-08-08**
 - **Dashboard model selector built** (§11.18): 54 checkpoints → 18 variants, one

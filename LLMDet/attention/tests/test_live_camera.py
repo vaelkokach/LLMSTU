@@ -124,3 +124,54 @@ def test_classify_source_still_reads_a_bare_index_as_a_camera():
     assert PB.classify_source("0") == ("camera", 0)
     assert PB.classify_source("rtsp://cam/stream")[0] == "stream"
     assert PB.classify_source("/tmp/x.mp4")[0] == "file"
+
+
+# --------------------------------------------------------------------------
+# the buffer's lifecycle across runs
+#
+# `run_live` ends by releasing its reader, and for the browser camera the reader
+# IS the process-wide buffer. So the first camera run leaves it permanently
+# closed, and the SECOND one attaches to a corpse: read() reports the pusher
+# gone on its first call, run_live returns normally, nothing raises, and the
+# recorded error stays empty. The page shows `sent` climbing, `analysed` frozen
+# and "the camera pipeline is not running" -- with nothing anywhere saying why.
+# Deployed, that is what "sent 233, analysed 1" was.
+# --------------------------------------------------------------------------
+
+def test_a_released_buffer_is_dead_to_a_second_run():
+    """The precondition for the bug. If this ever stops holding, so does it."""
+    q = PB.PushedFrames()
+    q.put("x")
+    q.release()
+    q.put("y")                      # the browser keeps posting; put() works
+    assert q.seq == 2               # ...and `sent` keeps climbing
+    assert q.read(timeout=0.1) == (False, None)   # but nothing can be read
+    assert q.taken == 0                           # so `analysed` never moves
+
+
+def test_starting_a_camera_run_gets_a_live_buffer():
+    server = pytest.importorskip("server")
+    first = server.camera_buffer(reset=True)
+    first.put("x")
+    first.release()                 # as run_live does when the first run ends
+
+    second = server.camera_buffer(reset=True)
+    assert second is not first, "a run must not inherit the released buffer"
+    assert second.alive
+    second.put("y")
+    assert second.read(timeout=1.0) == (True, "y")
+
+
+def test_the_frame_endpoint_pushes_into_the_run_s_buffer():
+    """POST /api/camera/frame and the worker must share one object.
+
+    They meet only through the module global, so a reset that replaced it
+    without the endpoint noticing would drop every frame on the floor.
+    """
+    server = pytest.importorskip("server")
+    server.camera_buffer(reset=True)
+    run_buf = server.camera_buffer(reset=True)
+    endpoint_buf = server.camera_buffer()        # what _camera_frame() uses
+    assert endpoint_buf is run_buf
+    endpoint_buf.put("z")
+    assert run_buf.read(timeout=1.0) == (True, "z")

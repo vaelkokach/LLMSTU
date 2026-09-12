@@ -378,6 +378,7 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=0,
     t_prev = time.time()
     t_start = time.time()
     t_stats = t_start
+    stop_reason = ""
     print(f"[dashboard] source: {kind} {source!r}"
           + (" — frames are dropped to stay current" if live else ""))
     # max_frames <= 0 means no cap. A live camera has no natural end, so the run
@@ -390,6 +391,20 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=0,
             break
         ok, frame = reader.read()
         if not ok:
+            # The source is gone. For a file that is simply the end; for a live
+            # source it is a diagnosis the page needs, because the run otherwise
+            # ends looking exactly like a clean finish and the caller records no
+            # error at all.
+            if live and n == 0:
+                stop_reason = ("the frame source ended before a single frame "
+                               "was analysed"
+                               + (" (the buffer was already closed)"
+                                  if getattr(reader, "closed", False) else
+                                  " (no frames arrived within the idle timeout)"))
+            elif live:
+                stop_reason = (f"the frame source stopped after {n} frames "
+                               "(the browser stopped posting, or the tab was "
+                               "closed)")
             break
         if frame is None:       # live source stalled; keep waiting
             continue
@@ -508,4 +523,10 @@ def run_live(config_path, video, push_fn, blur_faces=False, max_frames=0,
     os.chdir(cwd0)
     if rec:
         rec.close()
+    if stop_reason:
+        print(f"[dashboard] live source ended: {stop_reason}")
+        if stats_fn is not None:
+            stats_fn({"processed": n, "dropped": int(getattr(reader, "dropped", 0)),
+                      "stopped_because": stop_reason})
     print(f"[dashboard] finished after {n} frames")
+    return stop_reason

@@ -367,7 +367,7 @@ class LlavaOneVisionGrounder:
         # working, since the output is otherwise perfectly well-formed.
         from llava.constants import DEFAULT_IMAGE_TOKEN
         from llava.mm_utils import tokenizer_image_token
-        prompt = DEFAULT_IMAGE_TOKEN + "\n" + build_prompt()
+        prompt = DEFAULT_IMAGE_TOKEN + "\n" + build_prompt(self.classes)
         ids = tokenizer_image_token(prompt, self._tok,
                                     return_tensors="pt").unsqueeze(0).to(self.device)
 
@@ -526,6 +526,18 @@ class QwenGrounder:
             ids.append(enc[0])
         self._letter_ids = ids
 
+    def prompt(self) -> str:
+        """The question this grounder asks, over ITS OWN classes.
+
+        Separate from `build_prompt()` because calling that with no argument is
+        exactly the bug this replaced: it returns the SIX cue6 options, while
+        `_letter_ids` is built from `self.classes`. A cue9 grounder then scored
+        nine letters against a question that offered six, and G/H/I -- three of
+        the four classes cue9 exists to separate -- were read off logits for
+        options the model was never shown. Well-formed, plausible, and noise.
+        """
+        return build_prompt(self.classes)
+
     def release(self) -> None:
         """Drop the weights so the process gets the memory back."""
         self._model = None
@@ -549,7 +561,7 @@ class QwenGrounder:
         if not idx:
             return scores
 
-        prompt = build_prompt()
+        prompt = self.prompt()
         images = [Image.fromarray(cv2.cvtColor(crops[i], cv2.COLOR_BGR2RGB))
                   for i in idx]
         msgs = [[{"role": "user", "content": [{"type": "image"},

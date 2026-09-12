@@ -149,3 +149,39 @@ def test_fuse_frame_tolerates_a_student_the_vlm_never_saw():
     assert set(out) == {1, 2}
     assert out[2].vlm_cue is None
     assert out[1].vlm_cue is not None
+
+
+# --------------------------------------------------------------------------
+# the question must match the letters being scored
+#
+# `_letter_ids` comes from `self.classes`; the prompt used to come from
+# `build_prompt()` with no argument, i.e. always the six cue6 options. A cue9
+# grounder therefore read nine logits off a six-option question, and three of
+# the four classes cue9 exists to separate were scored from options the model
+# never saw. The output was well-formed the whole time, which is why it took
+# reading the call to find.
+# --------------------------------------------------------------------------
+
+def test_the_prompt_offers_exactly_the_classes_being_scored():
+    from attention.taxonomy import CUE9_CLASSES
+    from attention.vlm_grounder import QwenGrounder, option_letters
+
+    for classes in (None, list(CUE9_CLASSES)):
+        g = QwenGrounder(classes=classes)
+        text = g.prompt()
+        letters = option_letters(len(g.classes))
+        offered = [L for L in letters if f"\n{L}. " in "\n" + text]
+        assert offered == list(letters), (
+            f"{len(g.classes)} classes scored, {len(offered)} offered")
+        assert f"({letters[0]}-{letters[-1]})" in text
+
+
+def test_a_nine_class_grounder_does_not_ask_a_six_option_question():
+    """The regression itself, stated as the difference it makes."""
+    from attention.taxonomy import CUE9_CLASSES
+    from attention.vlm_grounder import QwenGrounder
+
+    six = QwenGrounder().prompt()
+    nine = QwenGrounder(classes=list(CUE9_CLASSES)).prompt()
+    assert six != nine
+    assert "\nG. " in nine and "\nG. " not in six

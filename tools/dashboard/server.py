@@ -112,14 +112,25 @@ LOCK = threading.Lock()
 CAMERA = None
 
 
-def camera_buffer():
+def camera_buffer(reset=False):
     """The browser-camera frame buffer, created on first use.
 
     Imported lazily because pipeline_bridge pulls in torch, and replay mode is
     deliberately stdlib-only.
+
+    ``reset`` replaces it with a fresh one, and starting a camera run MUST pass
+    it. `run_live` ends by releasing its reader, and for the browser camera the
+    reader is this process-wide buffer -- so after the first camera run the
+    buffer is permanently `closed`. A second run then attaches to a dead buffer:
+    `read()` reports the pusher gone on its first call, `run_live` returns
+    normally, and because nothing raised, STATE["error"] stays empty. Meanwhile
+    `put()` still accepts frames and bumps `seq`. The page shows `sent` climbing,
+    `analysed` frozen and "the camera pipeline is not running", with no error
+    anywhere to explain it. That cost a day; it is the second run that is broken,
+    which is why it looked intermittent.
     """
     global CAMERA
-    if CAMERA is None:
+    if CAMERA is None or reset:
         from pipeline_bridge import PushedFrames
         CAMERA = PushedFrames()
     return CAMERA
@@ -612,7 +623,8 @@ def run_live_source(entry, video):
     cal_path = SR.calibration_path(entry.variant_id)
     cal = json.loads(cal_path.read_text()) if cal_path.exists() else {}
     browser_cam = str(video) == SRC.BROWSER_CAMERA_ID
-    frame_source = camera_buffer() if browser_cam else None
+    # reset=True: a fresh buffer per run. See camera_buffer().
+    frame_source = camera_buffer(reset=True) if browser_cam else None
     kind = "camera" if browser_cam else classify_source(video)[0]
     with LOCK:
         STATE["running"] = True
@@ -629,13 +641,19 @@ def run_live_source(entry, video):
         with LOCK:
             STATE["capture"] = s
 
-    run_live(CONTEXT["config"], video, push_frame,
-             blur_faces=CONTEXT["blur_faces"], max_frames=CONTEXT["max_frames"],
-             device=CONTEXT["device"], entry=entry,
-             should_stop=RUNNER.should_stop, stats_fn=on_stats,
-             frame_source=frame_source)
+    stopped_because = run_live(
+        CONTEXT["config"], video, push_frame,
+        blur_faces=CONTEXT["blur_faces"], max_frames=CONTEXT["max_frames"],
+        device=CONTEXT["device"], entry=entry,
+        should_stop=RUNNER.should_stop, stats_fn=on_stats,
+        frame_source=frame_source)
     with LOCK:
         STATE["running"] = False
+        # A live run that analysed nothing ended for a reason the page cannot
+        # infer: it looks identical to a clean finish. Anything else -- the
+        # browser closing the tab, Stop -- is an ordinary end, not an error.
+        if stopped_because and not (STATE.get("capture") or {}).get("processed"):
+            STATE["error"] = stopped_because
 
 
 def model_card(entry, cal):
